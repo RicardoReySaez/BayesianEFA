@@ -141,7 +141,7 @@ This corresponds to \code{as.vector(t(Lambda))} in R:
 }
 }
 \examples{
-\donttest{
+\dontrun{
 # Fit Bayesian EFA model
 befa_fit <- befa(
   data = HS_data,

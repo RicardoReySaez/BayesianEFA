@@ -242,7 +242,7 @@ to the item means, \eqn{\nu_j}: \eqn{\nu_j \sim \mathcal{N}(\mu_\nu, \sigma_\nu)
 }
 }
 \examples{
-\donttest{
+\dontrun{
 # Fit Bayesian EFA model to the famous Grant-White School Data (Holzinger & Swineford, 1939)
 befa_fit <- befa(
   data = HS_data,

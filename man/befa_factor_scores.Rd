@@ -54,7 +54,7 @@ data vector \eqn{(\mathbf{y}_i - \boldsymbol{\nu})}, are subsetted to the
 indices of the observed variables, denoted as \eqn{o_i}.
 }
 \examples{
-\donttest{
+\dontrun{
 # ─────────────────────────────────────────────────────── #
 #    1. Factor scores after fitting Bayesian EFA model    #
 # ─────────────────────────────────────────────────────── #

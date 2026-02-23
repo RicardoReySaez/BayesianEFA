@@ -53,9 +53,11 @@ and reports MCMC diagnostics (Rhat, ESS). Communalities (h2) and uniquenesses (u
 are derived from the squared loadings.
 }
 \examples{
-\donttest{
-befa_fit <- befa(data = HS_data, n_factors = 3, model = "cor",
-                 iter = 500, chains = 2, seed = 123)
+\dontrun{
+befa_fit <- befa(
+  data = HS_data, n_factors = 3, model = "cor",
+  iter = 500, chains = 2, seed = 123
+)
 
 # Get and print the summary
 befa_summary <- summary(befa_fit, sort = TRUE, signif_stars = TRUE)

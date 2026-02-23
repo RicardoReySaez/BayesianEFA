@@ -21,9 +21,11 @@ A wrapper around \code{\link[posterior:draws_summary]{posterior::summarise_draws
 from a \code{befa} object.
 }
 \examples{
-\donttest{
-befa_fit <- befa(data = HS_data, n_factors = 3, model = "cor",
-                 iter = 500, chains = 2, seed = 123)
+\dontrun{
+befa_fit <- befa(
+  data = HS_data, n_factors = 3, model = "cor",
+  iter = 500, chains = 2, seed = 123
+)
 
 # Posterior summaries of communalities
 posterior_summaries(befa_fit, pars = "h2")

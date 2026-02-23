@@ -60,7 +60,7 @@ as measurement error.
 }
 }
 \examples{
-\donttest{
+\dontrun{
 # ──────────────────────────────────────────────────────────────────────── #
 #    1. Bayesian Reliability estimates after fitting Bayesian EFA model    #
 # ──────────────────────────────────────────────────────────────────────── #

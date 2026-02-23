@@ -25,9 +25,11 @@ A wrapper around the \code{posterior} package to extract draws from a \code{befa
 object in various formats.
 }
 \examples{
-\donttest{
-befa_fit <- befa(data = HS_data, n_factors = 3, model = "cor",
-                 iter = 500, chains = 2, seed = 123)
+\dontrun{
+befa_fit <- befa(
+  data = HS_data, n_factors = 3, model = "cor",
+  iter = 500, chains = 2, seed = 123
+)
 
 # Extract Lambda draws as a matrix
 lambda_draws <- extract_posterior_draws(befa_fit, pars = "Lambda", format = "matrix")

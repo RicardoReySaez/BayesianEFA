@@ -15,6 +15,14 @@ quantification.
 \references{
 Stan Development Team (2024). RStan: the R interface to Stan. R package. https://mc-stan.org
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/RicardoReySaez/BayesEFA}
+  \item Report bugs at \url{https://github.com/RicardoReySaez/BayesEFA/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Ricardo Rey-Sáez \email{ricardoreysaez95@gmail.com} (\href{https://orcid.org/0000-0001-6739-2035}{ORCID})
 

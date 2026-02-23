@@ -103,7 +103,7 @@ Out-of-sample predictive accuracy is assessed using PSIS-LOO cross-validation:
 }
 }
 \examples{
-\donttest{
+\dontrun{
 # ─────────────────────────────────────────────────────────────── #
 #    1. Bayesian Fit Measures after fitting Bayesian EFA model    #
 # ─────────────────────────────────────────────────────────────── #
