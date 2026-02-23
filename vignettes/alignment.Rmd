@@ -1,0 +1,176 @@
+---
+title: "Fixing Rotational Indeterminacy with rsp_align"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Fixing Rotational Indeterminacy with rsp_align}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+A foundational challenge in Bayesian Exploratory Factor Analysis (BEFA) is that the latent structure is not uniquely identified by the data. Because the model-implied covariance matrix is invariant to orthogonal rotations, an infinite number of factor loading matrices can produce the exact same fit. In a Bayesian framework, this symmetry causes the posterior distribution to be highly multimodal. As a Markov Chain Monte Carlo (MCMC) algorithm explores the parameter space, it will naturally jump between these equivalent modes. 
+
+In practice, this means that the order of the factors might swap (label switching) and their directions might reverse (sign switching) from one iteration to the next. Consequently, if we naively calculate the posterior mean of the raw MCMC draws, the positive and negative values will cancel each other out, artificially shrinking the parameter estimates toward zero and destroying any substantive interpretation.
+
+## The Alignment Solution: The E-RSP Algorithm
+
+A straightforward solution to this problem is to align the posterior draws after sampling. The `rsp_align()` function in the `BayesEFA` package achieves this by implementing the Efficient Rotation-Sign-Permutation (E-RSP) algorithm, which yields an exact alignment for high-dimensional factor models in just a few seconds. Here, we illustrate how to use `rsp_align()` to effectively recover the underlying factor structure.
+
+### The unrotated solution
+
+Let's begin by generating a dataset from a simple, two-dimensional latent structure. This will serve as our ground truth.
+
+```{r echo = FALSE, message = FALSE}
+# Load BayesEFA
+library(BayesEFA)
+options(cmdstanr_warn_inits = FALSE)
+```
+```{r}
+# Load BayesEFA
+library(BayesEFA)
+
+# Define a true loading matrix with a clear simple structure
+L_true <- matrix(c(
+  0.7, 0.0,
+  0.7, 0.0,
+  0.7, 0.0,
+  0.0, 0.7,
+  0.0, 0.7,
+  0.0, 0.7
+), ncol = 2, byrow = TRUE)
+
+# Generate the corresponding correlation matrix
+R_true <- tcrossprod(L_true)
+diag(R_true) <- 1
+
+# Simulate data for 300 observations
+set.seed(2026)
+X <- matrix(rnorm(300 * nrow(L_true)), ncol = nrow(L_true)) %*% chol(R_true)
+colnames(X) <- paste0("Item_", 1:6)
+```
+
+We will fit the Bayesian EFA model using `befa()`. To illustrate the pathology of rotational indeterminacy, we explicitly disable the internal alignment process by setting `rotate = "none"`.
+
+```{r}
+# Fit the model without automatic post-processing
+fit_unaligned <- befa(
+  data = X,
+  n_factors = 2,
+  compute_fit_indices = FALSE,
+  compute_reliability = FALSE,
+  rotate = "none",
+  seed = 123,
+  refresh = 0,
+  show_message = FALSE,
+  show_exceptions = FALSE
+)
+
+# Save posterior draws
+draws_unaligned <- extract_posterior_draws(
+  fit_unaligned,
+  pars = "Lambda",
+  format = "matrix"
+)
+```
+
+As we will see below, attempting to summarize the posterior distributions at this stage is meaningless due to **rotational indeterminacy**. By not applying any post-hoc alignment or rotation method, the MCMC chains have freely explored an unidentified, multimodal parameter space, generating several obvious anomalies in the summaries:
+
+* **Null means and medians:** They are all very close to zero. By averaging over infinite equivalent rotations that have flipped signs or swapped positions, the factor loadings essentially cancel each other out.
+* **Extreme uncertainty (`sd` and quantiles):** The posterior standard deviations are huge (ranging from 0.47 to 0.56). Considering that standardized factor loadings range between -1 and 1, this variability is extremely high. Consequently, the 90% credible intervals (`q5` to `q95`) are massive (e.g., from -0.78 to +0.79), and absolutely all of them symmetrically include 0.
+* **Convergence and mixing issues:** Because the model is unidentified, the chains struggle to converge stably. This is reflected in some $\hat{R}$ (`rhat`) values exceeding the recommended 1.01 threshold, as well as rather low effective sample sizes (`ess_bulk`).
+
+```{r}
+posterior_summaries(fit_unaligned, pars = "Lambda")
+```
+
+A visual inspection of the posterior draws for a specific parameter (e.g., `Lambda[1,1]`) makes the severity of this unidentified parameter space immediately apparent:
+
+```{r}
+hist(draws_unaligned[, "Lambda[1,1]"],
+  breaks = 50,
+  col = "#2780e3",
+  border = "white",
+  main = "Raw Posterior Distribution (Lambda[1,1])",
+  xlab = "Sampled Value"
+)
+```
+
+Instead of a clean, unimodal distribution centered around the true value of $0.7$ (their true simulated value), we have a bimodal shape caused by the sampler traversing different orthogonal rotations.
+
+### The rotated solution
+
+We now pass our raw MCMC matrix to `rsp_align()`. However, because MCMC samplers generally output multidimensional parameters (like a loading matrix $\mathbf{\Lambda}$) as flat, one-dimensional vectors, it is crucial to understand **how** `rsp_align()` expects this data to be formatted.
+
+The function requires the following key arguments:
+
+1.  **`lambda_draws`**: A 2D numeric matrix of dimensions $S \times (J \times M)$, where $S$ is the total number of posterior draws, $J$ is the number of items, and $M$ is the number of factors. Every row in this matrix represents a single MCMC iteration containing the entire flattened loading matrix.
+2.  **`n_chains`**: The number of MCMC chains. The function assumes the rows in `lambda_draws` are stacked chain by chain (e.g., if you have 4000 draws from 4 chains, rows 1-1000 belong to chain 1, rows 1001-2000 to chain 2, etc.).
+3.  **`format`**: This is the most critical argument. It tells the algorithm how your specific MCMC software (e.g., Stan, JAGS) flattened the original $J \times M$ matrix into a single row.
+
+To correctly reconstruct the matrices internally, `rsp_align()` needs to know the flattening order. There are two options:
+
+* **`format = "column_major"`**: The matrix was flattened factor by factor (column by column). The row vector first contains all items for Factor 1, then all items for Factor 2, and so on. **This is the default behavior in Stan** and corresponds to R's standard `as.vector(Lambda)`.
+* **`format = "row_major"`**: The matrix was flattened item by item (row by row). The row vector first contains all factor loadings for Item 1, then all factor loadings for Item 2, etc. This corresponds to `as.vector(t(Lambda))` in `R`.
+
+We can easily visualize this difference by looking at the column names of our extracted draws. For an $6 \times 2$ loading matrix:
+
+```{r}
+# 1. Draws in column-major order (Stan's default)
+# Notice how it fills Factor 1 completely before moving to Factor 2
+colnames(draws_unaligned)
+
+# 2. Draws in row-major order
+# We can simulate this order by transposing the index matrix
+rw_ord <- rep(1:6, each = 2) + rep(c(0, 6), times = 2)
+colnames(draws_unaligned)[rw_ord]
+```
+
+Now that we understand the requirements, we can safely apply the algorithm to our data. In our example, we have 6 items, 2 factors, 4 chains, and we confirmed our extraction tool outputs column-major vectors:
+
+```{r}
+# Apply the Efficient RSP algorithm
+aligned_res <- rsp_align(
+  lambda_draws = draws_unaligned,
+  n_items = 6,
+  n_factors = 2,
+  n_chains = 4,
+  format = "column_major"
+)
+```
+
+Once the posterior draws are properly aligned, the rotational indeterminacy is completely resolved, and the output becomes highly informative. By examining the aligned summaries, the true underlying structure of the data emerges clearly, fixing all the previous anomalies:
+
+* **Clear factor structure (Meaningful means and medians):** Instead of canceling out to zero, the parameters now reveal a perfect simple structure. Items 1, 2, and 3 load heavily on Factor 1 (`Lambda[1:3, 1]` range from 0.66 to 0.80) while having near-zero cross-loadings on Factor 2. Conversely, items 4, 5, and 6 load strongly on Factor 2 (`Lambda[4:6, 2]` are all ~0.68) and virtually zero on Factor 1.
+* **High precision (Drastically reduced uncertainty):** The posterior standard deviations (`sd`) have plummeted from the massive ~0.50 range down to a very precise ~0.04. Consequently, the 90% credible intervals (`q5` to `q95`) are now narrow and informative, definitively excluding zero for the main loadings.
+* **Perfect convergence and mixing:** With the parameter space properly identified, the MCMC diagnostics are flawless. All $\hat{R}$ (`rhat`) values are now exactly 1.00, and the effective sample sizes (`ess_bulk` and `ess_tail`) have skyrocketed to extremely healthy levels (well over 2000), indicating that the chains are stable and mixing efficiently.
+
+```{r}
+# Now, aligned posterior summaries are interpretable
+aligned_res$summary
+```
+
+Re-visualizing the posterior distribution for `Lambda[1,1]` after alignment provides clear visual proof that the parameter is now identified. The formerly erratic, multimodal draws have successfully resolved into a clean, unimodal distribution, confirming that rotational indeterminacy has been completely eliminated.
+
+```{r}
+# Retrieve the clean, aligned posterior matrix
+draws_aligned <- aligned_res$Lambda_hat_mcmc
+
+# The output maintains the exact dimensions and format of the input
+hist(draws_aligned[, "Lambda[1,1]"],
+  breaks = 50,
+  col = "#2780e3",
+  border = "white",
+  main = "Aligned Posterior Distribution (Lambda[1,1])",
+  xlab = "Sampled Value"
+)
+```
+
+

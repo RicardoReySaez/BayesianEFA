@@ -1,0 +1,54 @@
+url: https://ricardoreysaez.github.io/BayesEFA/
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  includes:
+    in_header: |
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+      <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+      <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    intro:
+      text: "Get Started"
+      href: articles/getting_started.html
+    articles:
+      text: "Articles"
+      menu:
+        - text: "Getting Started with BayesEFA"
+          href: articles/getting_started.html
+        - text: "Dealing with Rotational Indeterminacy"
+          href: articles/alignment.html
+        - text: "-------"
+        - text: "All Articles"
+          href: articles/index.html
+
+reference:
+  - title: "Core Modeling"
+    desc: "Functions for estimating Bayesian Exploratory Factor Analysis models."
+    contents:
+      - BayesEFA-package
+      - befa
+  - title: "Alignment & Post-Processing"
+    desc: "Functions to resolve rotational indeterminacy and compute secondary outputs."
+    contents:
+      - rsp_align
+      - befa_fit_measures
+      - befa_reliability
+      - befa_factor_scores
+      - extract_posterior_draws
+  - title: "Summary & Visualization"
+    desc: "Tools for inspecting the posterior distributions and summarizing models."
+    contents:
+      - summary.befa
+      - posterior_summaries
+      - print.summary.befa
+      - print.befa_fitmeasures
+  - title: "Datasets"
+    desc: "Built-in datasets for examples and tutorials."
+    contents:
+      - HS_data

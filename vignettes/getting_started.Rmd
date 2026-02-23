@@ -1,0 +1,119 @@
+---
+title: "Getting Started with BayesEFA"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with BayesEFA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+**BayesEFA** provides a flexible and robust framework for conducting Bayesian Exploratory Factor Analysis (EFA). It allows researchers to estimate exploratory factor models and obtain full posterior distributions for key parameters such as factor loadings and uniquenesses, as well as the Bayesian Structural Equation Modeling fit measures proposed by Garnier-Villarreal & Jorgensen (2020) and reliability indices. While remaining as intuitive and easy to use as standard frequentist software, **BayesEFA** offers the significant advantage of solving common estimation issues by default, such as non-positive definite correlation matrices and Heywood cases.
+
+## Setup and Installation: Use `cmdstanr`!
+
+While **BayesEFA** can use the `rstan` backend (which is installed from CRAN), **we strongly recommend using the `cmdstanr` backend**.
+
+`cmdstanr` is a lightweight interface to CmdStan, the command-line interface to Stan. It provides:
+
+* **Faster estimation:** It uses the latest version of the Stan math libraries.
+* **Lower memory usage:** It runs models in separate processes.
+* **Better diagnostics:** It offers more up-to-date diagnostic tools.
+
+To obtain the best performance with **BayesEFA**, please install `cmdstanr` by following the official guide:
+
+> [**Getting Started with CmdStanR**](https://mc-stan.org/cmdstanr/articles/cmdstanr.html)
+
+Once installed, **BayesEFA** will automatically detect it and use `cmdstanr` as the default backend for all model estimations. If `cmdstanr` is not found, the package will safely fall back to using `rstan`.
+
+> **Note**: The first time you use the `cmdstanr` backend, the underlying Stan model will be compiled to C++. This one-time process may take a minute. However, the compiled executable is saved and reused for all subsequent analyses, so future model fitting will be immediate.
+
+```{r echo = FALSE, message = FALSE}
+# Load BayesEFA
+library(BayesEFA)
+options(cmdstanr_warn_inits = FALSE)
+```
+
+## Basic example using BayesEFA
+
+Here is a complete example demonstrating a standard workflow using the classic Holzinger and Swineford (1939) dataset: fitting a model and inspecting the results.
+
+We fit a 3-factor model using the `befa()` function. Here is what we specify:
+
+* `model = "cor"`: The recommended prior distribution proposed by Rey-Sáez et al. (2025). When used with the default settings, this implies a uniform joint distribution over the factor loadings.
+* `lambda_prior = "unit_vector"`: A prior that accounts for the correlation structure of the data.
+* `rotate = "varimax"`: Crucial for interpretability. It applies the Varimax rotation criterion and the Efficient Rotation-Sign-Permutation (RSP) alignment algorithm to properly resolve the rotational indeterminacy of the posterior samples.
+* `compute_fit_indices` and `compute_reliability`: Set to `TRUE` to automatically calculate the BSEM fit indices and Omega reliability coefficients after estimation.
+* `factor_scores = TRUE`: Computes and stores the Bayesian factor scores.
+
+```{r fit_model, message=FALSE, warning=FALSE, results='hide'}
+library(BayesEFA)
+
+# Fit Bayesian EFA model
+befa_fit <- befa(
+  data = HS_data,
+  n_factors = 3,
+  model = "cor",
+  lambda_prior = "unit_vector",
+  rotate = "varimax",
+  factor_scores = TRUE,
+  compute_fit_indices = TRUE,
+  compute_reliability = TRUE,
+  iter_sampling = 1000,
+  iter_warmup = 1000,
+  chains = 4,
+  parallel_chains = 4,
+  seed = 8
+)
+```
+
+Under the hood, the fitted `befa_fit` object stores a standard `stanfit` object, which is the default model structure used by the `rstan` ecosystem. Because the package automatically standardizes the output to this universal format, you can easily extract this internal object and apply your favorite `rstan` functions, diagnostic plots, or generic methods to it. Conveniently, this full compatibility is maintained regardless of whether you selected `cmdstanr` or `rstan` as your computational backend during the model estimation process.
+
+## Basic model summaries
+
+To examine the estimated model, BayesEFA provides a `summary()` method that returns easily reportable tables containing the main results. The design of these tables is heavily inspired by the well-known summaries from the `psych` package, making them immediately familiar to researchers used to frequentist software.
+
+You can customize the output using two handy arguments:
+
+-   `cutoff`: Hides factor loadings with an absolute value below the specified threshold (e.g., 0.3), keeping the pattern matrix clean and easy to read.
+-   `signif_stars`: If set to `TRUE`, it adds an asterisk (`*`) to those factor loadings whose 95% Credible Interval strictly excludes zero, offering a quick Bayesian proxy for "statistical significance".
+
+```{r summary}
+summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
+```
+
+## Extract and summarise posterior draws
+
+The `extract_posterior_draws()` function allows you to easily extract the MCMC draws for any parameter in the model. Once extracted, you have complete flexibility to perform custom analyses, such as visualizing the posterior distribution of specific parameters.
+
+```{r draws}
+# Extract rotated factor loadings
+draws <- extract_posterior_draws(befa_fit, pars = "Lambda", format = "matrix")
+
+# Posterior distribution of the first factor loading
+hist(draws[, "Lambda[1,1]"],
+  breaks = 50,
+  col = "#2780e3",
+  border = "white",
+  main = "Posterior Distribution of Lambda[1,1]",
+  xlab = "Loading Value"
+)
+```
+
+While `extract_posterior_draws()` gives you the raw samples, the `posterior_summaries()` function provides a convenient, automated way to review your results. It automatically returns comprehensive descriptive statistics for any model parameter, alongside essential convergence diagnostic measures (such as $\hat{R}$ and effective sample sizes).
+
+```{r}
+# Posterior summaries
+posterior_summaries(befa_fit, pars = "h2")
+```
+
