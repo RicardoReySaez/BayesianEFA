@@ -5,6 +5,10 @@ compute_factor_scores_cpp <- function(post_draws, data, lambda_idx, sig_idx, nu_
     .Call(`_BayesEFA_compute_factor_scores_cpp`, post_draws, data, lambda_idx, sig_idx, nu_idx, J, M, N, has_missing, obs_patterns)
 }
 
+compute_posterior_metrics_cpp <- function(post_draws, data, sig_idx, nu_idx, M_sat, S_sat, ll_saturated, model_type, has_missing, Y_comp, Y_miss, comp_idx_0, miss_idx_0, obs_patterns_miss) {
+    .Call(`_BayesEFA_compute_posterior_metrics_cpp`, post_draws, data, sig_idx, nu_idx, M_sat, S_sat, ll_saturated, model_type, has_missing, Y_comp, Y_miss, comp_idx_0, miss_idx_0, obs_patterns_miss)
+}
+
 rsp_exact_eff <- function(Lambda_tilde, Lambda_star_init, J, M, maxIter, threshold) {
     .Call(`_BayesEFA_rsp_exact_eff`, Lambda_tilde, Lambda_star_init, J, M, maxIter, threshold)
 }

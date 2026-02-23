@@ -22,16 +22,8 @@ compute_posterior_metrics <- function(object, data) {
 
   # ---- FIML PRE-PROCESSING ----
   # Pre-split data into complete and incomplete subsets ONCE.
-  # This drastically speeds up the log-likelihood loop by vectorizing complete cases.
   comp_idx <- which(stats::complete.cases(data))
   miss_idx <- which(!stats::complete.cases(data))
-
-  data_fiml <- list(
-    comp_idx = comp_idx,
-    miss_idx = miss_idx,
-    Y_comp   = data[comp_idx, , drop = FALSE],
-    Y_miss   = data[miss_idx, , drop = FALSE]
-  )
 
   # Saturated model: use EM if missing data, else direct computation
   if (has_missing) {
@@ -51,7 +43,13 @@ compute_posterior_metrics <- function(object, data) {
     }
 
     # Saturated LL using FIML (same N as hypothesized model)
-    ll_saturated <- sum(compute_fiml_loglik(data_fiml, mu = M_sat, Sigma = S_sat))
+    sat_fiml <- list(
+      comp_idx = comp_idx,
+      miss_idx = miss_idx,
+      Y_comp   = data[comp_idx, , drop = FALSE],
+      Y_miss   = data[miss_idx, , drop = FALSE]
+    )
+    ll_saturated <- sum(compute_fiml_loglik(sat_fiml, mu = M_sat, Sigma = S_sat))
   } else {
     # No missing: standard computation
     if (model_type == "cor") {
@@ -69,9 +67,6 @@ compute_posterior_metrics <- function(object, data) {
 
   # Extract posterior draws as 3D array (iter x chains x variables)
   draws_array <- posterior::as_draws_array(object$stanfit)
-  n_iter <- dim(draws_array)[1]
-  n_chains <- dim(draws_array)[2]
-  n_draws <- n_iter * n_chains
 
   # Get variable names from the array
   var_names <- dimnames(draws_array)[[3]]
@@ -92,70 +87,62 @@ compute_posterior_metrics <- function(object, data) {
     if (length(sig_idx) == 0) stop("Parameter 'Rho' not found in Stan output.")
   }
 
-  # Prepare 3D log-likelihood array (iter x chains x N) for loo::relative_eff()
-  log_lik_array <- array(NA, dim = c(n_iter, n_chains, N))
+  # ── Prepare inputs for C++ backend ──
 
-  # Pre-allocate vectors for aggregate metrics (will be filled sequentially)
-  chisq_vec <- chisq_rep_vec <- srmr_vec <- numeric(n_draws)
+  # Convert model_type to integer flag (1 = raw, 2 = cov, 3 = cor)
+  mt_int <- switch(model_type,
+    "raw" = 1L,
+    "cov" = 2L,
+    "cor" = 3L
+  )
 
-  # Pre-allocate loop variables
-  Sigma_s <- matrix(0, J, J)
-  Nu_s <- if (model_type == "raw") numeric(J) else rep(0, J) # cov and cor have means = 0
+  # 0-based indices for C++
+  sig_idx_0 <- as.integer(sig_idx - 1L)
+  nu_idx_0 <- if (!is.null(nu_idx)) as.integer(nu_idx - 1L) else integer(0)
 
-  # Main loop: iterate over chains and iterations separately
-  draw_idx <- 0
-  for (c in 1:n_chains) {
-    for (i in 1:n_iter) {
-      draw_idx <- draw_idx + 1
+  # FIML subsets for C++: 0-based indices
+  comp_idx_0 <- as.integer(comp_idx - 1L)
+  miss_idx_0 <- as.integer(miss_idx - 1L)
 
-      # Reconstruct model-implied mean vector and cov/cor matrix
-      Sigma_s <- matrix(draws_array[i, c, sig_idx], nrow = J, ncol = J)
-      if (!is.null(nu_idx)) {
-        Nu_s <- draws_array[i, c, nu_idx]
-      }
-
-      # Compute Pointwise Log-Likelihood (FIML-proper: handles NAs)
-      ll_s <- compute_fiml_loglik(data_fiml, mu = Nu_s, Sigma = Sigma_s)
-      log_lik_array[i, c, ] <- ll_s
-
-      # Compute chi-square statistic: 2 * (LL_Saturated - LL_Model)
-      chisq_vec[draw_idx] <- 2 * (ll_saturated - sum(ll_s))
-
-      # Posterior predictive p-value (replicate N observations from model)
-      Y_rep <- mvnfast::rmvn(n = N, mu = Nu_s, sigma = Sigma_s)
-      ll_rep_model <- sum(mvnfast::dmvn(Y_rep, mu = Nu_s, sigma = Sigma_s, log = TRUE))
-
-      # Observed moments for simulated data
-      if (model_type == "cor") {
-        S_sat_rep <- stats::cor(Y_rep)
-        M_sat_rep <- rep(0, J)
-      } else if (model_type == "cov") {
-        S_sat_rep <- stats::cov(Y_rep) * (N - 1) / N
-        M_sat_rep <- rep(0, J)
-      } else { # raw
-        S_sat_rep <- stats::cov(Y_rep) * (N - 1) / N
-        M_sat_rep <- colMeans(Y_rep)
-      }
-
-      # Compute chi-square statistic
-      ll_sat_rep <- sum(mvnfast::dmvn(Y_rep, mu = M_sat_rep, sigma = S_sat_rep, log = TRUE))
-      chisq_rep_vec[draw_idx] <- 2 * (ll_sat_rep - ll_rep_model)
-
-      # Prepare objects for SRMR statistic
-      if (model_type == "raw" || model_type == "cov") {
-        Imp_Cor <- stats::cov2cor(Sigma_s)
-        Sample_Cor <- stats::cov2cor(S_sat)
-      } else { # cor
-        Imp_Cor <- Sigma_s
-        Sample_Cor <- S_sat
-      }
-
-      # Compute SRMR
-      diff_mat <- Sample_Cor - Imp_Cor
-      resid_unique <- diff_mat[lower.tri(diff_mat, diag = TRUE)]
-      srmr_vec[draw_idx] <- sqrt(mean(resid_unique^2))
-    }
+  # Observation patterns for missing rows (0-based)
+  if (length(miss_idx) > 0) {
+    obs_patterns_miss <- lapply(miss_idx, function(i) {
+      as.integer(which(!is.na(data[i, ])) - 1L)
+    })
+  } else {
+    obs_patterns_miss <- list()
   }
+
+  # Complete / incomplete case subsets as matrices
+  Y_comp <- if (length(comp_idx) > 0) data[comp_idx, , drop = FALSE] else matrix(0, nrow = 0, ncol = J)
+  Y_miss <- if (length(miss_idx) > 0) data[miss_idx, , drop = FALSE] else matrix(0, nrow = 0, ncol = J)
+
+  # Convert draws to a raw 3D array for C++
+  draws_cube <- as.array(draws_array)
+
+  # ── Call C++ backend ──
+  cpp_result <- compute_posterior_metrics_cpp(
+    post_draws        = draws_cube,
+    data              = data,
+    sig_idx           = sig_idx_0,
+    nu_idx            = nu_idx_0,
+    M_sat             = M_sat,
+    S_sat             = S_sat,
+    ll_saturated      = ll_saturated,
+    model_type        = mt_int,
+    has_missing       = has_missing,
+    Y_comp            = Y_comp,
+    Y_miss            = Y_miss,
+    comp_idx_0        = comp_idx_0,
+    miss_idx_0        = miss_idx_0,
+    obs_patterns_miss = obs_patterns_miss
+  )
+
+  # Unpack results (match original return names)
+  log_lik_array <- cpp_result$log_lik
+  chisq_vec <- cpp_result$chisq
+  chisq_rep_vec <- cpp_result$chisq_rep
+  srmr_vec <- cpp_result$srmr
 
   return(list(
     log_lik      = log_lik_array,
