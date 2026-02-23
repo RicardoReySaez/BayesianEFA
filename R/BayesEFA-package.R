@@ -19,6 +19,7 @@
 #' @importFrom posterior as_draws_array
 #' @importFrom mvnfast dmvn rmvn
 #' @importFrom brms read_csv_as_stanfit
+#' @importFrom stats complete.cases dnorm na.omit qnorm quantile rnorm sd
 #'
 #' @references
 #' Stan Development Team (2024). RStan: the R interface to Stan. R package. https://mc-stan.org

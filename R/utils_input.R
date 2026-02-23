@@ -172,8 +172,20 @@ prepare_missing_data <- function(data, missing = "listwise", model = "raw", sent
 #' @return A list formatted for Stan.
 #' @noRd
 check_befa_inputs <- function(args) {
-  # Extract all arguments
-  list2env(args, envir = environment())
+  # Extract all arguments explicitly
+  data <- args$data
+  n_factors <- args$n_factors
+  ordered <- args$ordered
+  sample_nobs <- args$sample_nobs
+  sample_mean <- args$sample_mean
+  sample_cov <- args$sample_cov
+  sample_cor <- args$sample_cor
+  model <- args$model
+  missing <- args$missing
+  factor_scores <- args$factor_scores
+  compute_fit_indices <- args$compute_fit_indices
+  compute_reliability <- args$compute_reliability
+  verbose <- args$verbose
 
   # Helper function for logical argument validation
   check_is_logical <- function(x, name) {

@@ -151,7 +151,7 @@ test_that("saturated model log-likelihood is computable", {
   S_sat <- cov(data) * (N - 1) / N
   M_sat <- colMeans(data)
 
-  ll_sat <- sum(mvtnorm::dmvnorm(data, mean = M_sat, sigma = S_sat, log = TRUE))
+  ll_sat <- sum(mvnfast::dmvn(data, mu = M_sat, sigma = S_sat, log = TRUE))
 
   expect_true(is.finite(ll_sat))
   expect_type(ll_sat, "double")
@@ -204,7 +204,7 @@ test_that("compute_null_metrics returns correct structure for std model", {
 
   S_sat <- cor(data)
   M_sat <- rep(0, J)
-  ll_saturated <- sum(mvtnorm::dmvnorm(z_data, mean = M_sat, sigma = S_sat, log = TRUE))
+  ll_saturated <- sum(mvnfast::dmvn(z_data, mu = M_sat, sigma = S_sat, log = TRUE))
 
   result <- compute_null_metrics(
     data = data,
@@ -227,7 +227,7 @@ test_that("compute_null_metrics std model returns scalar chisq (deterministic)",
   z_data <- scale(data)
 
   S_sat <- cor(data)
-  ll_saturated <- sum(mvtnorm::dmvnorm(z_data, mean = rep(0, J), sigma = S_sat, log = TRUE))
+  ll_saturated <- sum(mvnfast::dmvn(z_data, mu = rep(0, J), sigma = S_sat, log = TRUE))
 
   result <- compute_null_metrics(
     data = data,
@@ -251,7 +251,7 @@ test_that("compute_null_metrics std model chisq is non-negative", {
   z_data <- scale(data)
 
   S_sat <- cor(data)
-  ll_saturated <- sum(mvtnorm::dmvnorm(z_data, mean = rep(0, J), sigma = S_sat, log = TRUE))
+  ll_saturated <- sum(mvnfast::dmvn(z_data, mu = rep(0, J), sigma = S_sat, log = TRUE))
 
   result <- compute_null_metrics(
     data = data,
@@ -273,7 +273,7 @@ test_that("compute_null_metrics std model df is at least 1", {
   z_data <- scale(data)
 
   S_sat <- cor(data)
-  ll_saturated <- sum(mvtnorm::dmvnorm(z_data, mean = rep(0, J), sigma = S_sat, log = TRUE))
+  ll_saturated <- sum(mvnfast::dmvn(z_data, mu = rep(0, J), sigma = S_sat, log = TRUE))
 
   result <- compute_null_metrics(
     data = data,
@@ -295,7 +295,7 @@ test_that("compute_null_metrics lambda_vec is non-negative", {
   z_data <- scale(data)
 
   S_sat <- cor(data)
-  ll_saturated <- sum(mvtnorm::dmvnorm(z_data, mean = rep(0, J), sigma = S_sat, log = TRUE))
+  ll_saturated <- sum(mvnfast::dmvn(z_data, mu = rep(0, J), sigma = S_sat, log = TRUE))
 
   result <- compute_null_metrics(
     data = data,
