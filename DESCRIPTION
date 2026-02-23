@@ -43,4 +43,5 @@ VignetteBuilder: knitr
 LazyData: true
 URL: https://github.com/RicardoReySaez/BayesEFA
 BugReports: https://github.com/RicardoReySaez/BayesEFA/issues
-Additional_repositories: https://stan-dev.r-universe.dev
+Additional_repositories:
+    https://stan-dev.r-universe.dev/
