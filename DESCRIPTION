@@ -52,7 +52,7 @@ SystemRequirements: GNU make
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 LazyData: true
-URL: https://github.com/RicardoReySaez/BayesEFA
+URL: https://ricardoreysaez.github.io/BayesEFA/, https://github.com/RicardoReySaez/BayesEFA
 BugReports: https://github.com/RicardoReySaez/BayesEFA/issues
 Additional_repositories:
     https://stan-dev.r-universe.dev/
