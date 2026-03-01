@@ -67,7 +67,10 @@ fit_befa_model <- function(model_name, stan_data, backend, verbose, model_type, 
         # Sampling from the model
         fit_cmd <- do.call(mod$sample, stan_args)
         # Make the output equivalent to rstan
-        brms::read_csv_as_stanfit(fit_cmd$output_files())
+        stanfit_out <- brms::read_csv_as_stanfit(fit_cmd$output_files())
+        # Normalize CmdStan dot-notation (Lambda.1.1) to bracket-notation (Lambda[1,1])
+        # This ensures compatibility with rstan::extract() and posterior::subset_draws()
+        repair_stanfit_names(stanfit_out)
 
         # Rstan branch: simple
       } else {
@@ -301,6 +304,34 @@ get_befa_inits <- function(model_type, lambda_prior, stan_data, n_chains) {
 
     return(inits)
   })
+}
+
+#' Repair CmdStan Parameter Names in Stanfit Objects (Internal)
+#'
+#' Converts CmdStan dot notation (e.g., Lambda.1.1) to standard bracket
+#' notation (Lambda[1,1]) in a stanfit object created by
+#' brms::read_csv_as_stanfit(). This ensures compatibility with
+#' rstan::extract() and posterior::subset_draws() regardless of backend.
+#'
+#' @param stanfit A stanfit object (from brms::read_csv_as_stanfit).
+#' @return The stanfit object with normalized parameter names.
+#' @keywords internal
+#' @noRd
+repair_stanfit_names <- function(stanfit) {
+  dot_to_bracket <- function(x) {
+    x <- sub("\\.", "[", x)
+    x <- gsub("\\.", ",", x)
+    x[grep("\\[", x)] <- paste0(x[grep("\\[", x)], "]")
+    x
+  }
+
+  sim <- stanfit@sim
+  sim$fnames_oi <- dot_to_bracket(sim$fnames_oi)
+  for (i in seq_along(sim$samples)) {
+    names(sim$samples[[i]]) <- dot_to_bracket(names(sim$samples[[i]]))
+  }
+  stanfit@sim <- sim
+  stanfit
 }
 
 #' Strip Internal Parameters from Stan Output (Internal)
