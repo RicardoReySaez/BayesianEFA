@@ -67,10 +67,7 @@ fit_befa_model <- function(model_name, stan_data, backend, verbose, model_type, 
         # Sampling from the model
         fit_cmd <- do.call(mod$sample, stan_args)
         # Make the output equivalent to rstan
-        stanfit_out <- brms::read_csv_as_stanfit(fit_cmd$output_files())
-        # Normalize CmdStan dot-notation (Lambda.1.1) to bracket-notation (Lambda[1,1])
-        # This ensures compatibility with rstan::extract() and posterior::subset_draws()
-        repair_stanfit_names(stanfit_out)
+        brms::read_csv_as_stanfit(fit_cmd$output_files())
 
         # Rstan branch: simple
       } else {
@@ -306,65 +303,6 @@ get_befa_inits <- function(model_type, lambda_prior, stan_data, n_chains) {
   })
 }
 
-#' Repair CmdStan Parameter Names in Stanfit Objects (Internal)
-#'
-#' Converts CmdStan dot notation (e.g., Lambda.1.1) to standard bracket
-#' notation (Lambda[1,1]) in a stanfit object created by
-#' brms::read_csv_as_stanfit(). This ensures compatibility with
-#' rstan::extract() and posterior::subset_draws() regardless of backend.
-#'
-#' @param stanfit A stanfit object (from brms::read_csv_as_stanfit).
-#' @return The stanfit object with normalized parameter names.
-#' @keywords internal
-#' @noRd
-repair_stanfit_names <- function(stanfit) {
-  dot_to_bracket <- function(x) {
-    x <- sub("\\.", "[", x)
-    x <- gsub("\\.", ",", x)
-    x[grep("\\[", x)] <- paste0(x[grep("\\[", x)], "]")
-    x
-  }
-
-  sim <- stanfit@sim
-
-  # 1. Fix fnames_oi and sample column names (dot -> bracket notation)
-  sim$fnames_oi <- dot_to_bracket(sim$fnames_oi)
-  for (i in seq_along(sim$samples)) {
-    names(sim$samples[[i]]) <- dot_to_bracket(names(sim$samples[[i]]))
-  }
-
-  # 2. Recompute dims_oi from the corrected fnames_oi
-  #    brms::read_csv_as_stanfit may set dims_oi incorrectly (e.g., treating
-  #    matrix parameters as scalars) when CmdStan CSV uses dot notation
-  for (p in seq_along(sim$pars_oi)) {
-    par_name <- sim$pars_oi[p]
-    # Find all flat names matching this parameter (e.g., Lambda[1,1], Lambda[2,1], ...)
-    pattern <- paste0("^", par_name, "\\[")
-    matching <- grep(pattern, sim$fnames_oi, value = TRUE)
-
-    if (length(matching) > 0) {
-      # Parse indices from bracket notation to determine dimensions
-      # e.g., "Lambda[9,3]" -> max row = 9, max col = 3 -> dims = c(9, 3)
-      indices_str <- sub(paste0("^", par_name, "\\["), "", matching)
-      indices_str <- sub("\\]$", "", indices_str)
-      indices_list <- strsplit(indices_str, ",")
-
-      n_dims <- length(indices_list[[1]])
-      max_idx <- integer(n_dims)
-      for (idx in indices_list) {
-        nums <- as.integer(idx)
-        for (d in seq_len(n_dims)) {
-          max_idx[d] <- max(max_idx[d], nums[d])
-        }
-      }
-      sim$dims_oi[[p]] <- max_idx
-    }
-    # else: scalar parameter, keep dims_oi as integer(0)
-  }
-
-  stanfit@sim <- sim
-  stanfit
-}
 
 #' Strip Internal Parameters from Stan Output (Internal)
 #'
