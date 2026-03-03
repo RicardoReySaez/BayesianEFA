@@ -7,3 +7,5 @@
 ^\.gitignore$
 ^docs$
 ^pkgdown$
+^vignettes/.*\.Rmd\.orig$
+^vignettes/precompile\.R$

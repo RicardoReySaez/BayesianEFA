@@ -37,8 +37,9 @@ where \eqn{\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_M)} and
 \eqn{\boldsymbol{\epsilon}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{\Psi})}.
 
 Because the posterior distributions of the model parameters are available from
-the MCMC draws, the factor scores can be derived analytically for each iteration.
-The conditional posterior distribution of the latent factors given the observed data is:
+the MCMC draws, the factor scores can be derived analytically for each iteration
+(see, e.g., Levy & Mislevy, 2016, pp.199--200). The conditional posterior
+distribution of the latent factors given the observed data is:
 \deqn{\boldsymbol{\eta}_i \mid \mathbf{y}_i, \mathbf{\Lambda}, \mathbf{\Psi}, \boldsymbol{\nu} \sim \mathcal{N}(\boldsymbol{\mu}_{\eta \mid y}, \mathbf{\Sigma}_{\eta \mid y})}
 
 with the conditional covariance matrix and mean vector defined as:
@@ -66,8 +67,10 @@ befa_fit <- befa(
   factor_scores = FALSE,
   compute_fit_indices = FALSE,
   compute_reliability = FALSE,
-  backend = "cmdstanr",
-  seed = 8
+  backend = "rstan",
+  seed = 17,
+  chains = 4,
+  parallel_chains = 4
 )
 
 # Compute factor scores from a fitted befa object
@@ -87,21 +90,21 @@ cor(efa_fit$scores[, 3], Bayes_fsc_pmean[, 3])
 # Bivariate plot to see linear equivalence
 par(mfrow = c(1, 3))
 plot(Bayes_fsc_pmean[, 1], efa_fit$scores[, 2],
-  main = "Factor 1",
-  xlab = "Bayesian factor scores",
-  ylab = "Frequentist factor scores"
+     main = "Factor 1",
+     xlab = "Bayesian factor scores",
+     ylab = "Frequentist factor scores"
 )
 abline(a = 0, b = 1, col = "steelblue2", lwd = 2)
 plot(Bayes_fsc_pmean[, 2], efa_fit$scores[, 1],
-  main = "Factor 2",
-  xlab = "Bayesian factor scores",
-  ylab = "Frequentist factor scores"
+     main = "Factor 2",
+     xlab = "Bayesian factor scores",
+     ylab = "Frequentist factor scores"
 )
 abline(a = 0, b = 1, col = "salmon2", lwd = 2)
 plot(Bayes_fsc_pmean[, 3], efa_fit$scores[, 3],
-  main = "Factor 3",
-  xlab = "Bayesian factor scores",
-  ylab = "Frequentist factor scores"
+     main = "Factor 3",
+     xlab = "Bayesian factor scores",
+     ylab = "Frequentist factor scores"
 )
 abline(a = 0, b = 1, col = "firebrick4", lwd = 2)
 par(mfrow = c(1, 1))
@@ -118,8 +121,10 @@ befa_fit <- befa(
   factor_scores = TRUE,
   compute_fit_indices = FALSE,
   compute_reliability = FALSE,
-  backend = "cmdstanr",
-  seed = 8
+  backend = "rstan",
+  seed = 17,
+  chains = 4,
+  parallel_chains = 4
 )
 
 # Factor scores (eta) are stored inside the befa object
@@ -128,35 +133,35 @@ extract_posterior_draws(befa_fit, pars = "eta")
 # # A draws_matrix: 1000 iterations, 4 chains, and 903 variables
 #     variable
 # draw eta[1,1] eta[2,1] eta[3,1] eta[4,1] eta[5,1] eta[6,1] eta[7,1] eta[8,1]
-#   1     -1.06    1.197    0.025    0.187     0.62     1.55    -1.65  -0.9944
-#   2     -0.55    1.721    0.195    0.497     0.29     1.81    -0.87  -0.6410
-#   3     -0.59    0.714   -0.510   -0.062    -0.60     0.39    -1.30  -0.1107
-#   4     -1.48    0.863    0.333    0.737    -1.04    -0.20    -2.12  -0.0072
-#   5     -1.01    1.230   -0.462    0.506    -1.27    -0.19    -1.96  -0.2326
-#   6     -1.47    0.269    0.235    0.754    -1.43     1.15    -2.15   0.0757
-#   7     -1.75   -0.028   -0.620    1.409    -1.05     0.44    -0.93  -0.5567
-#   8     -1.00    0.750   -0.016   -0.013    -0.57    -0.26    -0.90  -0.1160
-#   9     -0.16    0.968   -1.193    1.203    -1.18    -0.61    -1.79  -1.1739
-#   10     0.70    0.740    0.662    0.361     0.32     0.49    -1.19   0.0822
+#   1    -1.215     0.55   -0.437    0.158    0.716     0.77    -1.23     0.78
+#   2     0.098    -0.43   -0.645    1.588   -0.511     1.21    -1.15    -0.66
+#   3    -1.324     0.36    0.116    0.363   -1.512     0.15    -1.73     0.14
+#   4     0.578     1.79   -0.108   -0.024    0.054     1.44    -0.61    -1.55
+#   5    -1.244     1.06   -0.393    1.662   -0.938     0.28    -0.52    -0.55
+#   6    -1.569     1.23   -0.059    0.988   -1.944     0.97    -1.29     0.53
+#   7    -1.099     0.35   -0.372    1.401    0.407     0.40    -0.50     0.55
+#   8     0.043     1.40   -0.198    0.997   -0.279     1.59    -1.15    -0.16
+#   9     0.078     0.60    0.129    0.833   -1.312     0.90    -0.41     0.31
+#   10   -0.084     0.72   -0.665    0.573   -1.653     0.99    -0.95    -0.72
 # # ... with 3990 more draws, and 895 more variables
 
 posterior_summaries(befa_fit, pars = "eta")
 
-# # A tibble: 903 x 10
+# # A tibble: 903 × 10
 #    variable    mean median    sd   mad     q5    q95  rhat ess_bulk ess_tail
 #    <chr>      <dbl>  <dbl> <dbl> <dbl>  <dbl>  <dbl> <dbl>    <dbl>    <dbl>
-#  1 eta[1,1]  -0.750 -0.750 0.633 0.635 -1.79   0.281 1.00     3978.    3997.
-#  2 eta[2,1]   0.604  0.612 0.610 0.588 -0.426  1.60  1.00     3849.    3599.
-#  3 eta[3,1]  -0.177 -0.180 0.597 0.588 -1.16   0.812 1.000    3670.    3731.
-#  4 eta[4,1]   0.714  0.717 0.585 0.594 -0.235  1.68  1.00     4190.    4058.
-#  5 eta[5,1]  -0.521 -0.524 0.607 0.608 -1.53   0.476 1.000    3842.    3813.
-#  6 eta[6,1]   0.461  0.465 0.622 0.612 -0.553  1.49  1.000    4063.    3953.
-#  7 eta[7,1]  -1.40  -1.40  0.585 0.574 -2.36  -0.452 1.000    3952.    3999.
-#  8 eta[8,1]  -0.117 -0.116 0.597 0.595 -1.09   0.869 1.00     3864.    3774.
-#  9 eta[9,1]  -0.283 -0.273 0.613 0.611 -1.31   0.696 1.000    4115.    4014.
-# 10 eta[10,1] -1.34  -1.34  0.587 0.572 -2.30  -0.359 1.00     4112.    3936.
-# # # 893 more rows
-# # # Use `print(n = ...)` to see more rows
+#  1 eta[1,1]  -0.719 -0.734 0.627 0.645 -1.73   0.317 1.00     4025.    3803.
+#  2 eta[2,1]   0.595  0.591 0.624 0.611 -0.430  1.61  1.00     4003.    3849.
+#  3 eta[3,1]  -0.161 -0.165 0.601 0.588 -1.16   0.836 1.00     3732.    4035.
+#  4 eta[4,1]   0.717  0.706 0.600 0.594 -0.264  1.72  1.00     3851.    3791.
+#  5 eta[5,1]  -0.507 -0.507 0.596 0.586 -1.47   0.497 1.000    3925.    3645.
+#  6 eta[6,1]   0.469  0.473 0.611 0.624 -0.528  1.48  1.000    3556.    3836.
+#  7 eta[7,1]  -1.40  -1.40  0.611 0.622 -2.40  -0.422 1.00     3698.    3830.
+#  8 eta[8,1]  -0.134 -0.127 0.596 0.580 -1.11   0.846 1.00     4070.    3815.
+#  9 eta[9,1]  -0.298 -0.298 0.595 0.600 -1.28   0.672 1.000    4000.    3938.
+# 10 eta[10,1] -1.35  -1.35  0.593 0.605 -2.29  -0.358 1.00     3965.    3718.
+# # 893 more rows
+# # Use `print(n = ...)` to see more rows
 
 # You can store posterior means easely because Stan always use column-major order
 Bayes_fsc <- matrix(
@@ -170,5 +175,6 @@ Bayes_fsc <- matrix(
 
 }
 \references{
-Thomson, G. H. (1951). \emph{The Factorial Analysis of Human Ability}. London University Press.
+Levy, R., & Mislevy, R. J. (2016). \emph{Bayesian psychometric modeling}.
+Chapman & Hall/CRC.
 }

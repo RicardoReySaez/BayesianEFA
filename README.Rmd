@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# BayesEFA: Bayesian Exploratory Factor Analysis <img src="man/figures/logo.png" align="right" height="160" />
+# BayesEFA: Bayesian Exploratory Factor Analysis <img src="man/figures/logo.png" align="right" height="120" />
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/RicardoReySaez/BayesEFA/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/BayesEFA/actions/workflows/R-CMD-check.yaml)
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-The **BayesEFA** package provides a simple and intuitive framework for estimating Bayesian Exploratory Factor Analysis (EFA) models via `Stan`. 
+The `BayesEFA` package provides a straightforward way to estimate Bayesian Exploratory Factor Analysis (EFA) models via `Stan`. 
 
 While the package supports both `rstan` and `cmdstanr`, the use of `cmdstanr` is highly recommended as it is the only backend that ensures compatibility with the latest version of `Stan` and typically offers faster estimation times. Please install `cmdstanr` by following the [official guide](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
 
@@ -33,6 +33,8 @@ You can install the development version of BayesEFA from [GitHub](https://github
 # install.packages("devtools")
 devtools::install_github("RicardoReySaez/BayesEFA", force = TRUE)
 ```
+
+Please be a little patient during installation! It will take several minutes to compile the underlying Stan models. Grab a coffee and don't worry if it seems to be taking a while, it's completely normal.
 
 ## Installation in macOS
 
@@ -51,6 +53,8 @@ macrtools::openmp_install()
 devtools::install_github("RicardoReySaez/BayesEFA", force = TRUE)
 ```
 
+> **Important:** GitHub Actions routinely test the package against the latest macOS environments, so keeping your system updated is the best way to avoid compilation errors. If errors persist, we highly recommend pasting the compilation output into a Large Language Model (e.g., ChatGPT, Gemini, Claude) for quick troubleshooting.
+
 ## Quick Start
 
 Here is a basic example showing how to fit a Bayesian EFA model:
@@ -62,26 +66,26 @@ library(BayesEFA)
 fit <- befa(data = HS_data, n_factors = 3)
 
 # Print a comprehensive summary of the model (inspired in psych package output)
-summary(befa_fit, cutoff = 0.1, signif_stars = TRUE)
+summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 
 # Table 1. Factor Loadings (Pattern Matrix)
 # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
 # Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
 # ———————————————————————————————————————————————————————————————————
-# Item_1      0.60*  0.31*  0.12*  0.47  0.53  1.00     4081     3307
-# Item_2      0.46*  0.13*         0.23  0.77  1.00     4127     2864
-# Item_3      0.65*         0.11*  0.44  0.56  1.00     4178     2513
-# Item_4      0.11*  0.83*         0.71  0.29  1.00     3532     3174
-# Item_5             0.86*         0.75  0.25  1.00     3802     2636
-# Item_6      0.16*  0.81*         0.68  0.32  1.00     3979     3011
-# Item_7                    0.68*  0.48  0.52  1.00     3685     2493
-# Item_8      0.17*         0.69*  0.51  0.49  1.00     3738     2597
-# Item_9      0.40*  0.16*  0.49*  0.43  0.57  1.00     4051     3253
+# Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849
+# Item_2      0.46*                0.23  0.77  1.00     4053     2741
+# Item_3      0.65*                0.44  0.56  1.00     4146     2274
+# Item_4             0.83*         0.71  0.29  1.00     4156     2607
+# Item_5             0.86*         0.75  0.25  1.00     4179     2983
+# Item_6             0.81*         0.68  0.32  1.00     4291     2817
+# Item_7                    0.68*  0.48  0.52  1.00     3343     2081
+# Item_8                    0.69*  0.52  0.48  1.00     3614     2593
+# Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757
 # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
 # Note: varimax rotation applied. Diagnostics show worst-case values
 # across factors (max Rhat, min ESS). The 3 latent factors accounted
 # for 52.2% of total variance. (*) 95% Credible Interval excludes 0.
-# Loadings with absolute values < 0.10 are hidden.
+# Loadings with absolute values < 0.30 are hidden.
 #
 # Table 2. Bayesian Fit Measures
 # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗

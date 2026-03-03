@@ -407,9 +407,10 @@ validate_backend <- function(backend) {
       # Only warn once per session to avoid spamming the user
       if (is.null(getOption("BayesEFA.cmdstanr_warned"))) {
         msg <- paste0(
-          "Backend 'cmdstanr' was requested (or default) but is not installed.\n",
+          "Backend 'cmdstanr' was requested but is not installed.\n",
           "Backend changed to 'rstan'.\n",
-          "To install CmdStanR, visit: https://mc-stan.org/cmdstanr/articles/cmdstanr.html"
+          "To install CmdStanR, visit: https://mc-stan.org/cmdstanr/articles/cmdstanr.html\n",
+          "(This warning is only shown once per R session)."
         )
         warning(msg, call. = FALSE)
         options(BayesEFA.cmdstanr_warned = TRUE)

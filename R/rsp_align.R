@@ -115,7 +115,7 @@
 #' factor analytic models. *Statistics and Computing, 32*(2), 23.
 #' <https://doi.org/10.1007/s11222-022-10084-4>
 #'
-#' Rey-Sáez, R., Vadillo, M. A., & Revuelta, J. (2026). *An Efficient
+#' Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient
 #' Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in
 #' Bayesian Exploratory Factor Analysis*. Manuscript submitted for publication.
 #' <https://osf.io/5dutv/>
@@ -130,8 +130,10 @@
 #'   factor_scores = FALSE,
 #'   compute_fit_indices = FALSE,
 #'   compute_reliability = FALSE,
-#'   backend = "cmdstanr",
-#'   seed = 8
+#'   backend = "rstan",
+#'   seed = 17,
+#'   chains = 4,
+#'   parallel_chains = 4
 #' )
 #'
 #' # Extract unrotated posterior draws

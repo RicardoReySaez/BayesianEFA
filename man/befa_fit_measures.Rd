@@ -115,8 +115,10 @@ befa_fit <- befa(
   factor_scores = FALSE,
   compute_fit_indices = FALSE,
   compute_reliability = FALSE,
-  backend = "cmdstanr",
-  seed = 8
+  backend = "rstan",
+  seed = 17,
+  chains = 4,
+  parallel_chains = 4
 )
 
 # Compute Bayesian Fit Measures from a fitted befa object
@@ -125,18 +127,18 @@ bayesian_fit_measures <- befa_fit_measures(befa_fit)
 # Posterios summaries (NAs when posterior draws have sds close to zero)
 bayesian_fit_measures$summary
 
-# # A tibble: 9 x 10
+# # A tibble: 9 × 10
 #   variable       mean   median      sd     mad       q5      q95  rhat ess_bulk ess_tail
 #   <chr>         <dbl>    <dbl>   <dbl>   <dbl>    <dbl>    <dbl> <dbl>    <dbl>    <dbl>
-# 1 Chi2        47.1     46.5    6.98    6.81     36.8     59.5     1.00    1410.    2596.
+# 1 Chi2        47.8     47.1    7.24    7.19     37.2     60.9     1.00    1276.    2504.
 # 2 Chi2_Null  919.     919.     0       0       919.     919.     NA         NA       NA
-# 3 BRMSEA       0.0543   0.0563 0.0204  0.0184    0.0159   0.0842  1.00    1418.    2596.
-# 4 BGamma       0.992    0.992  0.00498 0.00495   0.983    0.999   1.00    1418.    2596.
-# 5 Adj_BGamma   0.973    0.975  0.0163  0.0162    0.944    0.998   1.00    1418.    2596.
-# 6 BMc          0.982    0.983  0.0112  0.0111    0.962    0.999   1.00    1418.    2596.
-# 7 SRMR         0.0462   0.0454 0.00809 0.00777   0.0348   0.0609  1.00    1775.    2856.
-# 8 BCFI         0.987    0.988  0.00779 0.00771   0.973    0.999   1.00    1418.    2596.
-# 9 BTLI         0.989    1      0.0174  0         0.952    1       1.00    1587.      NA
+# 3 BRMSEA       0.0576   0.0594 0.0209  0.0195    0.0196   0.0890  1.00    1303.    2504.
+# 4 BGamma       0.991    0.992  0.00517 0.00522   0.982    0.999   1.00    1303.    2504.
+# 5 Adj_BGamma   0.970    0.972  0.0179  0.0180    0.938    0.997   1.00    1303.    2504.
+# 6 BMc          0.981    0.982  0.0116  0.0117    0.960    0.998   1.00    1303.    2504.
+# 7 SRMR         0.0465   0.0456 0.00809 0.00773   0.0349   0.0612  1.00    1836.    2978.
+# 8 BCFI         0.987    0.987  0.00810 0.00814   0.972    0.999   1.00    1303.    2504.
+# 9 BTLI         0.986    0.997  0.0208  0.00381   0.941    1       1.00    1466.      NA
 
 # Posterior draws of fit measures (transform to matrix)
 posterior::as_draws_matrix(bayesian_fit_measures$fit_draws)
@@ -144,16 +146,16 @@ posterior::as_draws_matrix(bayesian_fit_measures$fit_draws)
 # # A draws_matrix: 1000 iterations, 4 chains, and 9 variables
 #     variable
 # draw Chi2 Chi2_Null BRMSEA BGamma Adj_BGamma  BMc  SRMR BCFI
-#   1    47       919  0.057   0.99       0.97 0.98 0.041 0.99
-#   2    59       919  0.084   0.98       0.94 0.96 0.047 0.97
-#   3    52       919  0.069   0.99       0.96 0.97 0.043 0.98
-#   4    52       919  0.070   0.99       0.96 0.97 0.049 0.98
-#   5    52       919  0.069   0.99       0.96 0.97 0.042 0.98
-#   6    52       919  0.069   0.99       0.96 0.97 0.046 0.98
-#   7    47       919  0.057   0.99       0.97 0.98 0.041 0.99
-#   8    37       919  0.014   1.00       1.00 1.00 0.039 1.00
-#   9    42       919  0.041   1.00       0.99 0.99 0.041 0.99
-#   10   41       919  0.040   1.00       0.99 0.99 0.044 0.99
+#   1    39       919  0.031   1.00       0.99 1.00 0.038 1.00
+#   2    52       919  0.070   0.99       0.96 0.97 0.049 0.98
+#   3    43       919  0.048   0.99       0.98 0.99 0.041 0.99
+#   4    60       919  0.088   0.98       0.94 0.96 0.051 0.97
+#   5    50       919  0.067   0.99       0.96 0.98 0.049 0.98
+#   6    49       919  0.063   0.99       0.97 0.98 0.044 0.99
+#   7    53       919  0.074   0.99       0.96 0.97 0.048 0.98
+#   8    57       919  0.082   0.98       0.95 0.97 0.047 0.98
+#   9    60       919  0.088   0.98       0.94 0.96 0.056 0.97
+#   10   61       919  0.090   0.98       0.94 0.96 0.049 0.97
 # # ... with 3990 more draws, and 1 more variables
 
 # We can also plot the posterior distribution of fit measures
@@ -165,9 +167,9 @@ bayesian_fit_measures$loo_object
 # Computed from 4000 by 301 log-likelihood matrix.
 #
 #          Estimate   SE
-# elpd_loo  -3416.3 42.5
-# p_loo        25.0  1.8
-# looic      6832.6 85.0
+# elpd_loo  -3416.9 42.5
+# p_loo        25.6  1.8
+# looic      6833.9 85.0
 # ------
 # MCSE of elpd_loo is 0.1.
 # MCSE and ESS estimates assume independent draws (r_eff=1).
@@ -186,16 +188,18 @@ befa_fit <- befa(
   data = HS_data,
   n_factors = 3,
   factor_scores = FALSE,
-  compute_fit_indices = FALSE,
-  compute_reliability = TRUE,
-  backend = "cmdstanr",
-  seed = 8
+  compute_fit_indices = TRUE,
+  compute_reliability = FALSE,
+  backend = "rstan",
+  seed = 17,
+  chains = 4,
+  parallel_chains = 4
 )
 
 # befa_fit_measures output is inside the "fit_indices" object
 # befa_fit$fit_indices
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 }
 
 }
