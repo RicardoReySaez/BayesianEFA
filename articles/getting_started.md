@@ -47,20 +47,20 @@ library(BayesEFA)
 
 # Fit Bayesian EFA model
 befa_fit <- befa(
-  data = HS_data,                  # Data
-  n_factors = 3,                   # Nº of latent factors
-  model = "cor",                   # Model the correlation matrix
-  lambda_prior = "unit_vector",    # Unit-vector prior (Rey-Sáez et al., 2025)
-  rotate = "varimax",              # Automatic Varimax + E-RSP Alignment
-  backend = "rstan",               # Estimation backend, also "cmdstanr"
-  factor_scores = TRUE,            # Compute Bayesian factor scores
-  compute_fit_indices = TRUE,      # Compute Bayesian SEM fit indices
-  compute_reliability = TRUE,      # Compute reliability indices
-  iter_sampling = 1000,            # Sampling iterations
-  iter_warmup = 1000,              # Warmup iterations
-  chains = 4,                      # 4 MCMC chains
-  parallel_chains = 4,             # 4 parallel chains
-  seed = 17                        # seed for reproducible results
+  data = HS_data,                     # Data
+  n_factors = 3,                      # Nº of latent factors
+  model = "cor",                      # Model the correlation matrix
+  lambda_prior = "unit_vector",       # Unit-vector prior (Rey-Sáez et al., 2025)
+  rotate = "varimax",                 # Automatic Varimax + E-RSP Alignment
+  backend = "rstan",                  # Estimation backend, also "cmdstanr"
+  factor_scores = TRUE,               # Compute Bayesian factor scores
+  compute_fit_indices = TRUE,         # Compute Bayesian SEM fit indices
+  compute_reliability = TRUE,         # Compute reliability indices
+  iter_sampling = 1000,               # Sampling iterations
+  iter_warmup = 1000,                 # Warmup iterations
+  chains = 4,                         # 4 MCMC chains
+  parallel_chains = 1,                # no parallel chains
+  seed = 17                           # seed for reproducible results
 )
 ```
 
@@ -87,15 +87,15 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
 #> ———————————————————————————————————————————————————————————————————
-#> Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849
-#> Item_2      0.46*                0.23  0.77  1.00     4053     2741
-#> Item_3      0.65*                0.44  0.56  1.00     4146     2274
-#> Item_4             0.83*         0.71  0.29  1.00     4156     2607
-#> Item_5             0.86*         0.75  0.25  1.00     4179     2983
-#> Item_6             0.81*         0.68  0.32  1.00     4291     2817
-#> Item_7                    0.68*  0.48  0.52  1.00     3343     2081
-#> Item_8                    0.69*  0.52  0.48  1.00     3614     2593
-#> Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757
+#> Item_1      0.31*  0.60*         0.47  0.53  1.00     4337     2901
+#> Item_2             0.46*         0.23  0.77  1.00     3848     2652
+#> Item_3             0.65*         0.44  0.56  1.00     3922     2761
+#> Item_4      0.83*                0.71  0.29  1.00     3942     3048
+#> Item_5      0.86*                0.75  0.25  1.00     4004     2826
+#> Item_6      0.81*                0.68  0.32  1.00     3971     2992
+#> Item_7                    0.68*  0.48  0.52  1.00     3423     2328
+#> Item_8                    0.69*  0.52  0.48  1.00     3061     2170
+#> Item_9             0.40*  0.49*  0.43  0.57  1.00     3646     3020
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Note: varimax rotation applied. Diagnostics show worst-case values
 #> across factors (max Rhat, min ESS). The 3 latent factors accounted
@@ -106,8 +106,8 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Index         Estimate     SD    CI_Low   CI_High
 #> —————————————————————————————————————————————————
-#> Chi2             47.75   7.24     35.81     63.71
-#> Chi2_ppp          0.12                           
+#> Chi2             47.44   7.05     35.60     63.66
+#> Chi2_ppp          0.11                           
 #> Chi2_Null       918.85   0.00    918.85    918.85
 #> BRMSEA            0.06   0.02      0.00      0.09
 #> BGamma            0.99   0.01      0.98      1.00
@@ -116,9 +116,9 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> SRMR              0.05   0.01      0.03      0.06
 #> BCFI              0.99   0.01      0.97      1.00
 #> BTLI              0.99   0.02      0.93      1.00
-#> ELPD          -3416.93  42.49  -3500.21  -3333.64
-#> LOOIC          6833.85  84.98   6667.29   7000.42
-#> p_loo            25.58   1.82     22.01     29.14
+#> ELPD          -3416.62  42.50  -3499.91  -3333.32
+#> LOOIC          6833.23  85.00   6666.64   6999.82
+#> p_loo            25.29   1.78     21.81     28.77
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Note: Intervals are 95% Credible Intervals. PPP:
 #> Posterior Predictive p-value (Ideal > .05).
@@ -128,8 +128,8 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Factor    Estimate    SD  CI_Low  CI_High
 #> —————————————————————————————————————————
-#> F1            0.60  0.04    0.52     0.67
-#> F2            0.73  0.02    0.69     0.76
+#> F1            0.73  0.02    0.69     0.76
+#> F2            0.60  0.04    0.52     0.67
 #> F3            0.55  0.04    0.45     0.62
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Full Scale Omega Total: 0.84 [0.82,
@@ -164,28 +164,24 @@ hist(draws[, "Lambda[1,1]"],
 )
 ```
 
-![plot of chunk
-unnamed-chunk-2](figures/getting_started-unnamed-chunk-2-1.png)
-
-plot of chunk unnamed-chunk-2
+![](getting_started_files/figure-html/unnamed-chunk-2-1.png)
 
 ``` r
 
 # 2. Get automated summaries and diagnostics
 posterior_summaries(befa_fit, pars = "h2")
 #> # A tibble: 9 × 10
-#>   variable  mean median     sd    mad    q5   q95  rhat ess_bulk
-#>   <chr>    <dbl>  <dbl>  <dbl>  <dbl> <dbl> <dbl> <dbl>    <dbl>
-#> 1 h2[1]    0.476  0.474 0.0645 0.0622 0.370 0.584 1.00     4808.
-#> 2 h2[2]    0.240  0.237 0.0569 0.0568 0.148 0.338 1.00     4910.
-#> 3 h2[3]    0.447  0.442 0.0791 0.0770 0.325 0.582 1.00     4352.
-#> 4 h2[4]    0.715  0.717 0.0364 0.0356 0.654 0.774 1.00     5036.
-#> 5 h2[5]    0.751  0.752 0.0386 0.0384 0.686 0.812 1.00     5169.
-#> 6 h2[6]    0.687  0.688 0.0358 0.0360 0.626 0.743 1.00     4945.
-#> 7 h2[7]    0.486  0.479 0.103  0.0990 0.332 0.669 1.00     3504.
-#> 8 h2[8]    0.527  0.523 0.0873 0.0846 0.390 0.674 1.00     3800.
-#> 9 h2[9]    0.442  0.441 0.0560 0.0549 0.350 0.533 1.000    4101.
-#> # ℹ 1 more variable: ess_tail <dbl>
+#>   variable  mean median     sd    mad    q5   q95  rhat ess_bulk ess_tail
+#>   <chr>    <dbl>  <dbl>  <dbl>  <dbl> <dbl> <dbl> <dbl>    <dbl>    <dbl>
+#> 1 h2[1]    0.478  0.477 0.0632 0.0639 0.376 0.580  1.00    4911.    2857.
+#> 2 h2[2]    0.240  0.238 0.0585 0.0580 0.147 0.339  1.00    5304.    2533.
+#> 3 h2[3]    0.445  0.443 0.0781 0.0763 0.323 0.576  1.00    5165.    2858.
+#> 4 h2[4]    0.715  0.717 0.0370 0.0375 0.654 0.775  1.00    4903.    2884.
+#> 5 h2[5]    0.751  0.752 0.0388 0.0381 0.686 0.813  1.00    4882.    2845.
+#> 6 h2[6]    0.687  0.689 0.0360 0.0365 0.627 0.743  1.00    5523.    2712.
+#> 7 h2[7]    0.488  0.482 0.103  0.0987 0.333 0.661  1.00    3448.    2303.
+#> 8 h2[8]    0.527  0.520 0.0886 0.0851 0.394 0.680  1.00    3083.    2138.
+#> 9 h2[9]    0.441  0.441 0.0577 0.0572 0.344 0.534  1.00    5326.    2556.
 ```
 
 ## References

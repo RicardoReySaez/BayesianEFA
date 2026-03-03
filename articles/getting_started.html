@@ -143,20 +143,20 @@ post-processing in a single step:</p>
 <span></span>
 <span><span class="co"># Fit Bayesian EFA model</span></span>
 <span><span class="va">befa_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/befa.html">befa</a></span><span class="op">(</span></span>
-<span>  data <span class="op">=</span> <span class="va">HS_data</span>,                  <span class="co"># Data</span></span>
-<span>  n_factors <span class="op">=</span> <span class="fl">3</span>,                   <span class="co"># Nº of latent factors</span></span>
-<span>  model <span class="op">=</span> <span class="st">"cor"</span>,                   <span class="co"># Model the correlation matrix</span></span>
-<span>  lambda_prior <span class="op">=</span> <span class="st">"unit_vector"</span>,    <span class="co"># Unit-vector prior (Rey-Sáez et al., 2025)</span></span>
-<span>  rotate <span class="op">=</span> <span class="st">"varimax"</span>,              <span class="co"># Automatic Varimax + E-RSP Alignment</span></span>
-<span>  backend <span class="op">=</span> <span class="st">"rstan"</span>,               <span class="co"># Estimation backend, also "cmdstanr"</span></span>
-<span>  factor_scores <span class="op">=</span> <span class="cn">TRUE</span>,            <span class="co"># Compute Bayesian factor scores</span></span>
-<span>  compute_fit_indices <span class="op">=</span> <span class="cn">TRUE</span>,      <span class="co"># Compute Bayesian SEM fit indices</span></span>
-<span>  compute_reliability <span class="op">=</span> <span class="cn">TRUE</span>,      <span class="co"># Compute reliability indices</span></span>
-<span>  iter_sampling <span class="op">=</span> <span class="fl">1000</span>,            <span class="co"># Sampling iterations</span></span>
-<span>  iter_warmup <span class="op">=</span> <span class="fl">1000</span>,              <span class="co"># Warmup iterations</span></span>
-<span>  chains <span class="op">=</span> <span class="fl">4</span>,                      <span class="co"># 4 MCMC chains</span></span>
-<span>  parallel_chains <span class="op">=</span> <span class="fl">4</span>,             <span class="co"># 4 parallel chains</span></span>
-<span>  seed <span class="op">=</span> <span class="fl">17</span>                        <span class="co"># seed for reproducible results</span></span>
+<span>  data <span class="op">=</span> <span class="va">HS_data</span>,                     <span class="co"># Data</span></span>
+<span>  n_factors <span class="op">=</span> <span class="fl">3</span>,                      <span class="co"># Nº of latent factors</span></span>
+<span>  model <span class="op">=</span> <span class="st">"cor"</span>,                      <span class="co"># Model the correlation matrix</span></span>
+<span>  lambda_prior <span class="op">=</span> <span class="st">"unit_vector"</span>,       <span class="co"># Unit-vector prior (Rey-Sáez et al., 2025)</span></span>
+<span>  rotate <span class="op">=</span> <span class="st">"varimax"</span>,                 <span class="co"># Automatic Varimax + E-RSP Alignment</span></span>
+<span>  backend <span class="op">=</span> <span class="st">"rstan"</span>,                  <span class="co"># Estimation backend, also "cmdstanr"</span></span>
+<span>  factor_scores <span class="op">=</span> <span class="cn">TRUE</span>,               <span class="co"># Compute Bayesian factor scores</span></span>
+<span>  compute_fit_indices <span class="op">=</span> <span class="cn">TRUE</span>,         <span class="co"># Compute Bayesian SEM fit indices</span></span>
+<span>  compute_reliability <span class="op">=</span> <span class="cn">TRUE</span>,         <span class="co"># Compute reliability indices</span></span>
+<span>  iter_sampling <span class="op">=</span> <span class="fl">1000</span>,               <span class="co"># Sampling iterations</span></span>
+<span>  iter_warmup <span class="op">=</span> <span class="fl">1000</span>,                 <span class="co"># Warmup iterations</span></span>
+<span>  chains <span class="op">=</span> <span class="fl">4</span>,                         <span class="co"># 4 MCMC chains</span></span>
+<span>  parallel_chains <span class="op">=</span> <span class="fl">1</span>,                <span class="co"># no parallel chains</span></span>
+<span>  seed <span class="op">=</span> <span class="fl">17</span>                           <span class="co"># seed for reproducible results</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The <code>befa_fit</code> object contains a standard
 <code>stanfit</code> object (from <code>rstan</code>). This ensures full
@@ -185,15 +185,15 @@ loadings whose 95% Credible Interval excludes zero.</li>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co">#&gt; Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail</span></span>
 <span><span class="co">#&gt; ———————————————————————————————————————————————————————————————————</span></span>
-<span><span class="co">#&gt; Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849</span></span>
-<span><span class="co">#&gt; Item_2      0.46*                0.23  0.77  1.00     4053     2741</span></span>
-<span><span class="co">#&gt; Item_3      0.65*                0.44  0.56  1.00     4146     2274</span></span>
-<span><span class="co">#&gt; Item_4             0.83*         0.71  0.29  1.00     4156     2607</span></span>
-<span><span class="co">#&gt; Item_5             0.86*         0.75  0.25  1.00     4179     2983</span></span>
-<span><span class="co">#&gt; Item_6             0.81*         0.68  0.32  1.00     4291     2817</span></span>
-<span><span class="co">#&gt; Item_7                    0.68*  0.48  0.52  1.00     3343     2081</span></span>
-<span><span class="co">#&gt; Item_8                    0.69*  0.52  0.48  1.00     3614     2593</span></span>
-<span><span class="co">#&gt; Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757</span></span>
+<span><span class="co">#&gt; Item_1      0.31*  0.60*         0.47  0.53  1.00     4337     2901</span></span>
+<span><span class="co">#&gt; Item_2             0.46*         0.23  0.77  1.00     3848     2652</span></span>
+<span><span class="co">#&gt; Item_3             0.65*         0.44  0.56  1.00     3922     2761</span></span>
+<span><span class="co">#&gt; Item_4      0.83*                0.71  0.29  1.00     3942     3048</span></span>
+<span><span class="co">#&gt; Item_5      0.86*                0.75  0.25  1.00     4004     2826</span></span>
+<span><span class="co">#&gt; Item_6      0.81*                0.68  0.32  1.00     3971     2992</span></span>
+<span><span class="co">#&gt; Item_7                    0.68*  0.48  0.52  1.00     3423     2328</span></span>
+<span><span class="co">#&gt; Item_8                    0.69*  0.52  0.48  1.00     3061     2170</span></span>
+<span><span class="co">#&gt; Item_9             0.40*  0.49*  0.43  0.57  1.00     3646     3020</span></span>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co">#&gt; Note: varimax rotation applied. Diagnostics show worst-case values</span></span>
 <span><span class="co">#&gt; across factors (max Rhat, min ESS). The 3 latent factors accounted</span></span>
@@ -204,8 +204,8 @@ loadings whose 95% Credible Interval excludes zero.</li>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co">#&gt; Index         Estimate     SD    CI_Low   CI_High</span></span>
 <span><span class="co">#&gt; —————————————————————————————————————————————————</span></span>
-<span><span class="co">#&gt; Chi2             47.75   7.24     35.81     63.71</span></span>
-<span><span class="co">#&gt; Chi2_ppp          0.12                           </span></span>
+<span><span class="co">#&gt; Chi2             47.44   7.05     35.60     63.66</span></span>
+<span><span class="co">#&gt; Chi2_ppp          0.11                           </span></span>
 <span><span class="co">#&gt; Chi2_Null       918.85   0.00    918.85    918.85</span></span>
 <span><span class="co">#&gt; BRMSEA            0.06   0.02      0.00      0.09</span></span>
 <span><span class="co">#&gt; BGamma            0.99   0.01      0.98      1.00</span></span>
@@ -214,9 +214,9 @@ loadings whose 95% Credible Interval excludes zero.</li>
 <span><span class="co">#&gt; SRMR              0.05   0.01      0.03      0.06</span></span>
 <span><span class="co">#&gt; BCFI              0.99   0.01      0.97      1.00</span></span>
 <span><span class="co">#&gt; BTLI              0.99   0.02      0.93      1.00</span></span>
-<span><span class="co">#&gt; ELPD          -3416.93  42.49  -3500.21  -3333.64</span></span>
-<span><span class="co">#&gt; LOOIC          6833.85  84.98   6667.29   7000.42</span></span>
-<span><span class="co">#&gt; p_loo            25.58   1.82     22.01     29.14</span></span>
+<span><span class="co">#&gt; ELPD          -3416.62  42.50  -3499.91  -3333.32</span></span>
+<span><span class="co">#&gt; LOOIC          6833.23  85.00   6666.64   6999.82</span></span>
+<span><span class="co">#&gt; p_loo            25.29   1.78     21.81     28.77</span></span>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co">#&gt; Note: Intervals are 95% Credible Intervals. PPP:</span></span>
 <span><span class="co">#&gt; Posterior Predictive p-value (Ideal &gt; .05).</span></span>
@@ -226,8 +226,8 @@ loadings whose 95% Credible Interval excludes zero.</li>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co">#&gt; Factor    Estimate    SD  CI_Low  CI_High</span></span>
 <span><span class="co">#&gt; —————————————————————————————————————————</span></span>
-<span><span class="co">#&gt; F1            0.60  0.04    0.52     0.67</span></span>
-<span><span class="co">#&gt; F2            0.73  0.02    0.69     0.76</span></span>
+<span><span class="co">#&gt; F1            0.73  0.02    0.69     0.76</span></span>
+<span><span class="co">#&gt; F2            0.60  0.04    0.52     0.67</span></span>
 <span><span class="co">#&gt; F3            0.55  0.04    0.45     0.62</span></span>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co">#&gt; Full Scale Omega Total: 0.84 [0.82,</span></span>
@@ -262,26 +262,23 @@ Size).</li>
 <span>  main <span class="op">=</span> <span class="st">"Posterior of Lambda[1,1]"</span>,</span>
 <span>  xlab <span class="op">=</span> <span class="st">"Value"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="figures/getting_started-unnamed-chunk-2-1.png" alt="plot of chunk unnamed-chunk-2"><div class="figcaption">plot of chunk unnamed-chunk-2</div>
-</div>
+<p><img src="getting_started_files/figure-html/unnamed-chunk-2-1.png" class="r-plt" alt="" width="672"></p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span></span>
 <span><span class="co"># 2. Get automated summaries and diagnostics</span></span>
 <span><span class="fu"><a href="../reference/posterior_summaries.html">posterior_summaries</a></span><span class="op">(</span><span class="va">befa_fit</span>, pars <span class="op">=</span> <span class="st">"h2"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # A tibble: 9 × 10</span></span>
-<span><span class="co">#&gt;   variable  mean median     sd    mad    q5   q95  rhat ess_bulk</span></span>
-<span><span class="co">#&gt;   &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt; 1 h2[1]    0.476  0.474 0.0645 0.0622 0.370 0.584 1.00     4808.</span></span>
-<span><span class="co">#&gt; 2 h2[2]    0.240  0.237 0.0569 0.0568 0.148 0.338 1.00     4910.</span></span>
-<span><span class="co">#&gt; 3 h2[3]    0.447  0.442 0.0791 0.0770 0.325 0.582 1.00     4352.</span></span>
-<span><span class="co">#&gt; 4 h2[4]    0.715  0.717 0.0364 0.0356 0.654 0.774 1.00     5036.</span></span>
-<span><span class="co">#&gt; 5 h2[5]    0.751  0.752 0.0386 0.0384 0.686 0.812 1.00     5169.</span></span>
-<span><span class="co">#&gt; 6 h2[6]    0.687  0.688 0.0358 0.0360 0.626 0.743 1.00     4945.</span></span>
-<span><span class="co">#&gt; 7 h2[7]    0.486  0.479 0.103  0.0990 0.332 0.669 1.00     3504.</span></span>
-<span><span class="co">#&gt; 8 h2[8]    0.527  0.523 0.0873 0.0846 0.390 0.674 1.00     3800.</span></span>
-<span><span class="co">#&gt; 9 h2[9]    0.442  0.441 0.0560 0.0549 0.350 0.533 1.000    4101.</span></span>
-<span><span class="co">#&gt; # ℹ 1 more variable: ess_tail &lt;dbl&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 9 × 10</span></span></span>
+<span><span class="co">#&gt;   variable  mean median     sd    mad    q5   q95  rhat ess_bulk ess_tail</span></span>
+<span><span class="co">#&gt;   <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">1</span> h2[1]    0.478  0.477 0.063<span style="text-decoration: underline;">2</span> 0.063<span style="text-decoration: underline;">9</span> 0.376 0.580  1.00    <span style="text-decoration: underline;">4</span>911.    <span style="text-decoration: underline;">2</span>857.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">2</span> h2[2]    0.240  0.238 0.058<span style="text-decoration: underline;">5</span> 0.058<span style="text-decoration: underline;">0</span> 0.147 0.339  1.00    <span style="text-decoration: underline;">5</span>304.    <span style="text-decoration: underline;">2</span>533.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">3</span> h2[3]    0.445  0.443 0.078<span style="text-decoration: underline;">1</span> 0.076<span style="text-decoration: underline;">3</span> 0.323 0.576  1.00    <span style="text-decoration: underline;">5</span>165.    <span style="text-decoration: underline;">2</span>858.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">4</span> h2[4]    0.715  0.717 0.037<span style="text-decoration: underline;">0</span> 0.037<span style="text-decoration: underline;">5</span> 0.654 0.775  1.00    <span style="text-decoration: underline;">4</span>903.    <span style="text-decoration: underline;">2</span>884.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">5</span> h2[5]    0.751  0.752 0.038<span style="text-decoration: underline;">8</span> 0.038<span style="text-decoration: underline;">1</span> 0.686 0.813  1.00    <span style="text-decoration: underline;">4</span>882.    <span style="text-decoration: underline;">2</span>845.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">6</span> h2[6]    0.687  0.689 0.036<span style="text-decoration: underline;">0</span> 0.036<span style="text-decoration: underline;">5</span> 0.627 0.743  1.00    <span style="text-decoration: underline;">5</span>523.    <span style="text-decoration: underline;">2</span>712.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">7</span> h2[7]    0.488  0.482 0.103  0.098<span style="text-decoration: underline;">7</span> 0.333 0.661  1.00    <span style="text-decoration: underline;">3</span>448.    <span style="text-decoration: underline;">2</span>303.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">8</span> h2[8]    0.527  0.520 0.088<span style="text-decoration: underline;">6</span> 0.085<span style="text-decoration: underline;">1</span> 0.394 0.680  1.00    <span style="text-decoration: underline;">3</span>083.    <span style="text-decoration: underline;">2</span>138.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">9</span> h2[9]    0.441  0.441 0.057<span style="text-decoration: underline;">7</span> 0.057<span style="text-decoration: underline;">2</span> 0.344 0.534  1.00    <span style="text-decoration: underline;">5</span>326.    <span style="text-decoration: underline;">2</span>556.</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a>

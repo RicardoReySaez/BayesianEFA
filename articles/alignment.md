@@ -57,9 +57,9 @@ fit_unaligned <- befa(
   seed = 17,
   refresh = 0,
   show_message = FALSE,
-  show_exceptions = FALSE, 
-  chains = 4, 
-  parallel_chains = 4
+  show_exceptions = FALSE,
+  chains = 4,
+  parallel_chains = 1
 )
 #> 
 #> Bayesian Exploratory Factor Analysis (BEFA)
@@ -69,9 +69,6 @@ fit_unaligned <- befa(
 #>    Engine: RStan
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
 #>    Sampling posterior draws...
-#> Warning: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.
-#> Running the chains for more iterations may help. See
-#> https://mc-stan.org/misc/warnings.html#bulk-ess
 #> Skipping alignment (rotate = 'none')...
 #> Bayesian Estimation Process Ended!
 
@@ -101,21 +98,20 @@ parameter space, generating several obvious anomalies in the summaries:
 ``` r
 posterior_summaries(fit_unaligned, pars = "Lambda")
 #> # A tibble: 12 × 10
-#>    variable         mean   median    sd   mad     q5   q95  rhat
-#>    <chr>           <dbl>    <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>
-#>  1 Lambda[1,1]  0.00176  -0.00178 0.472 0.697 -0.663 0.667  1.00
-#>  2 Lambda[2,1] -0.000218 -0.0176  0.557 0.825 -0.785 0.783  1.00
-#>  3 Lambda[3,1] -0.000330 -0.0181  0.509 0.748 -0.717 0.723  1.00
-#>  4 Lambda[4,1] -0.0216   -0.0451  0.491 0.719 -0.686 0.682  1.01
-#>  5 Lambda[5,1] -0.0232   -0.0481  0.490 0.713 -0.689 0.681  1.01
-#>  6 Lambda[6,1] -0.0205   -0.0512  0.493 0.719 -0.685 0.685  1.01
-#>  7 Lambda[1,2] -0.00482  -0.00616 0.484 0.717 -0.671 0.672  1.01
-#>  8 Lambda[2,2] -0.00710  -0.0330  0.575 0.845 -0.792 0.799  1.01
-#>  9 Lambda[3,2] -0.00730  -0.0361  0.521 0.762 -0.719 0.725  1.01
-#> 10 Lambda[4,2] -0.0137   -0.0279  0.479 0.706 -0.684 0.675  1.00
-#> 11 Lambda[5,2] -0.0128   -0.0177  0.479 0.709 -0.683 0.670  1.00
-#> 12 Lambda[6,2] -0.0132   -0.0232  0.479 0.707 -0.684 0.670  1.00
-#> # ℹ 2 more variables: ess_bulk <dbl>, ess_tail <dbl>
+#>    variable       mean   median    sd   mad     q5   q95  rhat ess_bulk ess_tail
+#>    <chr>         <dbl>    <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>    <dbl>    <dbl>
+#>  1 Lambda[1,…  5.97e-3  0.0219  0.480 0.710 -0.666 0.674  1.00     483.    1583.
+#>  2 Lambda[2,…  2.98e-4  0.0140  0.570 0.846 -0.790 0.792  1.00     491.    1400.
+#>  3 Lambda[3,… -8.31e-4  0.0114  0.515 0.767 -0.717 0.720  1.00     478.    1441.
+#>  4 Lambda[4,… -5.40e-2 -0.126   0.483 0.667 -0.689 0.679  1.01     487.    1169.
+#>  5 Lambda[5,… -5.41e-2 -0.121   0.479 0.659 -0.689 0.676  1.01     515.    1781.
+#>  6 Lambda[6,… -5.43e-2 -0.126   0.483 0.661 -0.692 0.678  1.01     507.    1696.
+#>  7 Lambda[1,…  3.64e-3  0.00348 0.476 0.695 -0.665 0.676  1.01     508.    1603.
+#>  8 Lambda[2,…  1.47e-3  0.0151  0.563 0.823 -0.789 0.788  1.01     489.    1415.
+#>  9 Lambda[3,…  7.78e-4  0.0173  0.512 0.749 -0.721 0.719  1.01     491.    1588.
+#> 10 Lambda[4,… -4.39e-3 -0.0155  0.488 0.723 -0.684 0.682  1.00     494.    1470.
+#> 11 Lambda[5,… -3.58e-3 -0.0151  0.485 0.712 -0.680 0.679  1.00     500.    1470.
+#> 12 Lambda[6,… -2.59e-3 -0.0163  0.489 0.717 -0.687 0.687  1.00     489.    1273.
 ```
 
 A visual inspection of the posterior draws for a specific parameter
@@ -132,10 +128,7 @@ hist(draws_unaligned[, "Lambda[1,2]"],
 )
 ```
 
-![plot of chunk
-unnamed-chunk-6](figures/alignment-unnamed-chunk-6-1.png)
-
-plot of chunk unnamed-chunk-6
+![](alignment_files/figure-html/unnamed-chunk-6-1.png)
 
 Instead of a clean, unimodal distribution centered around the true value
 of \\0.7\\ (their true simulated value), we have a bimodal shape caused
@@ -202,17 +195,17 @@ of our extracted draws. For an \\6 \times 2\\ loading matrix:
 # 1. Draws in column-major order (Stan's default)
 # Notice how it fills Factor 1 completely before moving to Factor 2
 colnames(draws_unaligned)
-#>  [1] "Lambda[1,1]" "Lambda[2,1]" "Lambda[3,1]" "Lambda[4,1]"
-#>  [5] "Lambda[5,1]" "Lambda[6,1]" "Lambda[1,2]" "Lambda[2,2]"
-#>  [9] "Lambda[3,2]" "Lambda[4,2]" "Lambda[5,2]" "Lambda[6,2]"
+#>  [1] "Lambda[1,1]" "Lambda[2,1]" "Lambda[3,1]" "Lambda[4,1]" "Lambda[5,1]"
+#>  [6] "Lambda[6,1]" "Lambda[1,2]" "Lambda[2,2]" "Lambda[3,2]" "Lambda[4,2]"
+#> [11] "Lambda[5,2]" "Lambda[6,2]"
 
 # 2. Draws in row-major order
 # We can simulate this order by transposing the index matrix
 rw_ord <- rep(1:6, each = 2) + rep(c(0, 6), times = 2)
 colnames(draws_unaligned)[rw_ord]
-#>  [1] "Lambda[1,1]" "Lambda[1,2]" "Lambda[2,1]" "Lambda[2,2]"
-#>  [5] "Lambda[3,1]" "Lambda[3,2]" "Lambda[4,1]" "Lambda[4,2]"
-#>  [9] "Lambda[5,1]" "Lambda[5,2]" "Lambda[6,1]" "Lambda[6,2]"
+#>  [1] "Lambda[1,1]" "Lambda[1,2]" "Lambda[2,1]" "Lambda[2,2]" "Lambda[3,1]"
+#>  [6] "Lambda[3,2]" "Lambda[4,1]" "Lambda[4,2]" "Lambda[5,1]" "Lambda[5,2]"
+#> [11] "Lambda[6,1]" "Lambda[6,2]"
 ```
 
 ### Resolving the Latent Structure
@@ -255,21 +248,21 @@ factor structure emerges with high precision and clarity:
 # Now, aligned posterior summaries are interpretable
 aligned_res$summary
 #> # A tibble: 12 × 10
-#>    variable       mean   median     sd    mad      q5     q95  rhat
-#>    <chr>         <dbl>    <dbl>  <dbl>  <dbl>   <dbl>   <dbl> <dbl>
-#>  1 Lambda[1,… -0.0972  -0.0974  0.0497 0.0503 -0.180  -0.0182 1.00 
-#>  2 Lambda[2,… -0.0127  -0.0119  0.0405 0.0414 -0.0784  0.0543 1.00 
-#>  3 Lambda[3,…  0.00896  0.00993 0.0456 0.0455 -0.0655  0.0831 1.00 
-#>  4 Lambda[4,…  0.681    0.683   0.0476 0.0467  0.600   0.757  1.00 
-#>  5 Lambda[5,…  0.682    0.683   0.0477 0.0448  0.605   0.760  1.00 
-#>  6 Lambda[6,…  0.684    0.685   0.0473 0.0460  0.604   0.759  1.00 
-#>  7 Lambda[1,…  0.666    0.667   0.0408 0.0398  0.596   0.730  1.00 
-#>  8 Lambda[2,…  0.798    0.800   0.0393 0.0394  0.730   0.861  1.00 
-#>  9 Lambda[3,…  0.726    0.726   0.0405 0.0381  0.658   0.791  1.00 
-#> 10 Lambda[4,… -0.0490  -0.0485  0.0481 0.0492 -0.127   0.0295 1.000
-#> 11 Lambda[5,… -0.00218 -0.00234 0.0482 0.0464 -0.0814  0.0796 1.00 
-#> 12 Lambda[6,… -0.0341  -0.0350  0.0476 0.0458 -0.113   0.0458 1.00 
-#> # ℹ 2 more variables: ess_bulk <dbl>, ess_tail <dbl>
+#>    variable        mean   median     sd    mad      q5     q95  rhat ess_bulk
+#>    <chr>          <dbl>    <dbl>  <dbl>  <dbl>   <dbl>   <dbl> <dbl>    <dbl>
+#>  1 Lambda[1,1] -0.0972  -0.0964  0.0516 0.0515 -0.181  -0.0151 1.000    3911.
+#>  2 Lambda[2,1] -0.0145  -0.0144  0.0433 0.0397 -0.0810  0.0543 1.00     3994.
+#>  3 Lambda[3,1]  0.00822  0.00986 0.0472 0.0448 -0.0685  0.0832 1.00     4130.
+#>  4 Lambda[4,1]  0.683    0.684   0.0472 0.0461  0.603   0.760  1.00     2589.
+#>  5 Lambda[5,1]  0.680    0.683   0.0488 0.0490  0.597   0.756  1.00     2708.
+#>  6 Lambda[6,1]  0.685    0.687   0.0461 0.0455  0.608   0.760  1.00     3033.
+#>  7 Lambda[1,2]  0.666    0.668   0.0427 0.0418  0.592   0.733  1.00     2962.
+#>  8 Lambda[2,2]  0.798    0.800   0.0405 0.0390  0.730   0.862  1.00     2756.
+#>  9 Lambda[3,2]  0.723    0.725   0.0398 0.0392  0.657   0.787  1.00     2843.
+#> 10 Lambda[4,2] -0.0491  -0.0493  0.0487 0.0483 -0.127   0.0273 1.00     3937.
+#> 11 Lambda[5,2] -0.00346 -0.00336 0.0495 0.0484 -0.0836  0.0772 1.00     3990.
+#> 12 Lambda[6,2] -0.0337  -0.0337  0.0482 0.0482 -0.113   0.0428 1.00     3842.
+#> # ℹ 1 more variable: ess_tail <dbl>
 ```
 
 Re-visualizing the posterior distribution for `Lambda[1,1]` after
@@ -292,10 +285,7 @@ hist(draws_aligned[, "Lambda[1,2]"],
 )
 ```
 
-![plot of chunk
-unnamed-chunk-10](figures/alignment-unnamed-chunk-10-1.png)
-
-plot of chunk unnamed-chunk-10
+![](alignment_files/figure-html/unnamed-chunk-10-1.png)
 
 ## References
 

@@ -139,9 +139,9 @@ disable the internal alignment process by setting
 <span>  seed <span class="op">=</span> <span class="fl">17</span>,</span>
 <span>  refresh <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  show_message <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  show_exceptions <span class="op">=</span> <span class="cn">FALSE</span>, </span>
-<span>  chains <span class="op">=</span> <span class="fl">4</span>, </span>
-<span>  parallel_chains <span class="op">=</span> <span class="fl">4</span></span>
+<span>  show_exceptions <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  chains <span class="op">=</span> <span class="fl">4</span>,</span>
+<span>  parallel_chains <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Bayesian Exploratory Factor Analysis (BEFA)</span></span>
@@ -151,9 +151,6 @@ disable the internal alignment process by setting
 <span><span class="co">#&gt;    Engine: RStan</span></span>
 <span><span class="co">#&gt; ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
 <span><span class="co">#&gt;    Sampling posterior draws...</span></span>
-<span><span class="co">#&gt; Warning: Bulk Effective Samples Size (ESS) is too low, indicating posterior means and medians may be unreliable.</span></span>
-<span><span class="co">#&gt; Running the chains for more iterations may help. See</span></span>
-<span><span class="co">#&gt; https://mc-stan.org/misc/warnings.html#bulk-ess</span></span>
 <span><span class="co">#&gt; Skipping alignment (rotate = 'none')...</span></span>
 <span><span class="co">#&gt; Bayesian Estimation Process Ended!</span></span>
 <span></span>
@@ -185,22 +182,21 @@ effective sample sizes, as indicated by the output warning.</li>
 </ul>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/posterior_summaries.html">posterior_summaries</a></span><span class="op">(</span><span class="va">fit_unaligned</span>, pars <span class="op">=</span> <span class="st">"Lambda"</span><span class="op">)</span></span>
-<span><span class="co">#&gt; # A tibble: 12 × 10</span></span>
-<span><span class="co">#&gt;    variable         mean   median    sd   mad     q5   q95  rhat</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;           &lt;dbl&gt;    &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 Lambda[1,1]  0.00176  -0.00178 0.472 0.697 -0.663 0.667  1.00</span></span>
-<span><span class="co">#&gt;  2 Lambda[2,1] -0.000218 -0.0176  0.557 0.825 -0.785 0.783  1.00</span></span>
-<span><span class="co">#&gt;  3 Lambda[3,1] -0.000330 -0.0181  0.509 0.748 -0.717 0.723  1.00</span></span>
-<span><span class="co">#&gt;  4 Lambda[4,1] -0.0216   -0.0451  0.491 0.719 -0.686 0.682  1.01</span></span>
-<span><span class="co">#&gt;  5 Lambda[5,1] -0.0232   -0.0481  0.490 0.713 -0.689 0.681  1.01</span></span>
-<span><span class="co">#&gt;  6 Lambda[6,1] -0.0205   -0.0512  0.493 0.719 -0.685 0.685  1.01</span></span>
-<span><span class="co">#&gt;  7 Lambda[1,2] -0.00482  -0.00616 0.484 0.717 -0.671 0.672  1.01</span></span>
-<span><span class="co">#&gt;  8 Lambda[2,2] -0.00710  -0.0330  0.575 0.845 -0.792 0.799  1.01</span></span>
-<span><span class="co">#&gt;  9 Lambda[3,2] -0.00730  -0.0361  0.521 0.762 -0.719 0.725  1.01</span></span>
-<span><span class="co">#&gt; 10 Lambda[4,2] -0.0137   -0.0279  0.479 0.706 -0.684 0.675  1.00</span></span>
-<span><span class="co">#&gt; 11 Lambda[5,2] -0.0128   -0.0177  0.479 0.709 -0.683 0.670  1.00</span></span>
-<span><span class="co">#&gt; 12 Lambda[6,2] -0.0132   -0.0232  0.479 0.707 -0.684 0.670  1.00</span></span>
-<span><span class="co">#&gt; # ℹ 2 more variables: ess_bulk &lt;dbl&gt;, ess_tail &lt;dbl&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 12 × 10</span></span></span>
+<span><span class="co">#&gt;    variable       mean   median    sd   mad     q5   q95  rhat ess_bulk ess_tail</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>         <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> Lambda[1,…  5.97<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span>  0.021<span style="text-decoration: underline;">9</span>  0.480 0.710 -<span style="color: #BB0000;">0.666</span> 0.674  1.00     483.    <span style="text-decoration: underline;">1</span>583.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> Lambda[2,…  2.98<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span>  0.014<span style="text-decoration: underline;">0</span>  0.570 0.846 -<span style="color: #BB0000;">0.790</span> 0.792  1.00     491.    <span style="text-decoration: underline;">1</span>400.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> Lambda[3,… -<span style="color: #BB0000;">8.31</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span>  0.011<span style="text-decoration: underline;">4</span>  0.515 0.767 -<span style="color: #BB0000;">0.717</span> 0.720  1.00     478.    <span style="text-decoration: underline;">1</span>441.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> Lambda[4,… -<span style="color: #BB0000;">5.40</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> -<span style="color: #BB0000;">0.126</span>   0.483 0.667 -<span style="color: #BB0000;">0.689</span> 0.679  1.01     487.    <span style="text-decoration: underline;">1</span>169.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> Lambda[5,… -<span style="color: #BB0000;">5.41</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> -<span style="color: #BB0000;">0.121</span>   0.479 0.659 -<span style="color: #BB0000;">0.689</span> 0.676  1.01     515.    <span style="text-decoration: underline;">1</span>781.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> Lambda[6,… -<span style="color: #BB0000;">5.43</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-2</span> -<span style="color: #BB0000;">0.126</span>   0.483 0.661 -<span style="color: #BB0000;">0.692</span> 0.678  1.01     507.    <span style="text-decoration: underline;">1</span>696.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> Lambda[1,…  3.64<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span>  0.003<span style="text-decoration: underline;">48</span> 0.476 0.695 -<span style="color: #BB0000;">0.665</span> 0.676  1.01     508.    <span style="text-decoration: underline;">1</span>603.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> Lambda[2,…  1.47<span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span>  0.015<span style="text-decoration: underline;">1</span>  0.563 0.823 -<span style="color: #BB0000;">0.789</span> 0.788  1.01     489.    <span style="text-decoration: underline;">1</span>415.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> Lambda[3,…  7.78<span style="color: #949494;">e</span><span style="color: #BB0000;">-4</span>  0.017<span style="text-decoration: underline;">3</span>  0.512 0.749 -<span style="color: #BB0000;">0.721</span> 0.719  1.01     491.    <span style="text-decoration: underline;">1</span>588.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> Lambda[4,… -<span style="color: #BB0000;">4.39</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> -<span style="color: #BB0000;">0.015</span><span style="color: #BB0000; text-decoration: underline;">5</span>  0.488 0.723 -<span style="color: #BB0000;">0.684</span> 0.682  1.00     494.    <span style="text-decoration: underline;">1</span>470.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> Lambda[5,… -<span style="color: #BB0000;">3.58</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> -<span style="color: #BB0000;">0.015</span><span style="color: #BB0000; text-decoration: underline;">1</span>  0.485 0.712 -<span style="color: #BB0000;">0.680</span> 0.679  1.00     500.    <span style="text-decoration: underline;">1</span>470.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">12</span> Lambda[6,… -<span style="color: #BB0000;">2.59</span><span style="color: #949494;">e</span><span style="color: #BB0000;">-3</span> -<span style="color: #BB0000;">0.016</span><span style="color: #BB0000; text-decoration: underline;">3</span>  0.489 0.717 -<span style="color: #BB0000;">0.687</span> 0.687  1.00     489.    <span style="text-decoration: underline;">1</span>273.</span></span></code></pre></div>
 <p>A visual inspection of the posterior draws for a specific parameter
 (e.g., <code>Lambda[1,2]</code>) makes the severity of this unidentified
 parameter space immediately apparent:</p>
@@ -212,9 +208,7 @@ parameter space immediately apparent:</p>
 <span>  main <span class="op">=</span> <span class="st">"Raw Posterior Distribution (Lambda[1,1])"</span>,</span>
 <span>  xlab <span class="op">=</span> <span class="st">"Sampled Value"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="figures/alignment-unnamed-chunk-6-1.png" alt="plot of chunk unnamed-chunk-6"><div class="figcaption">plot of chunk unnamed-chunk-6</div>
-</div>
+<p><img src="alignment_files/figure-html/unnamed-chunk-6-1.png" class="r-plt" alt="" width="672"></p>
 <p>Instead of a clean, unimodal distribution centered around the true
 value of <span class="math inline">\(0.7\)</span> (their true simulated
 value), we have a bimodal shape caused by the sampler traversing
@@ -296,17 +290,17 @@ names of our extracted draws. For an <span class="math inline">\(6
 <code class="sourceCode R"><span><span class="co"># 1. Draws in column-major order (Stan's default)</span></span>
 <span><span class="co"># Notice how it fills Factor 1 completely before moving to Factor 2</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">draws_unaligned</span><span class="op">)</span></span>
-<span><span class="co">#&gt;  [1] "Lambda[1,1]" "Lambda[2,1]" "Lambda[3,1]" "Lambda[4,1]"</span></span>
-<span><span class="co">#&gt;  [5] "Lambda[5,1]" "Lambda[6,1]" "Lambda[1,2]" "Lambda[2,2]"</span></span>
-<span><span class="co">#&gt;  [9] "Lambda[3,2]" "Lambda[4,2]" "Lambda[5,2]" "Lambda[6,2]"</span></span>
+<span><span class="co">#&gt;  [1] "Lambda[1,1]" "Lambda[2,1]" "Lambda[3,1]" "Lambda[4,1]" "Lambda[5,1]"</span></span>
+<span><span class="co">#&gt;  [6] "Lambda[6,1]" "Lambda[1,2]" "Lambda[2,2]" "Lambda[3,2]" "Lambda[4,2]"</span></span>
+<span><span class="co">#&gt; [11] "Lambda[5,2]" "Lambda[6,2]"</span></span>
 <span></span>
 <span><span class="co"># 2. Draws in row-major order</span></span>
 <span><span class="co"># We can simulate this order by transposing the index matrix</span></span>
 <span><span class="va">rw_ord</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">6</span>, each <span class="op">=</span> <span class="fl">2</span><span class="op">)</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">6</span><span class="op">)</span>, times <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">draws_unaligned</span><span class="op">)</span><span class="op">[</span><span class="va">rw_ord</span><span class="op">]</span></span>
-<span><span class="co">#&gt;  [1] "Lambda[1,1]" "Lambda[1,2]" "Lambda[2,1]" "Lambda[2,2]"</span></span>
-<span><span class="co">#&gt;  [5] "Lambda[3,1]" "Lambda[3,2]" "Lambda[4,1]" "Lambda[4,2]"</span></span>
-<span><span class="co">#&gt;  [9] "Lambda[5,1]" "Lambda[5,2]" "Lambda[6,1]" "Lambda[6,2]"</span></span></code></pre></div>
+<span><span class="co">#&gt;  [1] "Lambda[1,1]" "Lambda[1,2]" "Lambda[2,1]" "Lambda[2,2]" "Lambda[3,1]"</span></span>
+<span><span class="co">#&gt;  [6] "Lambda[3,2]" "Lambda[4,1]" "Lambda[4,2]" "Lambda[5,1]" "Lambda[5,2]"</span></span>
+<span><span class="co">#&gt; [11] "Lambda[6,1]" "Lambda[6,2]"</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="resolving-the-latent-structure">Resolving the Latent Structure<a class="anchor" aria-label="anchor" href="#resolving-the-latent-structure"></a>
@@ -347,22 +341,22 @@ mixing and stable chains.</li>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Now, aligned posterior summaries are interpretable</span></span>
 <span><span class="va">aligned_res</span><span class="op">$</span><span class="va">summary</span></span>
-<span><span class="co">#&gt; # A tibble: 12 × 10</span></span>
-<span><span class="co">#&gt;    variable       mean   median     sd    mad      q5     q95  rhat</span></span>
-<span><span class="co">#&gt;    &lt;chr&gt;         &lt;dbl&gt;    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt;  1 Lambda[1,… -0.0972  -0.0974  0.0497 0.0503 -0.180  -0.0182 1.00 </span></span>
-<span><span class="co">#&gt;  2 Lambda[2,… -0.0127  -0.0119  0.0405 0.0414 -0.0784  0.0543 1.00 </span></span>
-<span><span class="co">#&gt;  3 Lambda[3,…  0.00896  0.00993 0.0456 0.0455 -0.0655  0.0831 1.00 </span></span>
-<span><span class="co">#&gt;  4 Lambda[4,…  0.681    0.683   0.0476 0.0467  0.600   0.757  1.00 </span></span>
-<span><span class="co">#&gt;  5 Lambda[5,…  0.682    0.683   0.0477 0.0448  0.605   0.760  1.00 </span></span>
-<span><span class="co">#&gt;  6 Lambda[6,…  0.684    0.685   0.0473 0.0460  0.604   0.759  1.00 </span></span>
-<span><span class="co">#&gt;  7 Lambda[1,…  0.666    0.667   0.0408 0.0398  0.596   0.730  1.00 </span></span>
-<span><span class="co">#&gt;  8 Lambda[2,…  0.798    0.800   0.0393 0.0394  0.730   0.861  1.00 </span></span>
-<span><span class="co">#&gt;  9 Lambda[3,…  0.726    0.726   0.0405 0.0381  0.658   0.791  1.00 </span></span>
-<span><span class="co">#&gt; 10 Lambda[4,… -0.0490  -0.0485  0.0481 0.0492 -0.127   0.0295 1.000</span></span>
-<span><span class="co">#&gt; 11 Lambda[5,… -0.00218 -0.00234 0.0482 0.0464 -0.0814  0.0796 1.00 </span></span>
-<span><span class="co">#&gt; 12 Lambda[6,… -0.0341  -0.0350  0.0476 0.0458 -0.113   0.0458 1.00 </span></span>
-<span><span class="co">#&gt; # ℹ 2 more variables: ess_bulk &lt;dbl&gt;, ess_tail &lt;dbl&gt;</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #949494;"># A tibble: 12 × 10</span></span></span>
+<span><span class="co">#&gt;    variable        mean   median     sd    mad      q5     q95  rhat ess_bulk</span></span>
+<span><span class="co">#&gt;    <span style="color: #949494; font-style: italic;">&lt;chr&gt;</span>          <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>  <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>   <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span> <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span>    <span style="color: #949494; font-style: italic;">&lt;dbl&gt;</span></span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 1</span> Lambda[1,1] -<span style="color: #BB0000;">0.097</span><span style="color: #BB0000; text-decoration: underline;">2</span>  -<span style="color: #BB0000;">0.096</span><span style="color: #BB0000; text-decoration: underline;">4</span>  0.051<span style="text-decoration: underline;">6</span> 0.051<span style="text-decoration: underline;">5</span> -<span style="color: #BB0000;">0.181</span>  -<span style="color: #BB0000;">0.015</span><span style="color: #BB0000; text-decoration: underline;">1</span> 1.000    <span style="text-decoration: underline;">3</span>911.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 2</span> Lambda[2,1] -<span style="color: #BB0000;">0.014</span><span style="color: #BB0000; text-decoration: underline;">5</span>  -<span style="color: #BB0000;">0.014</span><span style="color: #BB0000; text-decoration: underline;">4</span>  0.043<span style="text-decoration: underline;">3</span> 0.039<span style="text-decoration: underline;">7</span> -<span style="color: #BB0000;">0.081</span><span style="color: #BB0000; text-decoration: underline;">0</span>  0.054<span style="text-decoration: underline;">3</span> 1.00     <span style="text-decoration: underline;">3</span>994.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 3</span> Lambda[3,1]  0.008<span style="text-decoration: underline;">22</span>  0.009<span style="text-decoration: underline;">86</span> 0.047<span style="text-decoration: underline;">2</span> 0.044<span style="text-decoration: underline;">8</span> -<span style="color: #BB0000;">0.068</span><span style="color: #BB0000; text-decoration: underline;">5</span>  0.083<span style="text-decoration: underline;">2</span> 1.00     <span style="text-decoration: underline;">4</span>130.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 4</span> Lambda[4,1]  0.683    0.684   0.047<span style="text-decoration: underline;">2</span> 0.046<span style="text-decoration: underline;">1</span>  0.603   0.760  1.00     <span style="text-decoration: underline;">2</span>589.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 5</span> Lambda[5,1]  0.680    0.683   0.048<span style="text-decoration: underline;">8</span> 0.049<span style="text-decoration: underline;">0</span>  0.597   0.756  1.00     <span style="text-decoration: underline;">2</span>708.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 6</span> Lambda[6,1]  0.685    0.687   0.046<span style="text-decoration: underline;">1</span> 0.045<span style="text-decoration: underline;">5</span>  0.608   0.760  1.00     <span style="text-decoration: underline;">3</span>033.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 7</span> Lambda[1,2]  0.666    0.668   0.042<span style="text-decoration: underline;">7</span> 0.041<span style="text-decoration: underline;">8</span>  0.592   0.733  1.00     <span style="text-decoration: underline;">2</span>962.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 8</span> Lambda[2,2]  0.798    0.800   0.040<span style="text-decoration: underline;">5</span> 0.039<span style="text-decoration: underline;">0</span>  0.730   0.862  1.00     <span style="text-decoration: underline;">2</span>756.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;"> 9</span> Lambda[3,2]  0.723    0.725   0.039<span style="text-decoration: underline;">8</span> 0.039<span style="text-decoration: underline;">2</span>  0.657   0.787  1.00     <span style="text-decoration: underline;">2</span>843.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">10</span> Lambda[4,2] -<span style="color: #BB0000;">0.049</span><span style="color: #BB0000; text-decoration: underline;">1</span>  -<span style="color: #BB0000;">0.049</span><span style="color: #BB0000; text-decoration: underline;">3</span>  0.048<span style="text-decoration: underline;">7</span> 0.048<span style="text-decoration: underline;">3</span> -<span style="color: #BB0000;">0.127</span>   0.027<span style="text-decoration: underline;">3</span> 1.00     <span style="text-decoration: underline;">3</span>937.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">11</span> Lambda[5,2] -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">46</span> -<span style="color: #BB0000;">0.003</span><span style="color: #BB0000; text-decoration: underline;">36</span> 0.049<span style="text-decoration: underline;">5</span> 0.048<span style="text-decoration: underline;">4</span> -<span style="color: #BB0000;">0.083</span><span style="color: #BB0000; text-decoration: underline;">6</span>  0.077<span style="text-decoration: underline;">2</span> 1.00     <span style="text-decoration: underline;">3</span>990.</span></span>
+<span><span class="co">#&gt; <span style="color: #BCBCBC;">12</span> Lambda[6,2] -<span style="color: #BB0000;">0.033</span><span style="color: #BB0000; text-decoration: underline;">7</span>  -<span style="color: #BB0000;">0.033</span><span style="color: #BB0000; text-decoration: underline;">7</span>  0.048<span style="text-decoration: underline;">2</span> 0.048<span style="text-decoration: underline;">2</span> -<span style="color: #BB0000;">0.113</span>   0.042<span style="text-decoration: underline;">8</span> 1.00     <span style="text-decoration: underline;">3</span>842.</span></span>
+<span><span class="co">#&gt; <span style="color: #949494;"># ℹ 1 more variable: ess_tail &lt;dbl&gt;</span></span></span></code></pre></div>
 <p>Re-visualizing the posterior distribution for
 <code>Lambda[1,1]</code> after alignment provides clear visual proof
 that the parameter is now identified. The formerly erratic, multimodal
@@ -381,9 +375,7 @@ eliminated.</p>
 <span>  main <span class="op">=</span> <span class="st">"Aligned Posterior Distribution (Lambda[1,1])"</span>,</span>
 <span>  xlab <span class="op">=</span> <span class="st">"Sampled Value"</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<div class="float">
-<img src="figures/alignment-unnamed-chunk-10-1.png" alt="plot of chunk unnamed-chunk-10"><div class="figcaption">plot of chunk unnamed-chunk-10</div>
-</div>
+<p><img src="alignment_files/figure-html/unnamed-chunk-10-1.png" class="r-plt" alt="" width="672"></p>
 </div>
 </div>
 <div class="section level2">
