@@ -9,16 +9,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/RicardoReySaez/BayesEFA/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/RicardoReySaez/BayesianEFA/blob/main/DESCRIPTION)
 
-Rey-Sáez R (2026). *BayesEFA: Bayesian Exploratory Factor Analysis Using
-'Stan'*. R package version 0.1.0,
-<https://ricardoreysaez.github.io/BayesEFA/>.
+Rey-Sáez R (2026). *BayesianEFA: Bayesian Exploratory Factor Analysis
+Using 'Stan'*. R package version 0.1.0,
+<https://ricardoreysaez.github.io/BayesianEFA/>.
 
     @Manual{,
-      title = {BayesEFA: Bayesian Exploratory Factor Analysis Using 'Stan'},
+      title = {BayesianEFA: Bayesian Exploratory Factor Analysis Using 'Stan'},
       author = {Ricardo Rey-Sáez},
       year = {2026},
       note = {R package version 0.1.0},
-      url = {https://ricardoreysaez.github.io/BayesEFA/},
+      url = {https://ricardoreysaez.github.io/BayesianEFA/},
     }

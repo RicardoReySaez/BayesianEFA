@@ -15,7 +15,7 @@ print(x, digits = 2, cutoff = NULL, sort = NULL, signif_stars = NULL, ...)
 - x:
 
   A `summary.befa` object from
-  [`summary.befa()`](https://ricardoreysaez.github.io/BayesEFA/reference/summary.befa.md).
+  [`summary.befa()`](https://ricardoreysaez.github.io/BayesianEFA/reference/summary.befa.md).
 
 - digits:
 

@@ -1,8 +1,8 @@
-# Getting Started with BayesEFA
+# Getting Started with BayesianEFA
 
 ## Introduction
 
-`BayesEFA` provides a robust and intuitive framework for Bayesian
+`BayesianEFA` provides a robust and intuitive framework for Bayesian
 Exploratory Factor Analysis using `Stan`.
 
 - **Unconstraint Estimation**: Fit unrestricted loading matrices without
@@ -28,22 +28,22 @@ for users who prefer the latest Stan features and faster estimation,
 `cmdstanr` can be installed by following the [official
 guide](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
 
-> Note: The `BayesEFA` model compiles only once when first using
+> Note: The `BayesianEFA` model compiles only once when first using
 > `cmdstanr.` It is permanently saved in your system’s cache and will
 > persist across R sessions and computer reboots. If you ever need to
 > force a recompile (e.g., after updating `cmdstanr`), you must manually
 > clear the cache by running:
-> `unlink(tools::R_user_dir("BayesEFA", which = "cache"), recursive = TRUE)`.
+> `unlink(tools::R_user_dir("BayesianEFA", which = "cache"), recursive = TRUE)`.
 
-## Basic example using BayesEFA
+## Basic example using BayesianEFA
 
 The following workflow fits a 3-factor model using the
-[`befa()`](https://ricardoreysaez.github.io/BayesEFA/reference/befa.md)
+[`befa()`](https://ricardoreysaez.github.io/BayesianEFA/reference/befa.md)
 function, handling estimation, rotation, and post-processing in a single
 step:
 
 ``` r
-library(BayesEFA)
+library(BayesianEFA)
 
 # Fit Bayesian EFA model
 befa_fit <- befa(
@@ -66,8 +66,8 @@ befa_fit <- befa(
 
 The `befa_fit` object contains a standard `stanfit` object (from
 `rstan`). This ensures full compatibility with the Stan ecosystem,
-allowing you to use your favorite diagnostic tools and plots—regardless
-of whether you used `cmdstanr` or `rstan` as the backend.
+allowing you to use your favorite diagnostic tools and plots –
+regardless of whether you used `cmdstanr` or `rstan` as the backend.
 
 ## Basic model summaries
 
@@ -139,13 +139,13 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 
 ## Extract and summarise posterior draws
 
-For deeper inspection, `BayesEFA` provides tools to extract raw MCMC
+For deeper inspection, `BayesianEFA` provides tools to extract raw MCMC
 draws or compute detailed diagnostics:
 
-- [`extract_posterior_draws()`](https://ricardoreysaez.github.io/BayesEFA/reference/extract_posterior_draws.md):
+- [`extract_posterior_draws()`](https://ricardoreysaez.github.io/BayesianEFA/reference/extract_posterior_draws.md):
   Returns raw MCMC samples for any parameter. This is ideal for custom
   visualizations or density plots.
-- [`posterior_summaries()`](https://ricardoreysaez.github.io/BayesEFA/reference/posterior_summaries.md):
+- [`posterior_summaries()`](https://ricardoreysaez.github.io/BayesianEFA/reference/posterior_summaries.md):
   A convenient wrapper that computes descriptive statistics and
   essential convergence diagnostics (e.g., \\\hat{R}\\ and Effective
   Sample Size).
@@ -188,7 +188,7 @@ posterior_summaries(befa_fit, pars = "h2")
 
 - Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit
   indices for Bayesian structural equation modeling: Comparison to
-  maximum likelihood. *Psychological methods, 25*(1), 46–70.
+  maximum likelihood. *Psychological methods, 25*(1), 46-70.
   <https://doi.org/10.1037/met0000224>
 - Holzinger, K. J., and F. A. Swineford. 1939. *A Study of Factor
   Analysis: The Stability of a Bi-Factor Solution.* Supplementary

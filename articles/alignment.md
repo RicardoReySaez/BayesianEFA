@@ -4,8 +4,8 @@ Bayesian EFA models suffer from rotational indeterminacy, causing MCMC
 chains to “jump” between equivalent modes. This leads to label and sign
 switching across iterations which, if left uncorrected, causes posterior
 means to cancel out and results to become uninterpretable. To resolve
-this, `BayesEFA` provides the
-[`rsp_align()`](https://ricardoreysaez.github.io/BayesEFA/reference/rsp_align.md)
+this, `BayesianEFA` provides the
+[`rsp_align()`](https://ricardoreysaez.github.io/BayesianEFA/reference/rsp_align.md)
 function. This implements the Efficient Rotation-Sign-Permutation
 (E-RSP) algorithm proposed by Rey-Sáez & Revuelta (2026), an exact
 alignment method that recovers the underlying factor structure in
@@ -15,8 +15,8 @@ Let’s begin by generating a dataset from a simple, two-dimensional
 latent structure. This will serve as our ground truth.
 
 ``` r
-# Load BayesEFA
-library(BayesEFA)
+# Load BayesianEFA
+library(BayesianEFA)
 
 # Define a true loading matrix with a clear simple structure
 L_true <- matrix(c(
@@ -41,7 +41,7 @@ colnames(X) <- paste0("Item_", 1:6)
 ## The unrotated solution
 
 We will fit the Bayesian EFA model using
-[`befa()`](https://ricardoreysaez.github.io/BayesEFA/reference/befa.md).
+[`befa()`](https://ricardoreysaez.github.io/BayesianEFA/reference/befa.md).
 To illustrate the pathology of rotational indeterminacy, we explicitly
 disable the internal alignment process by setting `rotate = "none"`.
 
@@ -123,7 +123,7 @@ hist(draws_unaligned[, "Lambda[1,2]"],
   breaks = 50,
   col = "#2780e3",
   border = "white",
-  main = "Raw Posterior Distribution (Lambda[1,1])",
+  main = "Raw Posterior Distribution (Lambda[1,2])",
   xlab = "Sampled Value"
 )
 ```
@@ -230,9 +230,9 @@ resolved. The previously observed anomalies disappear, and the true
 factor structure emerges with high precision and clarity:
 
 - **Clear Factor Structure:** The previous non-significant loadings have
-  been replaced by a perfect simple structure. Items 1–3 now load onto
+  been replaced by a perfect simple structure. Items 1-3 now load onto
   Factor 2, with \\\lambda \approx .68\\ across all items, while Items
-  4–6 load onto Factor 1, with loadings ranging from \\0.66\\ to
+  4-6 load onto Factor 1, with loadings ranging from \\0.66\\ to
   \\0.80\\.
 - **High precision:** Posterior standard deviations have decreased
   significantly, from \\\approx 0.50\\ down to \\0.04\\, resulting in
@@ -265,7 +265,7 @@ aligned_res$summary
 #> # ℹ 1 more variable: ess_tail <dbl>
 ```
 
-Re-visualizing the posterior distribution for `Lambda[1,1]` after
+Re-visualizing the posterior distribution for `Lambda[1,2]` after
 alignment provides clear visual proof that the parameter is now
 identified. The formerly erratic, multimodal draws have successfully
 resolved into a clean, unimodal distribution, confirming that rotational
@@ -280,7 +280,7 @@ hist(draws_aligned[, "Lambda[1,2]"],
   breaks = 50,
   col = "#2780e3",
   border = "white",
-  main = "Aligned Posterior Distribution (Lambda[1,1])",
+  main = "Aligned Posterior Distribution (Lambda[1,2])",
   xlab = "Sampled Value"
 )
 ```

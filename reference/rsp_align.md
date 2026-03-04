@@ -186,8 +186,8 @@ Bayesian factor analytic models. *Statistics and Computing, 32*(2), 23.
 
 Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient
 Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in
-Bayesian Exploratory Factor Analysis*. Manuscript submitted for
-publication. <https://osf.io/5dutv/>
+Bayesian Exploratory Factor Analysis*. PsyArXiv.
+<https://doi.org/10.31234/osf.io/6drsw_v1>
 
 ## Examples
 

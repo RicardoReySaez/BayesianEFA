@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Bayesian Exploratory Factor Analysis • BayesEFA</title>
+<title>Bayesian Exploratory Factor Analysis • BayesianEFA</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
@@ -25,7 +25,7 @@
 <meta property="og:title" content="Bayesian Exploratory Factor Analysis">
 <meta name="description" content="Estimate Bayesian Exploratory Factor Analysis (EFA) models using Stan for full Bayesian inference. The package allows users to fit unrestricted factor models without specifying any constraints on the factor loading matrix. Instead, rotational indeterminacy is resolved via an efficient Rotation-Sign-Permutation (RSP) alignment algorithm, which recovers interpretable posterior distributions during post-processing. Features include support for correlation, covariance, and unstandardized factor models, flexible prior specifications, and Full Information Maximum Likelihood (FIML) for missing data. It also provides tools to calculate Bayesian fit indices, Omega reliability estimates, and Bayesian factor scores with full uncertainty quantification.">
 <meta property="og:description" content="Estimate Bayesian Exploratory Factor Analysis (EFA) models using Stan for full Bayesian inference. The package allows users to fit unrestricted factor models without specifying any constraints on the factor loading matrix. Instead, rotational indeterminacy is resolved via an efficient Rotation-Sign-Permutation (RSP) alignment algorithm, which recovers interpretable posterior distributions during post-processing. Features include support for correlation, covariance, and unstandardized factor models, flexible prior specifications, and Full Information Maximum Likelihood (FIML) for missing data. It also provides tools to calculate Bayesian fit indices, Omega reliability estimates, and Bayesian factor scores with full uncertainty quantification.">
-<meta property="og:image" content="https://ricardoreysaez.github.io/BayesEFA/logo.png">
+<meta property="og:image" content="https://ricardoreysaez.github.io/BayesianEFA/logo.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
 </head>
@@ -35,7 +35,7 @@
 
     <nav class="navbar navbar-expand-lg fixed-top " aria-label="Site navigation"><div class="container">
 
-    <a class="navbar-brand me-2" href="index.html">BayesEFA</a>
+    <a class="navbar-brand me-2" href="index.html">BayesianEFA</a>
 
     <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
@@ -68,7 +68,7 @@
     <li><button class="dropdown-item" data-bs-theme-value="auto"><span class="fa fa-adjust"></span> Auto</button></li>
   </ul>
 </li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/RicardoReySaez/BayesEFA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/RicardoReySaez/BayesianEFA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -78,26 +78,26 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header">
-<img src="logo.png" class="logo" alt=""><h1 id="bayesefa-bayesian-exploratory-factor-analysis-">BayesEFA: Bayesian Exploratory Factor Analysis <a class="anchor" aria-label="anchor" href="#bayesefa-bayesian-exploratory-factor-analysis-"></a>
+<img src="logo.png" class="logo" alt=""><h1 id="bayesianefa-bayesian-exploratory-factor-analysis-">BayesianEFA: Bayesian Exploratory Factor Analysis <a class="anchor" aria-label="anchor" href="#bayesianefa-bayesian-exploratory-factor-analysis-"></a>
 </h1>
 </div>
 <!-- badges: start -->
 
-<p>The <code>BayesEFA</code> package provides a straightforward way to estimate Bayesian Exploratory Factor Analysis (EFA) models via <code>Stan</code>.</p>
+<p>The <code>BayesianEFA</code> package provides a straightforward way to estimate Bayesian Exploratory Factor Analysis (EFA) models via <code>Stan</code>.</p>
 <p>While the package supports both <code>rstan</code> and <code>cmdstanr</code>, the use of <code>cmdstanr</code> is highly recommended as it is the only backend that ensures compatibility with the latest version of <code>Stan</code> and typically offers faster estimation times. Please install <code>cmdstanr</code> by following the <a href="https://mc-stan.org/cmdstanr/articles/cmdstanr.html" class="external-link">official guide</a>.</p>
 <div class="section level2">
 <h2 id="installation-in-windows-and-linux">Installation in Windows and Linux<a class="anchor" aria-label="anchor" href="#installation-in-windows-and-linux"></a>
 </h2>
-<p>You can install the development version of BayesEFA from <a href="https://github.com/RicardoReySaez/BayesEFA" class="external-link">GitHub</a> with:</p>
+<p>You can install the development version of BayesianEFA from <a href="https://github.com/RicardoReySaez/BayesianEFA" class="external-link">GitHub</a> with:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("devtools")</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"RicardoReySaez/BayesEFA"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"RicardoReySaez/BayesianEFA"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <p>Please be a little patient during installation! It will take several minutes to compile the underlying Stan models. Grab a coffee and don’t worry if it seems to be taking a while, it’s completely normal.</p>
 </div>
 <div class="section level2">
 <h2 id="installation-in-macos">Installation in macOS<a class="anchor" aria-label="anchor" href="#installation-in-macos"></a>
 </h2>
-<p>Since <code>BayesEFA</code> includes custom C++ functions, macOS users must configure the R compilation toolchain. Following the recommendations from the <a href="https://github.com/Marcosjnez/latent" class="external-link">latent</a> package, we suggest using <code>macrtools</code> by James Balamuta to automate this setup:</p>
+<p>Since <code>BayesianEFA</code> includes custom C++ functions, macOS users must configure the R compilation toolchain. Following the recommendations from the <a href="https://github.com/Marcosjnez/latent" class="external-link">latent</a> package, we suggest using <code>macrtools</code> by James Balamuta to automate this setup:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># 1. Install macrtools</span></span>
 <span><span class="co"># install.packages("remotes")</span></span>
@@ -107,8 +107,8 @@
 <span><span class="fu">macrtools</span><span class="fu">::</span><span class="fu">macos_rtools_install</span><span class="op">(</span><span class="op">)</span></span>
 <span><span class="fu">macrtools</span><span class="fu">::</span><span class="fu">openmp_install</span><span class="op">(</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># 3. Install BayesEFA</span></span>
-<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"RicardoReySaez/BayesEFA"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<span><span class="co"># 3. Install BayesianEFA</span></span>
+<span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"RicardoReySaez/BayesianEFA"</span>, force <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <blockquote>
 <p><strong>Important:</strong> GitHub Actions routinely test the package against the latest macOS environments, so keeping your system updated is the best way to avoid compilation errors. If errors persist, we highly recommend pasting the compilation output into a Large Language Model (e.g., ChatGPT, Gemini, Claude) for quick troubleshooting.</p>
 </blockquote>
@@ -118,16 +118,16 @@
 </h2>
 <p>Here is a basic example showing how to fit a Bayesian EFA model:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ricardoreysaez.github.io/BayesEFA/">BayesEFA</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ricardoreysaez.github.io/BayesianEFA/">BayesianEFA</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Fit a 3-factor Bayesian EFA model using the Holzinger &amp; Swineford dataset</span></span>
-<span><span class="va">befa_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/befa.html">befa</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">HS_data</span>, n_factors <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">befa_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/befa.html">befa</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">HS_data</span>, n_factors <span class="op">=</span> <span class="fl">3</span>, seed <span class="op">=</span> <span class="fl">17</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Print a comprehensive summary of the model (inspired in psych package output)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">befa_fit</span>, cutoff <span class="op">=</span> <span class="fl">0.3</span>, signif_stars <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># Table 1. Factor Loadings (Pattern Matrix)</span></span>
-<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
+<span><span class="co"># Table 1. Factor Loadings (Pattern Matrix) </span></span>
+<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co"># Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail</span></span>
 <span><span class="co"># ———————————————————————————————————————————————————————————————————</span></span>
 <span><span class="co"># Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849</span></span>
@@ -139,53 +139,53 @@
 <span><span class="co"># Item_7                    0.68*  0.48  0.52  1.00     3343     2081</span></span>
 <span><span class="co"># Item_8                    0.69*  0.52  0.48  1.00     3614     2593</span></span>
 <span><span class="co"># Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757</span></span>
-<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
+<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co"># Note: varimax rotation applied. Diagnostics show worst-case values</span></span>
 <span><span class="co"># across factors (max Rhat, min ESS). The 3 latent factors accounted</span></span>
 <span><span class="co"># for 52.2% of total variance. (*) 95% Credible Interval excludes 0.</span></span>
-<span><span class="co"># Loadings with absolute values &lt; 0.30 are hidden.</span></span>
-<span><span class="co">#</span></span>
-<span><span class="co"># Table 2. Bayesian Fit Measures</span></span>
-<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
+<span><span class="co"># Loadings with absolute values &lt; 0.30 are hidden. </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># Table 2. Bayesian Fit Measures </span></span>
+<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co"># Index         Estimate     SD    CI_Low   CI_High</span></span>
 <span><span class="co"># —————————————————————————————————————————————————</span></span>
-<span><span class="co"># Chi2             47.12   6.98     35.37     62.56</span></span>
-<span><span class="co"># Chi2_ppp          0.11</span></span>
+<span><span class="co"># Chi2             47.75   7.24     35.81     63.71</span></span>
+<span><span class="co"># Chi2_ppp          0.11                           </span></span>
 <span><span class="co"># Chi2_Null       918.85   0.00    918.85    918.85</span></span>
-<span><span class="co"># BRMSEA            0.05   0.02      0.00      0.09</span></span>
-<span><span class="co"># BGamma            0.99   0.00      0.98      1.00</span></span>
-<span><span class="co"># Adj_BGamma        0.97   0.02      0.94      1.00</span></span>
+<span><span class="co"># BRMSEA            0.06   0.02      0.00      0.09</span></span>
+<span><span class="co"># BGamma            0.99   0.01      0.98      1.00</span></span>
+<span><span class="co"># Adj_BGamma        0.97   0.02      0.93      1.00</span></span>
 <span><span class="co"># BMc               0.98   0.01      0.96      1.00</span></span>
 <span><span class="co"># SRMR              0.05   0.01      0.03      0.06</span></span>
 <span><span class="co"># BCFI              0.99   0.01      0.97      1.00</span></span>
-<span><span class="co"># BTLI              0.99   0.02      0.94      1.00</span></span>
-<span><span class="co"># ELPD          -3416.31  42.49  -3499.60  -3333.02</span></span>
-<span><span class="co"># LOOIC          6832.62  84.99   6666.05   6999.20</span></span>
-<span><span class="co"># p_loo            24.97   1.78     21.48     28.46</span></span>
-<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
+<span><span class="co"># BTLI              0.99   0.02      0.93      1.00</span></span>
+<span><span class="co"># ELPD          -3416.93  42.49  -3500.21  -3333.64</span></span>
+<span><span class="co"># LOOIC          6833.85  84.98   6667.29   7000.42</span></span>
+<span><span class="co"># p_loo            25.58   1.82     22.01     29.14</span></span>
+<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co"># Note: Intervals are 95% Credible Intervals. PPP:</span></span>
 <span><span class="co"># Posterior Predictive p-value (Ideal &gt; .05).</span></span>
-<span><span class="co"># p_loo/LOOIC derived from PSIS-LOO.</span></span>
-<span><span class="co">#</span></span>
-<span><span class="co"># Table 3. Factor Reliability (Coefficient Omega)</span></span>
-<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
+<span><span class="co"># p_loo/LOOIC derived from PSIS-LOO. </span></span>
+<span><span class="co"># </span></span>
+<span><span class="co"># Table 3. Factor Reliability (Coefficient Omega) </span></span>
+<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co"># Factor    Estimate    SD  CI_Low  CI_High</span></span>
 <span><span class="co"># —————————————————————————————————————————</span></span>
 <span><span class="co"># F1            0.60  0.04    0.52     0.67</span></span>
 <span><span class="co"># F2            0.73  0.02    0.69     0.76</span></span>
 <span><span class="co"># F3            0.55  0.04    0.45     0.62</span></span>
-<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗</span></span>
+<span><span class="co"># ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ </span></span>
 <span><span class="co"># Full Scale Omega Total: 0.84 [0.82,</span></span>
 <span><span class="co"># 0.86]. Omega coefficients use the full</span></span>
-<span><span class="co"># posterior distribution.</span></span></code></pre></div>
+<span><span class="co"># posterior distribution. </span></span></code></pre></div>
 <p>For a complete guide on how to perform a Bayesian EFA from scratch, please visit the <a href="articles/getting_started.html">Getting Started</a> tutorial or explore the comprehensive package website!</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/RicardoReySaez/BayesEFA/" class="external-link">Browse source code</a></li>
-<li><a href="https://github.com/RicardoReySaez/BayesEFA/issues" class="external-link">Report a bug</a></li>
+<li><a href="https://github.com/RicardoReySaez/BayesianEFA/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/RicardoReySaez/BayesianEFA/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 
@@ -200,7 +200,7 @@
 <div class="citation">
 <h2 data-toc-skip>Citation</h2>
 <ul class="list-unstyled">
-<li><a href="authors.html#citation">Citing BayesEFA</a></li>
+<li><a href="authors.html#citation">Citing BayesianEFA</a></li>
 </ul>
 </div>
 
@@ -215,8 +215,8 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/RicardoReySaez/BayesEFA/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/RicardoReySaez/BayesEFA/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
-<li><a href="https://CRAN.R-project.org/package=BayesEFA" class="external-link"><img src="https://www.r-pkg.org/badges/version/BayesEFA" alt="CRAN status"></a></li>
+<li><a href="https://github.com/RicardoReySaez/BayesianEFA/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/RicardoReySaez/BayesianEFA/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
+<li><a href="https://CRAN.R-project.org/package=BayesianEFA" class="external-link"><img src="https://www.r-pkg.org/badges/version/BayesianEFA" alt="CRAN status"></a></li>
 <li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 </ul>
 </div>

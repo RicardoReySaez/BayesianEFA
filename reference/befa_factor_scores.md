@@ -15,7 +15,7 @@ befa_factor_scores(object, post_summaries = TRUE)
 - object:
 
   A `befa` object returned by
-  [`befa()`](https://ricardoreysaez.github.io/BayesEFA/reference/befa.md).
+  [`befa()`](https://ricardoreysaez.github.io/BayesianEFA/reference/befa.md).
 
 - post_summaries:
 

@@ -26,7 +26,7 @@ summary(
 - object:
 
   A `befa` object returned by
-  [`befa()`](https://ricardoreysaez.github.io/BayesEFA/reference/befa.md).
+  [`befa()`](https://ricardoreysaez.github.io/BayesianEFA/reference/befa.md).
 
 - probs:
 

@@ -15,7 +15,7 @@ print(x, digits = 3, ...)
 - x:
 
   A `befa_fitmeasures` object from
-  [`befa_fit_measures()`](https://ricardoreysaez.github.io/BayesEFA/reference/befa_fit_measures.md).
+  [`befa_fit_measures()`](https://ricardoreysaez.github.io/BayesianEFA/reference/befa_fit_measures.md).
 
 - digits:
 

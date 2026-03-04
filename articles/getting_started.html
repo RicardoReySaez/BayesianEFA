@@ -5,7 +5,7 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Getting Started with BayesEFA • BayesEFA</title>
+<title>Getting Started with BayesianEFA • BayesianEFA</title>
 <!-- favicons --><link rel="icon" type="image/png" sizes="96x96" href="../favicon-96x96.png">
 <link rel="icon" type="”image/svg+xml”" href="../favicon.svg">
 <link rel="apple-touch-icon" sizes="180x180" href="../apple-touch-icon.png">
@@ -22,7 +22,7 @@
 <script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><link href="../extra.css" rel="stylesheet">
-<meta property="og:title" content="Getting Started with BayesEFA">
+<meta property="og:title" content="Getting Started with BayesianEFA">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
 </head>
@@ -32,7 +32,7 @@
 
     <nav class="navbar navbar-expand-lg fixed-top " aria-label="Site navigation"><div class="container">
 
-    <a class="navbar-brand me-2" href="../index.html">BayesEFA</a>
+    <a class="navbar-brand me-2" href="../index.html">BayesianEFA</a>
 
     <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
@@ -65,7 +65,7 @@
     <li><button class="dropdown-item" data-bs-theme-value="auto"><span class="fa fa-adjust"></span> Auto</button></li>
   </ul>
 </li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/RicardoReySaez/BayesEFA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/RicardoReySaez/BayesianEFA/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -78,10 +78,10 @@
 
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
-      <img src="../logo.png" class="logo" alt=""><h1>Getting Started with BayesEFA</h1>
+      <img src="../logo.png" class="logo" alt=""><h1>Getting Started with BayesianEFA</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/RicardoReySaez/BayesEFA/blob/main/vignettes/getting_started.Rmd" class="external-link"><code>vignettes/getting_started.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/RicardoReySaez/BayesianEFA/blob/main/vignettes/getting_started.Rmd" class="external-link"><code>vignettes/getting_started.Rmd</code></a></small>
       <div class="d-none name"><code>getting_started.Rmd</code></div>
     </div>
 
@@ -90,8 +90,8 @@
 <div class="section level2">
 <h2 id="introduction">Introduction<a class="anchor" aria-label="anchor" href="#introduction"></a>
 </h2>
-<p><code>BayesEFA</code> provides a robust and intuitive framework for
-Bayesian Exploratory Factor Analysis using <code>Stan</code>.</p>
+<p><code>BayesianEFA</code> provides a robust and intuitive framework
+for Bayesian Exploratory Factor Analysis using <code>Stan</code>.</p>
 <ul>
 <li>
 <strong>Unconstraint Estimation</strong>: Fit unrestricted loading
@@ -124,22 +124,22 @@ users who prefer the latest Stan features and faster estimation,
 <code>cmdstanr</code> can be installed by following the <a href="https://mc-stan.org/cmdstanr/articles/cmdstanr.html" class="external-link">official
 guide</a>.</p>
 <blockquote>
-<p>Note: The <code>BayesEFA</code> model compiles only once when first
-using <code>cmdstanr.</code> It is permanently saved in your system’s
-cache and will persist across R sessions and computer reboots. If you
-ever need to force a recompile (e.g., after updating
+<p>Note: The <code>BayesianEFA</code> model compiles only once when
+first using <code>cmdstanr.</code> It is permanently saved in your
+system’s cache and will persist across R sessions and computer reboots.
+If you ever need to force a recompile (e.g., after updating
 <code>cmdstanr</code>), you must manually clear the cache by running:
-<code>unlink(tools::R_user_dir("BayesEFA", which = "cache"), recursive = TRUE)</code>.</p>
+<code>unlink(tools::R_user_dir("BayesianEFA", which = "cache"), recursive = TRUE)</code>.</p>
 </blockquote>
 </div>
 <div class="section level2">
-<h2 id="basic-example-using-bayesefa">Basic example using BayesEFA<a class="anchor" aria-label="anchor" href="#basic-example-using-bayesefa"></a>
+<h2 id="basic-example-using-bayesianefa">Basic example using BayesianEFA<a class="anchor" aria-label="anchor" href="#basic-example-using-bayesianefa"></a>
 </h2>
 <p>The following workflow fits a 3-factor model using the
 <code><a href="../reference/befa.html">befa()</a></code> function, handling estimation, rotation, and
 post-processing in a single step:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ricardoreysaez.github.io/BayesEFA/">BayesEFA</a></span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ricardoreysaez.github.io/BayesianEFA/">BayesianEFA</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Fit Bayesian EFA model</span></span>
 <span><span class="va">befa_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/befa.html">befa</a></span><span class="op">(</span></span>
@@ -161,7 +161,7 @@ post-processing in a single step:</p>
 <p>The <code>befa_fit</code> object contains a standard
 <code>stanfit</code> object (from <code>rstan</code>). This ensures full
 compatibility with the Stan ecosystem, allowing you to use your favorite
-diagnostic tools and plots—regardless of whether you used
+diagnostic tools and plots – regardless of whether you used
 <code>cmdstanr</code> or <code>rstan</code> as the backend.</p>
 </div>
 <div class="section level2">
@@ -237,7 +237,7 @@ loadings whose 95% Credible Interval excludes zero.</li>
 <div class="section level2">
 <h2 id="extract-and-summarise-posterior-draws">Extract and summarise posterior draws<a class="anchor" aria-label="anchor" href="#extract-and-summarise-posterior-draws"></a>
 </h2>
-<p>For deeper inspection, <code>BayesEFA</code> provides tools to
+<p>For deeper inspection, <code>BayesianEFA</code> provides tools to
 extract raw MCMC draws or compute detailed diagnostics:</p>
 <ul>
 <li>
@@ -286,7 +286,7 @@ Size).</li>
 <ul>
 <li>Garnier-Villarreal, M., &amp; Jorgensen, T. D. (2020). Adapting fit
 indices for Bayesian structural equation modeling: Comparison to maximum
-likelihood. <em>Psychological methods, 25</em>(1), 46–70. <a href="https://doi.org/10.1037/met0000224" class="external-link uri">https://doi.org/10.1037/met0000224</a>
+likelihood. <em>Psychological methods, 25</em>(1), 46-70. <a href="https://doi.org/10.1037/met0000224" class="external-link uri">https://doi.org/10.1037/met0000224</a>
 </li>
 <li>Holzinger, K. J., and F. A. Swineford. 1939. <em>A Study of Factor
 Analysis: The Stability of a Bi-Factor Solution.</em> Supplementary
