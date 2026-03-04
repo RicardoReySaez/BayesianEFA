@@ -121,7 +121,7 @@
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ricardoreysaez.github.io/BayesEFA/">BayesEFA</a></span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Fit a 3-factor Bayesian EFA model using the Holzinger &amp; Swineford dataset</span></span>
-<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/befa.html">befa</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">HS_data</span>, n_factors <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="va">befa_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/befa.html">befa</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">HS_data</span>, n_factors <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># Print a comprehensive summary of the model (inspired in psych package output)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">befa_fit</span>, cutoff <span class="op">=</span> <span class="fl">0.3</span>, signif_stars <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
