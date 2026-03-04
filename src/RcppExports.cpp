@@ -14,7 +14,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 
 // compute_factor_scores_cpp
 arma::cube compute_factor_scores_cpp(const arma::cube& post_draws, const arma::mat& data, const arma::uvec& lambda_idx, const arma::uvec& sig_idx, const arma::uvec& nu_idx, int J, int M, int N, bool has_missing, const Rcpp::List& obs_patterns);
-RcppExport SEXP _BayesEFA_compute_factor_scores_cpp(SEXP post_drawsSEXP, SEXP dataSEXP, SEXP lambda_idxSEXP, SEXP sig_idxSEXP, SEXP nu_idxSEXP, SEXP JSEXP, SEXP MSEXP, SEXP NSEXP, SEXP has_missingSEXP, SEXP obs_patternsSEXP) {
+RcppExport SEXP _BayesianEFA_compute_factor_scores_cpp(SEXP post_drawsSEXP, SEXP dataSEXP, SEXP lambda_idxSEXP, SEXP sig_idxSEXP, SEXP nu_idxSEXP, SEXP JSEXP, SEXP MSEXP, SEXP NSEXP, SEXP has_missingSEXP, SEXP obs_patternsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -34,7 +34,7 @@ END_RCPP
 }
 // compute_posterior_metrics_cpp
 Rcpp::List compute_posterior_metrics_cpp(const arma::cube& post_draws, const arma::mat& data, const arma::uvec& sig_idx, const arma::uvec& nu_idx, const arma::vec& M_sat, const arma::mat& S_sat, double ll_saturated, int model_type, bool has_missing, const arma::mat& Y_comp, const arma::mat& Y_miss, const arma::uvec& comp_idx_0, const arma::uvec& miss_idx_0, const Rcpp::List& obs_patterns_miss);
-RcppExport SEXP _BayesEFA_compute_posterior_metrics_cpp(SEXP post_drawsSEXP, SEXP dataSEXP, SEXP sig_idxSEXP, SEXP nu_idxSEXP, SEXP M_satSEXP, SEXP S_satSEXP, SEXP ll_saturatedSEXP, SEXP model_typeSEXP, SEXP has_missingSEXP, SEXP Y_compSEXP, SEXP Y_missSEXP, SEXP comp_idx_0SEXP, SEXP miss_idx_0SEXP, SEXP obs_patterns_missSEXP) {
+RcppExport SEXP _BayesianEFA_compute_posterior_metrics_cpp(SEXP post_drawsSEXP, SEXP dataSEXP, SEXP sig_idxSEXP, SEXP nu_idxSEXP, SEXP M_satSEXP, SEXP S_satSEXP, SEXP ll_saturatedSEXP, SEXP model_typeSEXP, SEXP has_missingSEXP, SEXP Y_compSEXP, SEXP Y_missSEXP, SEXP comp_idx_0SEXP, SEXP miss_idx_0SEXP, SEXP obs_patterns_missSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -58,7 +58,7 @@ END_RCPP
 }
 // rsp_exact_eff
 Rcpp::List rsp_exact_eff(const arma::mat& Lambda_tilde, const arma::mat& Lambda_star_init, int J, int M, int maxIter, double threshold);
-RcppExport SEXP _BayesEFA_rsp_exact_eff(SEXP Lambda_tildeSEXP, SEXP Lambda_star_initSEXP, SEXP JSEXP, SEXP MSEXP, SEXP maxIterSEXP, SEXP thresholdSEXP) {
+RcppExport SEXP _BayesianEFA_rsp_exact_eff(SEXP Lambda_tildeSEXP, SEXP Lambda_star_initSEXP, SEXP JSEXP, SEXP MSEXP, SEXP maxIterSEXP, SEXP thresholdSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -77,15 +77,15 @@ RcppExport SEXP _rcpp_module_boot_stan_fit4befa_efa_mod();
 RcppExport SEXP _rcpp_module_boot_stan_fit4befa_null_mod();
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_BayesEFA_compute_factor_scores_cpp", (DL_FUNC) &_BayesEFA_compute_factor_scores_cpp, 10},
-    {"_BayesEFA_compute_posterior_metrics_cpp", (DL_FUNC) &_BayesEFA_compute_posterior_metrics_cpp, 14},
-    {"_BayesEFA_rsp_exact_eff", (DL_FUNC) &_BayesEFA_rsp_exact_eff, 6},
+    {"_BayesianEFA_compute_factor_scores_cpp", (DL_FUNC) &_BayesianEFA_compute_factor_scores_cpp, 10},
+    {"_BayesianEFA_compute_posterior_metrics_cpp", (DL_FUNC) &_BayesianEFA_compute_posterior_metrics_cpp, 14},
+    {"_BayesianEFA_rsp_exact_eff", (DL_FUNC) &_BayesianEFA_rsp_exact_eff, 6},
     {"_rcpp_module_boot_stan_fit4befa_efa_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4befa_efa_mod, 0},
     {"_rcpp_module_boot_stan_fit4befa_null_mod", (DL_FUNC) &_rcpp_module_boot_stan_fit4befa_null_mod, 0},
     {NULL, NULL, 0}
 };
 
-RcppExport void R_init_BayesEFA(DllInfo *dll) {
+RcppExport void R_init_BayesianEFA(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
 }

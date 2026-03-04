@@ -1,24 +1,24 @@
-#' @importFrom utils packageVersion
+﻿#' @importFrom utils packageVersion
 #' @noRd
 
 .onAttach <- function(libname, pkgname) {
-  # ───────────────────────── #
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #
   #    Get package version    #
-  # ───────────────────────── #
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #
 
   pkg_version <- tryCatch(
-    as.character(utils::packageVersion("BayesEFA")),
+    as.character(utils::packageVersion("BayesianEFA")),
     error = function(e) "unknown"
   )
 
-  # ─────────────────────────── #
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #
   #    Build startup message    #
-  # ─────────────────────────── #
+  # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ #
 
   line_width <- 60
   thick_line <- paste0(rep("\u2500", line_width), collapse = "")
 
-  header <- sprintf(" BayesEFA (v%s): Bayesian Exploratory Factor Analysis", pkg_version)
+  header <- sprintf(" BayesianEFA (v%s): Bayesian Exploratory Factor Analysis", pkg_version)
 
   # Check for cmdstanr
   has_cmdstanr <- requireNamespace("cmdstanr", quietly = TRUE)

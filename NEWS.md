@@ -1,4 +1,4 @@
-# BayesEFA 0.1.0
+# BayesianEFA 0.1.0
 
 * Initial CRAN release.
 

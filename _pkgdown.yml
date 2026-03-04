@@ -1,4 +1,4 @@
-url: https://ricardoreysaez.github.io/BayesEFA/
+url: https://ricardoreysaez.github.io/BayesianEFA/
 
 home:
   title: Bayesian Exploratory Factor Analysis
@@ -54,7 +54,7 @@ articles:
 reference:
   - title: "All Functions"
     desc: >
-      Complete list of functions and datasets available in the BayesEFA package.
+      Complete list of functions and datasets available in the BayesianEFA package.
     contents:
       - befa
       - summary.befa
@@ -67,4 +67,4 @@ reference:
       - print.summary.befa
       - print.befa_fitmeasures
       - HS_data
-      - BayesEFA-package
+      - BayesianEFA-package

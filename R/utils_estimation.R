@@ -1,4 +1,4 @@
-#' Fit BEFA Model (Internal)
+﻿#' Fit BEFA Model (Internal)
 #'
 #' Handles the backend selection, verbose messaging, and sampling execution.
 #'
@@ -53,7 +53,7 @@ fit_befa_model <- function(model_name, stan_data, backend, verbose, model_type, 
       # Cmdstanr estimation: save model on cache
       if (backend == "cmdstanr") {
         # Save .exe files in cache
-        cache_dir <- tools::R_user_dir("BayesEFA", which = "cache")
+        cache_dir <- tools::R_user_dir("BayesianEFA", which = "cache")
         if (!dir.exists(cache_dir)) dir.create(cache_dir, recursive = TRUE)
         # Get Stan model code and write cmdstanr file
         stan_code <- rstan::get_stancode(rstan_obj)
@@ -327,7 +327,7 @@ strip_stan_params <- function(stanfit, lambda_prior, n_factors) {
 
   # Define parameters to strip based on prior
   if (is_uni) {
-    # Uni models have Lambda_uni — strip it (keep Lambda which is a copy)
+    # Uni models have Lambda_uni â€” strip it (keep Lambda which is a copy)
     params_to_strip <- c("Lambda_uni")
   } else if (lambda_prior == "unit_vector") {
     params_to_strip <- c("Z", "Z_norm")

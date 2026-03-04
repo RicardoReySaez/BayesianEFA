@@ -1,4 +1,4 @@
-#' The 'BayesEFA' package.
+﻿#' The 'BayesianEFA' package.
 #'
 #' @description Bayesian Exploratory Factor Analysis using Hamiltonian Monte Carlo
 #' via Stan. Posterior draws are post-processed with Varimax rotation and the RSP
@@ -7,9 +7,9 @@
 #' quantification.
 #'
 #' @docType package
-#' @name BayesEFA-package
-#' @aliases BayesEFA
-#' @useDynLib BayesEFA, .registration = TRUE
+#' @name BayesianEFA-package
+#' @aliases BayesianEFA
+#' @useDynLib BayesianEFA, .registration = TRUE
 #' @import methods
 #' @import Rcpp
 #' @importFrom rstan sampling extract get_stancode

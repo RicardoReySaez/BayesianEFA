@@ -1,4 +1,4 @@
-# This file is part of the standard setup for testthat.
+﻿# This file is part of the standard setup for testthat.
 # It is recommended that you do not modify it.
 #
 # Where should you do additional test configuration?
@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(BayesEFA)
+library(BayesianEFA)
 
-test_check("BayesEFA")
+test_check("BayesianEFA")

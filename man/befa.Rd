@@ -381,4 +381,9 @@ Chicago: University of Chicago Press.
 Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2025).
 \emph{A Unified Framework for Psychometrics in Experimental Psychology: The Standardized
 Generalized Hierarchical Factor Model}. PsyArXiv. \url{https://doi.org/10.31234/osf.io/gv6k7_v1}
+
+Rey-Sáez, R. & Revuelta, J. (2026). \emph{An Efficient
+Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in
+Bayesian Exploratory Factor Analysis}. PsyArXiv.
+\url{https://doi.org/10.31234/osf.io/6drsw_v1}
 }

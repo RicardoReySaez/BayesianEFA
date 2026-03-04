@@ -1,4 +1,4 @@
-Package: BayesEFA
+Package: BayesianEFA
 Title: Bayesian Exploratory Factor Analysis Using 'Stan'
 Version: 0.1.0
 Authors@R: 
@@ -51,7 +51,7 @@ SystemRequirements: GNU make
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 LazyData: true
-URL: https://ricardoreysaez.github.io/BayesEFA/, https://github.com/RicardoReySaez/BayesEFA
-BugReports: https://github.com/RicardoReySaez/BayesEFA/issues
+URL: https://ricardoreysaez.github.io/BayesianEFA/, https://github.com/RicardoReySaez/BayesianEFA
+BugReports: https://github.com/RicardoReySaez/BayesianEFA/issues
 Additional_repositories:
     https://stan-dev.r-universe.dev/

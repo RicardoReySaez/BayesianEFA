@@ -1,8 +1,8 @@
 ---
-title: "Getting Started with BayesEFA"
+title: "Getting Started with BayesianEFA"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting Started with BayesEFA}
+  %\VignetteIndexEntry{Getting Started with BayesianEFA}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 
 ## Introduction
 
-`BayesEFA` provides a robust and intuitive framework for Bayesian Exploratory Factor Analysis using `Stan`.
+`BayesianEFA` provides a robust and intuitive framework for Bayesian Exploratory Factor Analysis using `Stan`.
 
 - **Unconstraint Estimation**: Fit unrestricted loading matrices without fixing parameters or using arbitrary identification constraints.
 - **Resolved Rotational Indeterminacy**: Recover interpretable posteriors through the Efficient Rotation-Sign-Permutation (E-RSP) alignment algorithm.
@@ -29,14 +29,14 @@ knitr::opts_chunk$set(
 
 While the package supports both `rstan` and `cmdstanr`, `rstan` is used as the default backend. However, we strongly recommend using `cmdstanr` for users who prefer the latest Stan features and faster estimation, `cmdstanr` can be installed by following the [official guide](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
 
-> Note: The `BayesEFA` model compiles only once when first using `cmdstanr.` It is permanently saved in your system's cache and will persist across R sessions and computer reboots. If you ever need to force a recompile (e.g., after updating `cmdstanr`), you must manually clear the cache by running: `unlink(tools::R_user_dir("BayesEFA", which = "cache"), recursive = TRUE)`.
+> Note: The `BayesianEFA` model compiles only once when first using `cmdstanr.` It is permanently saved in your system's cache and will persist across R sessions and computer reboots. If you ever need to force a recompile (e.g., after updating `cmdstanr`), you must manually clear the cache by running: `unlink(tools::R_user_dir("BayesianEFA", which = "cache"), recursive = TRUE)`.
 
-## Basic example using BayesEFA
+## Basic example using BayesianEFA
 
 The following workflow fits a 3-factor model using the `befa()` function, handling estimation, rotation, and post-processing in a single step:
 
 ```{r fit_model, message=FALSE, warning=FALSE, results='hide'}
-library(BayesEFA)
+library(BayesianEFA)
 
 # Fit Bayesian EFA model
 befa_fit <- befa(
@@ -57,7 +57,7 @@ befa_fit <- befa(
 )
 ```
 
-The `befa_fit` object contains a standard `stanfit` object (from `rstan`). This ensures full compatibility with the Stan ecosystem, allowing you to use your favorite diagnostic tools and plots—regardless of whether you used `cmdstanr` or `rstan` as the backend.
+The `befa_fit` object contains a standard `stanfit` object (from `rstan`). This ensures full compatibility with the Stan ecosystem, allowing you to use your favorite diagnostic tools and plots -- regardless of whether you used `cmdstanr` or `rstan` as the backend.
 
 ## Basic model summaries
 
@@ -72,7 +72,7 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 
 ## Extract and summarise posterior draws
 
-For deeper inspection, `BayesEFA` provides tools to extract raw MCMC draws or compute detailed diagnostics:
+For deeper inspection, `BayesianEFA` provides tools to extract raw MCMC draws or compute detailed diagnostics:
 
 - `extract_posterior_draws()`: Returns raw MCMC samples for any parameter. This is ideal for custom visualizations or density plots.
 - `posterior_summaries()`: A convenient wrapper that computes descriptive statistics and essential convergence diagnostics (e.g., $\hat{R}$ and Effective Sample Size).
@@ -96,7 +96,7 @@ posterior_summaries(befa_fit, pars = "h2")
 
 ## References
 
-- Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian structural equation modeling: Comparison to maximum likelihood. *Psychological methods, 25*(1), 46–70. <https://doi.org/10.1037/met0000224>
+- Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian structural equation modeling: Comparison to maximum likelihood. *Psychological methods, 25*(1), 46-70. <https://doi.org/10.1037/met0000224>
 - Holzinger, K. J., and F. A. Swineford. 1939. *A Study of Factor Analysis: The Stability of a Bi-Factor Solution.* Supplementary Educational Monograph 48. Chicago: University of Chicago Press.
 - McDonald, R. P. (1999). *Test Theory: A Unified Treatment*. Lawrence Erlbaum Associates.
 - Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2025). *A Unified Framework for Psychometrics in Experimental Psychology: The Standardized Generalized Hierarchical Factor Model*. PsyArXiv. <https://doi.org/10.31234/osf.io/gv6k7_v1>

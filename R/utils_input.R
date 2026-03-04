@@ -1,4 +1,4 @@
-#' Check if Model is Unidimensional Forced (Internal)
+﻿#' Check if Model is Unidimensional Forced (Internal)
 #'
 #' Determines if the model configuration forces the unidimensional ("uni") Stan model.
 #' This occurs when M=1 and using unit_vector prior.
@@ -405,7 +405,7 @@ validate_backend <- function(backend) {
   if (backend == "cmdstanr") {
     if (!requireNamespace("cmdstanr", quietly = TRUE)) {
       # Only warn once per session to avoid spamming the user
-      if (is.null(getOption("BayesEFA.cmdstanr_warned"))) {
+      if (is.null(getOption("BayesianEFA.cmdstanr_warned"))) {
         msg <- paste0(
           "Backend 'cmdstanr' was requested but is not installed.\n",
           "Backend changed to 'rstan'.\n",
@@ -413,7 +413,7 @@ validate_backend <- function(backend) {
           "(This warning is only shown once per R session)."
         )
         warning(msg, call. = FALSE)
-        options(BayesEFA.cmdstanr_warned = TRUE)
+        options(BayesianEFA.cmdstanr_warned = TRUE)
       }
 
       return("rstan")
@@ -439,7 +439,7 @@ select_befa_model <- function(model, lambda_prior, n_factors, verbose) {
     stop("The 'normal' prior is not supported for 'cor' models. Please use 'unit_vector'.", call. = FALSE)
   }
 
-  # Unified model — flags are passed via stan_data
+  # Unified model â€” flags are passed via stan_data
   return("befa_efa")
 }
 
