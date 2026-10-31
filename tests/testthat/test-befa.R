@@ -1,568 +1,203 @@
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 1: main function befa
-# ─────────────────────────────────────────────────────────────────────────────
+# Argument checks: they all stop before any sampling.
 
-# --- Setup: dummy data for all tests ---
-set.seed(123)
-dummy_data <- as.data.frame(matrix(rnorm(200), ncol = 5))
-colnames(dummy_data) <- paste0("V", 1:5)
-dummy_cov <- cov(dummy_data)
-dummy_cor <- cor(dummy_data)
-
-# --- Argument matching tests ---
-
-test_that("befa matches model argument correctly", {
-  expect_no_error(match.arg("cor", c("cor", "cov", "raw")))
-  expect_no_error(match.arg("raw", c("cor", "cov", "raw")))
-  expect_error(match.arg("invalid", c("cor", "cov", "raw")))
+test_that("befa() checks where the data come from", {
+  Y <- .simulated_data()
+  expect_error(befa(Y, 2, sample_nobs = 40, sample_cov = cov(Y)), "not both")
+  expect_error(befa(n_factors = 2), "Provide `data`, or summary statistics")
+  expect_error(befa(sample_nobs = 40, sample_cov = cov(Y), n_factors = 2,
+                    missing = "FIML"), "FIML needs the raw `data`")
+  expect_error(befa(list(a = 1:3), 1), "data frame or a matrix")
+  expect_error(befa(data.frame(a = letters[1:5], b = 1:5), 1), "numeric columns")
+  expect_error(befa(sample_nobs = 40, sample_cov = cov(Y), sample_cor = cor(Y),
+                    n_factors = 2), "either `sample_cov` or `sample_cor`")
+  expect_error(befa(sample_nobs = 40, sample_cov = cov(Y)[, -1], n_factors = 2),
+               "symmetric square matrix")
 })
 
-test_that("befa matches lambda_prior argument correctly", {
-  expect_no_error(match.arg("unit_vector", c("unit_vector", "normal")))
-  expect_no_error(match.arg("normal", c("unit_vector", "normal")))
-  expect_error(match.arg("invalid", c("unit_vector", "normal")))
+test_that("befa() checks the model it is asked to fit", {
+  Y <- .simulated_data()
+  expect_error(befa(Y), "`n_factors` is required")
+  expect_error(befa(Y, 0), "positive whole number")
+  expect_error(befa(Y, 5), "smaller than the number of items \\(5\\)")
+  expect_error(befa(Y, 2, ordered = TRUE), "not implemented yet")
+  expect_error(befa(Y, 2, verbose = "yes"), "`verbose` must be TRUE or FALSE")
+  expect_error(befa(Y, 2, model = "cor", lambda_prior = "normal"),
+               "not available for the correlation model")
+  expect_error(befa(Y, 2, chainz = 2), "`chainz` is not an option of MCMC")
+  expect_error(befa(Y, 2, backend = "brms"), "must be \"auto\" or one of")
 })
 
-test_that("befa matches backend argument correctly", {
-  expect_no_error(match.arg("rstan", c("rstan", "cmdstanr")))
-  expect_no_error(match.arg("cmdstanr", c("rstan", "cmdstanr")))
+test_that("starting values are built, reused or checked", {
+  spec <- .befa_spec("cor", "unit_vector", 2L)
+  prep <- .prepared_for(spec)
+  prior <- .prior_for(spec)
+  mcmc <- .sampler_settings("mcmc", list(chains = 3, seed = 1))
+  expect_length(.befa_inits(mcmc, spec, prep, 2L, prior), 3L)
+  one <- .start_values(spec, prep, 2L, prior, 1L, 1L)[[1L]]
+  mcmc$init <- one
+  expect_identical(.befa_inits(mcmc, spec, prep, 2L, prior), rep(list(one), 3))
+  mcmc$init <- list(one, one)
+  expect_error(.befa_inits(mcmc, spec, prep, 2L, prior), "has 2 lists")
+  mcmc$init <- 0.5
+  expect_error(.befa_inits(mcmc, spec, prep, 2L, prior), "must be a list")
+  advi <- .sampler_settings("advi", list(seed = 1))
+  expect_named(.befa_inits(advi, spec, prep, 2L, prior), c("h2", "Z"))
+  path <- .sampler_settings("pathfinder", list(seed = 1, num_paths = 2))
+  expect_length(.befa_inits(path, spec, prep, 2L, prior), 2L)
 })
 
-# --- Input validation (delegated to check_befa_inputs) ---
+# Fits with stanli, which needs no compilation. They are short, so the
+# convergence warnings they raise are expected and silenced.
 
-test_that("befa errors on ambiguous input", {
-  skip_if_not_installed("rstan")
-
-  expect_error(
-    befa(
-      data = dummy_data, sample_cov = dummy_cov, sample_nobs = 40,
-      n_factors = 2
-    ),
-    "Ambiguous"
-  )
-})
-
-test_that("befa errors when no input provided", {
-  skip_if_not_installed("rstan")
-
-  expect_error(
-    befa(n_factors = 2),
-    "No input"
-  )
-})
-
-test_that("befa errors when n_factors >= J", {
-  skip_if_not_installed("rstan")
-
-  expect_error(
-    befa(data = dummy_data, n_factors = 5), # J=5
-    "smaller than"
-  )
-})
-
-test_that("befa errors when n_factors is NULL", {
-  skip_if_not_installed("rstan")
-
-  expect_error(
-    befa(data = dummy_data, n_factors = NULL),
-    "positive integer"
-  )
-})
-
-# --- n_factors = 1 (unidimensional) tests ---
-
-test_that("befa uses 'uni' model for M=1 with unit_vector", {
-  model_name <- select_befa_model("cor", "unit_vector", n_factors = 1, verbose = FALSE)
-  expect_equal(model_name, "befa_efa")
-})
-
-
-# --- lambda_prior='normal' + model='cor' is blocked ---
-
-test_that("befa blocks lambda_prior='normal' with model='cor'", {
-  skip_if_not_installed("rstan")
-
-  expect_error(
-    befa(
-      sample_cor = dummy_cor, sample_nobs = 40, n_factors = 2,
-      model = "cor", lambda_prior = "normal"
-    ),
-    "not supported"
-  )
-})
-
-# --- backend argument tests ---
-
-test_that("befa falls back to rstan when cmdstanr unavailable", {
-  skip_if(requireNamespace("cmdstanr", quietly = TRUE))
-
-  expect_warning(
-    backend <- validate_backend("cmdstanr"),
-    "not installed"
-  )
-  expect_equal(backend, "rstan")
-})
-
-test_that("befa uses rstan backend when specified", {
-  backend <- validate_backend("rstan")
-  expect_equal(backend, "rstan")
-})
-
-# --- prior argument tests ---
-
-test_that("befa warns on unknown prior parameters", {
-  skip_if_not_installed("rstan")
-
-  expect_warning(
-    prepare_befa_priors(
-      prior_user = list(unknown_param = 99),
-      model = "cor",
-      lambda_prior = "unit_vector",
-      n_factors = 2
-    ),
-    "not valid"
-  )
-})
-
-test_that("befa accepts valid prior parameters", {
-  priors <- prepare_befa_priors(
-    prior_user = list(xi = 50, h2 = c(2, 2)),
-    model = "cor",
-    lambda_prior = "unit_vector",
-    n_factors = 2
-  )
-
-  expect_equal(priors$xi, 50)
-  expect_equal(priors$h2, c(2, 2))
-})
-
-# --- rsp_args argument tests ---
-
-test_that("befa accepts valid rsp_args", {
-  rsp_config <- validate_rsp_args(list(max_iter = 500, threshold = 1e-5))
-
-  expect_equal(rsp_config$max_iter, 500)
-  expect_equal(rsp_config$threshold, 1e-5)
-})
-
-test_that("befa warns on unknown rsp_args", {
-  expect_warning(
-    validate_rsp_args(list(bad_arg = 123)),
-    "Unknown"
-  )
-})
-
-# --- Data handling tests ---
-
-test_that("befa handles matrix input", {
-  skip_if_not_installed("rstan")
-
-  data_matrix <- as.matrix(dummy_data)
-  args <- list(
-    data = data_matrix, n_factors = 2, ordered = FALSE,
-    sample_nobs = NULL, sample_mean = NULL, sample_cov = NULL,
-    sample_cor = NULL, model = "cor", lambda_prior = "unit_vector",
-    missing = "listwise",
-    rotate = "varimax", rsp_args = NULL, factor_scores = FALSE,
-    backend = "rstan", prior = list(), compute_fit_indices = FALSE,
-    compute_reliability = FALSE, verbose = FALSE
-  )
-
-  result <- check_befa_inputs(args)
-  expect_type(result, "list")
-})
-
-test_that("befa handles data.frame input", {
-  skip_if_not_installed("rstan")
-
-  args <- list(
-    data = dummy_data, n_factors = 2, ordered = FALSE,
-    sample_nobs = NULL, sample_mean = NULL, sample_cov = NULL,
-    sample_cor = NULL, model = "cor", lambda_prior = "unit_vector",
-    missing = "listwise",
-    rotate = "varimax", rsp_args = NULL, factor_scores = FALSE,
-    backend = "rstan", prior = list(), compute_fit_indices = FALSE,
-    compute_reliability = FALSE, verbose = FALSE
-  )
-
-  result <- check_befa_inputs(args)
-  expect_type(result, "list")
-})
-
-test_that("befa warns on missing data", {
-  data_na <- dummy_data
-  data_na[1, 1] <- NA
-
-  args <- list(
-    data = data_na, n_factors = 2, ordered = FALSE,
-    sample_nobs = NULL, sample_mean = NULL, sample_cov = NULL,
-    sample_cor = NULL, model = "raw", lambda_prior = "unit_vector",
-    rotate = "varimax", rsp_args = NULL, factor_scores = FALSE,
-    backend = "rstan", prior = list(), compute_fit_indices = FALSE,
-    compute_reliability = FALSE, verbose = FALSE
-  )
-
-  expect_warning(check_befa_inputs(args), "Missing values")
-})
-
-# --- Summary statistics input tests ---
-
-test_that("befa accepts sample_cor with sample_nobs", {
-  args <- list(
-    data = NULL, n_factors = 2, ordered = FALSE,
-    sample_nobs = 100, sample_mean = NULL, sample_cov = NULL,
-    sample_cor = dummy_cor, model = "cor", lambda_prior = "unit_vector",
-    missing = "listwise",
-    rotate = "varimax", rsp_args = NULL, factor_scores = FALSE,
-    backend = "rstan", prior = list(), compute_fit_indices = FALSE,
-    compute_reliability = FALSE, verbose = FALSE
-  )
-
-  result <- check_befa_inputs(args)
-  expect_equal(result$N, 100)
-})
-
-test_that("befa accepts sample_cov with sample_nobs", {
-  args <- list(
-    data = NULL, n_factors = 2, ordered = FALSE,
-    sample_nobs = 100, sample_mean = NULL, sample_cov = dummy_cov,
-    sample_cor = NULL, model = "cov", lambda_prior = "unit_vector",
-    missing = "listwise",
-    rotate = "varimax", rsp_args = NULL, factor_scores = FALSE,
-    backend = "rstan", prior = list(), compute_fit_indices = FALSE,
-    compute_reliability = FALSE, verbose = FALSE
-  )
-
-  result <- check_befa_inputs(args)
-  expect_equal(result$N, 100)
-})
-
-test_that("befa accepts ordered=FALSE", {
-  args <- list(
-    data = dummy_data, n_factors = 2, ordered = FALSE,
-    sample_nobs = NULL, sample_mean = NULL, sample_cov = NULL,
-    sample_cor = NULL, model = "cor", lambda_prior = "unit_vector",
-    missing = "listwise",
-    rotate = "varimax", rsp_args = NULL, factor_scores = FALSE,
-    backend = "rstan", prior = list(), compute_fit_indices = FALSE,
-    compute_reliability = FALSE, verbose = FALSE
-  )
-
-  result <- check_befa_inputs(args)
-  expect_type(result, "list")
-})
-
-# Note: All integration tests that require Stan sampling (model fitting,
-# verbose, reliability, fit indices, return object structure, Stan args, etc.)
-# are now covered by run_all_befa_checks() in Section 2 below.
-
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION 2: Comprehensive Bayesian EFA Integration Tests
-# ─────────────────────────────────────────────────────────────────────────────
-
-# ═══════════════════════════════════════════════════════════════════════════════
-#                    INTEGRATION TESTS: FULL MODEL ESTIMATION
-# ═══════════════════════════════════════════════════════════════════════════════
-# These tests actually run Stan and verify that all model combinations work.
-# They are slow and require rstan to be installed.
-
-# --- Setup for integration tests ---
-setup_integration_data <- function() {
-  set.seed(42)
-  # Generate data with clear factor structure
-  n <- 300
-  J <- 6
-
-  # True loadings: items 1-3 load on F1, items 4-6 load on F2
-  Lambda_true <- matrix(c(
-    0.7, 0,
-    0.7, 0,
-    0.7, 0,
-    0., 0.7,
-    0,  0.7,
-    0,  0.7
-  ), nrow = 6, ncol = 2, byrow = TRUE)
-
-  Psi_true <- diag(c(0.3, 0.35, 0.4, 0.3, 0.35, 0.4))
-  Sigma_true <- Lambda_true %*% t(Lambda_true) + Psi_true
-
-  # Generate multivariate normal data
-  data <- mvnfast::rmvn(n = n, mu = rep(0, J), sigma = Sigma_true)
-  colnames(data) <- paste0("V", 1:J)
-
-  list(
-    data = as.data.frame(data),
-    cor_matrix = cor(data),
-    cov_matrix = cov(data),
-    n = n,
-    J = J
-  )
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPER: Run ALL comprehensive checks on a fitted befa object
-# ─────────────────────────────────────────────────────────────────────────────
-
-run_all_befa_checks <- function(result, test_label) {
-  # This function performs extensive validation on a fitted befa object
-  # It is called within each model test to avoid code repetition
-
-  J <- result$stan_data$J
-  M <- result$n_factors
-  model_type <- result$model_type
-
-  # ── Basic structure checks ──
-  expect_s3_class(result, "befa")
-  expect_true("stanfit" %in% names(result))
-  expect_true("stan_data" %in% names(result))
-  expect_true("n_factors" %in% names(result))
-  expect_true("model_type" %in% names(result))
-  expect_true("lambda_prior" %in% names(result))
-  expect_true("rsp_objective" %in% names(result))
-  expect_true("priors_used" %in% names(result))
-
-  # ── Posterior draws validation ──
-  draws <- posterior::as_draws_matrix(result$stanfit)
-  col_names <- colnames(draws)
-
-  # Lambda parameters must exist
-  lambda_cols <- grep("^Lambda\\[", col_names)
-  expect_true(length(lambda_cols) > 0)
-  expect_equal(length(lambda_cols), J * M)
-
-  # Psi must exist in all models
-  expect_true(any(grepl("^Psi\\[", col_names)))
-
-  # Internal-only parameters must be stripped
-  expect_false(any(grepl("^Z\\[", col_names)))
-  expect_false(any(grepl("^Z_norm\\[", col_names)))
-  expect_false(any(grepl("^psi\\[", col_names)))
-
-  # Model-specific parameters
-  if (model_type == "raw") {
-    expect_true(any(grepl("^Sigma\\[", col_names)))
-    expect_true(any(grepl("^nu\\[", col_names)))
-
-    # Check Sigma is positive definite (first draw)
-    sigma_cols <- grep("^Sigma\\[", col_names)
-    Sigma_1 <- matrix(draws[1, sigma_cols], nrow = J, ncol = J)
-    eigenvalues <- eigen(Sigma_1, only.values = TRUE)$values
-    expect_true(all(eigenvalues > 0))
-  } else {
-    expect_true(any(grepl("^Rho\\[", col_names)))
-
-    # Check Rho is valid correlation matrix (first draw)
-    rho_cols <- grep("^Rho\\[", col_names)
-    Rho_1 <- matrix(draws[1, rho_cols], nrow = J, ncol = J)
-    expect_equal(diag(Rho_1), rep(1, J), tolerance = 0.01)
-    eigenvalues <- eigen(Rho_1, only.values = TRUE)$values
-    expect_true(all(eigenvalues > 0))
-  }
-
-  # ── Lambda draws quality ──
-  lambda_draws <- draws[, lambda_cols]
-  mean_loadings <- colMeans(lambda_draws)
-
-  # Loadings should be bounded (roughly -25 to 25 for raw scale models with normal prior)
-  expect_true(all(abs(mean_loadings) <= 25.0))
-
-  # At least some loadings should be substantially non-zero
-  expect_true(any(abs(mean_loadings) > 0.2))
-
-  # ── RSP alignment check ──
-  expect_type(result$rsp_objective, "double")
-  expect_true(all(is.finite(result$rsp_objective)))
-
-  # ── Convergence diagnostics ──
-  summ <- posterior::summarise_draws(lambda_draws, posterior::default_convergence_measures())
-
-  # ── Summary method ──
-  summ_obj <- summary(result)
-  expect_s3_class(summ_obj, "summary.befa")
-  expect_equal(nrow(summ_obj$estimates), J)
-  expect_true("h2" %in% names(summ_obj$estimates))
-  expect_true("u2" %in% names(summ_obj$estimates))
-  expect_true("Rhat" %in% names(summ_obj$estimates))
-
-  # ── Reliability (if computed) ──
-  if (!is.null(result$reliability)) {
-    rel <- result$reliability
-    expect_s3_class(rel, "befa_reliability")
-    expect_true("total" %in% names(rel))
-    expect_true("subscales" %in% names(rel))
-    expect_true(all(c("Estimate", "SD", "Lower_95", "Upper_95") %in% names(rel$total)))
-    expect_equal(nrow(rel$subscales), M)
-    expect_equal(rownames(rel$subscales), paste0("F", 1:M))
-    expect_true(rel$total$Estimate > 0 && rel$total$Estimate <= 1)
-    expect_true(all(rel$subscales$Estimate > 0))
-    expect_true(all(rel$subscales$Estimate <= 1))
-  }
-
-  # ── Fit indices (if computed) ──
-  if (!is.null(result$fit_indices)) {
-    fit <- result$fit_indices
-    expect_s3_class(fit, "befa_fitmeasures")
-    expect_true("fit_draws" %in% names(fit))
-    expect_true("summary" %in% names(fit))
-    expect_true("posterior_fit" %in% names(fit))
-    expect_true("loo_object" %in% names(fit))
-    expect_true("details" %in% names(fit))
-
-    # Check that key indices are computed and present in the summary tibble
-    expected_vars <- c("Chi2", "BRMSEA", "BCFI", "SRMR")
-    expect_true(all(expected_vars %in% fit$summary$variable))
-
-    # Value bounds (from posterior summary means)
-    brmsea_mean <- fit$summary$mean[fit$summary$variable == "BRMSEA"]
-    expect_true(length(brmsea_mean) == 1 && brmsea_mean >= 0)
-
-    bcfi_mean <- fit$summary$mean[fit$summary$variable == "BCFI"]
-    expect_true(length(bcfi_mean) == 1 && bcfi_mean >= 0 && bcfi_mean <= 1)
-
-    # chi2_ppp is stored as a scalar in details
-    expect_true(fit$details$chi2_ppp >= 0 && fit$details$chi2_ppp <= 1)
-
-    # LOO object
-    expect_s3_class(fit$loo_object, "loo")
-
-    # Details
-    expect_true("p_star" %in% names(fit$details))
-    expect_true("pD" %in% names(fit$details))
-    expect_true("N" %in% names(fit$details))
-  }
-
-  invisible(TRUE)
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ─────────────────────────────────────────────────────────────────────────────
-# NEGATIVE TESTS: Invalid combinations
-# ─────────────────────────────────────────────────────────────────────────────
-
-test_that("befa errors: cor + normal is blocked", {
-  skip_if_not_installed("rstan")
-
-  test_data <- setup_integration_data()
-
-  expect_error(
-    befa(
-      sample_cor = test_data$cor_matrix,
-      sample_nobs = test_data$n,
-      n_factors = 2,
-      model = "cor",
-      lambda_prior = "normal",
-      verbose = FALSE
-    ),
-    "not supported"
-  )
-})
-
-# ─────────────────────────────────────────────────────────────────────────────
-# EXHAUSTIVE INTEGRATION GRID: All valid model combinations
-# ─────────────────────────────────────────────────────────────────────────────
-# Tests ALL valid befa model combinations with varimax/none rotation.
-# Covers: cor/cov/raw models, unit_vector/normal priors, M=1/2, listwise/FIML.
-
-test_that("befa runs successfully on all valid parameter combinations", {
-  # The precompiled Stan models are gone; this grid returns with the new
-  # backend layer (phase 4 of the v0.2.0 rewrite).
-  skip("Stan sampling is rebuilt in phase 4 of the v0.2.0 rewrite.")
-  skip_if_not_installed("rstan")
+.skip_without_stanli <- function() {
   skip_on_cran()
+  skip_if_not_installed("stanli", "0.25.0")
+  skip_if_not(stanli::stanli_available(), "the stanli runtime is not installed")
+}
 
-  # ─────────────────────────────────────────────────────────────────────────
-  # Setup: Generate simulated data with clear factor structure
-  # ─────────────────────────────────────────────────────────────────────────
-  set.seed(42)
-  N <- 600
-  J <- 6
-
-  # True loadings: items 1-3 load on F1, items 4-6 load on F2
-  Lambda_true <- matrix(c(
-    0.8, 0.1,
-    0.75, 0.1,
-    0.7, 0.15,
-    0.1, 0.8,
-    0.15, 0.75,
-    0.1, 0.7
-  ), nrow = 6, ncol = 2, byrow = TRUE)
-
-  Psi_true <- diag(c(0.3, 0.35, 0.4, 0.3, 0.35, 0.4))
-  Sigma_true <- Lambda_true %*% t(Lambda_true) + Psi_true
-
-  # Complete data
-  data_complete <- mvnfast::rmvn(n = N, mu = rep(0, J), sigma = Sigma_true)
-  colnames(data_complete) <- paste0("V", 1:J)
-
-  # Data with missing values for FIML tests (~15% missing)
-  data_missing <- data_complete
-  data_missing[1:6, 1] <- NA
-  data_missing[7:12, 2] <- NA
-  data_missing[13:18, 3] <- NA
-  data_missing[19:24, 4] <- NA
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Define the complete parameter grid
-  # ─────────────────────────────────────────────────────────────────────────
-  grid <- expand.grid(
-    M = 2,
-    model = c("cor", "cov", "raw"),
-    lambda_prior = c("unit_vector", "normal"),
-    missing = c("listwise", "FIML"),
-    rotate = "varimax",
-    stringsAsFactors = FALSE
-  )
-
-  # ─────────────────────────────────────────────────────────────────────────
-  # Filter invalid combinations:
-  # 1. normal prior + cor model = NOT SUPPORTED
-  # 2. FIML + M=1 + none = skip (M=1 always uses varimax internally anyway)
-  # ─────────────────────────────────────────────────────────────────────────
-  grid <- grid[!(grid$model == "cor" & grid$lambda_prior == "normal"), ]
-
-  # Stan arguments for fast testing
-  stan_args <- list(iter = 3000, warmup = 1000, chains = 2, cores = 2, refresh = 0)
-
-  for (i in 1:nrow(grid)) {
-    p <- grid[i, ]
-
-    # Select appropriate data based on missing strategy
-    test_data <- if (p$missing == "FIML") data_missing else data_complete
-
-    label <- sprintf(
-      "[M=%d | %s | %s | %s | %s]",
-      p$M, p$model, p$lambda_prior, p$missing, p$rotate
-    )
-
-    test_that(paste("Grid test:", label), {
-
-      # Fit Bayesian EFA model
-      fit <- befa(
-        data = test_data,
-        n_factors = p$M,
-        model = p$model,
-        lambda_prior = p$lambda_prior,
-        missing = p$missing,
-        rotate = p$rotate,
-        iter = stan_args$iter,
-        warmup = stan_args$warmup,
-        chains = stan_args$chains,
-        cores = stan_args$cores,
-        refresh = stan_args$refresh,
-        backend = "rstan",
-        verbose = FALSE,
-        compute_fit_indices = FALSE,
-        compute_reliability = FALSE,
-        show_message = FALSE,
-        show_exceptions = FALSE
-      )
-
-      # Full validation of posterior properties using helper
-      run_all_befa_checks(fit, label)
-    })
+# This function fits a short stanli model quietly: two MCMC chains of 150
+# draws, or the defaults of ADVI and Pathfinder.
+.quick_befa <- function(data = .simulated_data(N = 300), n_factors = 2L,
+                        method = "mcmc", ...) {
+  withr::local_options(BayesianEFA.cache_dir = withr::local_tempdir())
+  short <- if (method == "mcmc") {
+    list(chains = 2, iter_warmup = 200, iter_sampling = 150)
   }
+  args <- c(list(data, n_factors, method = method, backend = "stanli",
+                 seed = 5, verbose = FALSE), short, list(...))
+  suppressWarnings(do.call(befa, args))
+}
+
+# This function returns the posterior means of the standardized loadings.
+.mean_loadings <- function(fit, M = fit$n_factors) {
+  draws <- extract_posterior_draws(fit, "Lambda_std", metric = "std")
+  matrix(colMeans(draws), ncol = M)
+}
+
+# The true loadings of .simulated_data(): items 1-3 on one factor, 4-5 on
+# the other.
+.true_pattern <- matrix(c(1, 1, 1, 0, 0, 0, 0, 0, 1, 1), 5, 2)
+
+grid <- expand.grid(model = c("cor", "cov", "raw"),
+                    lambda_prior = c("unit_vector", "normal"),
+                    missing = c("listwise", "FIML"), stringsAsFactors = FALSE)
+grid <- grid[!(grid$model == "cor" & grid$lambda_prior == "normal"), ]
+
+for (i in seq_len(nrow(grid))) {
+  g <- grid[i, ]
+  label <- paste(g$model, g$lambda_prior, g$missing, sep = " / ")
+  test_that(paste("befa() fits and aligns", label), {
+    .skip_without_stanli()
+    data <- .simulated_data(N = 300, missing = g$missing == "FIML")
+    fit <- .quick_befa(data, model = g$model, lambda_prior = g$lambda_prior,
+                       missing = g$missing)
+    expect_s3_class(fit, "befa")
+    expect_identical(unname(dim(fit$draws)[1:2]), c(150L, 2L))
+    expect_identical(fit$spec$patterns, if (g$missing == "FIML") "multiple" else "single")
+
+    vars <- unique(sub("\\[.*", "", posterior::variables(fit$draws)))
+    expected <- if (g$model == "cor") {
+      c("Lambda_std", "Psi_std", "h2")
+    } else if (g$lambda_prior == "normal") {
+      c("Lambda", "Psi", if (g$model == "raw") "nu")
+    } else {
+      c("Lambda", "Psi", "sigma", "h2", if (g$model == "raw") "nu")
+    }
+    expect_identical(vars, expected)
+
+    # Each true factor is recovered by one aligned column with positive mean.
+    L <- .mean_loadings(fit)
+    hit <- abs(stats::cor(L, .true_pattern))
+    expect_gt(min(apply(hit, 2, max)), 0.9)
+    expect_true(all(colMeans(L) > 0))
+    std <- extract_posterior_draws(fit, c("Psi_std", "h2"), metric = "std")
+    expect_true(all(std > 0 & std < 1))
+    expect_named(fit$rsp, c("Lambda_star", "objective", "sign_vectors", "perm_vectors"))
+    expect_false(is.na(fit$diagnostics$max_rhat))
+  })
+}
+
+test_that("befa() fits one factor and summary statistics", {
+  .skip_without_stanli()
+  Y <- .simulated_data(N = 300)
+  uni <- .quick_befa(Y[, 1:3], n_factors = 1L)
+  expect_identical(posterior::variables(uni$draws)[1:3],
+                   c("Lambda_std[1,1]", "Lambda_std[2,1]", "Lambda_std[3,1]"))
+  expect_true(all(.mean_loadings(uni) > 0.4))
+
+  withr::local_options(BayesianEFA.cache_dir = withr::local_tempdir())
+  summ <- suppressWarnings(befa(sample_nobs = 300, sample_cov = stats::cov(Y),
+                                sample_mean = colMeans(Y), n_factors = 2,
+                                model = "raw", backend = "stanli", chains = 2,
+                                iter_warmup = 200, iter_sampling = 150, seed = 5,
+                                verbose = FALSE))
+  expect_true(summ$data$summary)
+  expect_equal(unname(colMeans(extract_posterior_draws(summ, "nu"))), colMeans(Y),
+               tolerance = 0.1)
 })
 
-# ─────────────────────────────────────────────────────────────────────────────
+test_that("befa() runs ADVI and Pathfinder and can skip the alignment", {
+  .skip_without_stanli()
+  advi <- .quick_befa(method = "advi")
+  expect_identical(advi$method, "advi")
+  expect_true("lp_approx__" %in% posterior::variables(advi$fit$draws))
+  path <- .quick_befa(method = "pathfinder", rotate = "none")
+  expect_null(path$rsp)
+  expect_identical(path$rotation, "none")
+})
+
+test_that("befa() reports the fit and warns when it is too short", {
+  .skip_without_stanli()
+  withr::local_options(BayesianEFA.cache_dir = withr::local_tempdir())
+  msgs <- character(0)
+  expect_warning(
+    withCallingHandlers(
+      befa(.simulated_data(N = 300), 2, backend = "stanli", chains = 2,
+           iter_warmup = 100, iter_sampling = 50, seed = 3),
+      message = function(m) {
+        msgs <<- c(msgs, conditionMessage(m))
+        invokeRestart("muffleMessage")
+      }),
+    "may be unreliable")
+  msgs <- paste(msgs, collapse = "")
+  expect_match(msgs, "Bayesian exploratory factor analysis")
+  expect_match(msgs, "Sampled 2 chains")
+  expect_match(msgs, "Largest R-hat")
+  expect_match(msgs, "being rebuilt")
+})
+
+test_that("befa() reproduces v0.1.0 on the Holzinger-Swineford data", {
+  .skip_without_stanli()
+  withr::local_options(BayesianEFA.cache_dir = withr::local_tempdir())
+  fit <- befa(HS_data, n_factors = 3, backend = "stanli", seed = 17,
+              verbose = FALSE)
+  # Posterior means printed in the v0.1.0 documentation of befa().
+  v010_h2 <- c(0.476, 0.240, 0.447, 0.715, 0.751, 0.687, 0.486, 0.527, 0.442)
+  v010_L <- matrix(c(0.594, 0.459, 0.648, 0.110, 0.029, 0.156, -0.053, 0.171, 0.401,
+                     0.313, 0.130, 0.076, 0.833, 0.862, 0.809, 0.099, 0.075, 0.165,
+                     0.122, -0.038, 0.108, 0.073, 0.068, 0.062, 0.681, 0.693, 0.492),
+                   9, 3)
+  expect_equal(unname(colMeans(extract_posterior_draws(fit, "h2"))), v010_h2,
+               tolerance = 0.02)
+  # The order of the factors is arbitrary, so each v0.1.0 column is matched
+  # with the closest aligned column.
+  L <- .mean_loadings(fit)
+  for (m in 1:3) {
+    best <- which.max(abs(stats::cor(v010_L[, m], L)))
+    expect_lt(max(abs(L[, best] - v010_L[, m])), 0.05)
+  }
+  expect_length(fit$diagnostics$issues, 0L)
+})
+
+test_that("extract_posterior_draws() and posterior_summaries() read befa fits", {
+  .skip_without_stanli()
+  fit <- .quick_befa(model = "cov")
+  expect_s3_class(extract_posterior_draws(fit, "Lambda"), "draws_matrix")
+  expect_s3_class(extract_posterior_draws(fit, format = "rvars"), "draws_rvars")
+  expect_s3_class(extract_posterior_draws(fit, format = "df"), "draws_df")
+  expect_s3_class(extract_posterior_draws(fit, format = "list"), "draws_list")
+  expect_s3_class(extract_posterior_draws(fit, format = "array"), "draws_array")
+  summ <- posterior_summaries(fit, "h2", metric = "std")
+  expect_identical(summ$variable, paste0("h2[", 1:5, "]"))
+  expect_error(extract_posterior_draws(list()), "fit returned by befa")
+})

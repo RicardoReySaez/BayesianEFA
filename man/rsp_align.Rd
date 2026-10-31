@@ -71,7 +71,7 @@ sign flips applied to each draw.
 \item \code{perm_vectors}: A matrix of dimensions \eqn{S \times M} containing the
 permutations applied to each draw.
 \item \code{summary}: A \code{draws_summary} data frame computed via
-\code{\link[posterior:draws_summary]{posterior::summarise_draws()}}.
+\code{\link[posterior:summarise_draws]{posterior::summarise_draws()}}.
 }
 }
 \description{

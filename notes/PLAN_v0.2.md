@@ -2,7 +2,11 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
-**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (este commit) · siguiente: fase 5.
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (`a0d721c`) · fase 5 ✔ (este commit) · siguiente: fase 6.
+
+**Fase 5 (2026-10-31).** `befa(HS_data, 3)` con stanli reproduce v0.1.0. Las medias de h² coinciden hasta 0,02 y las cargas alineadas hasta 0,05 con la tabla de la documentación de v0.1.0. El ajuste no da ningún aviso de convergencia.
+
+**Quedan para la fase 6**, porque aún leen `stanfit`: puntuaciones factoriales, fiabilidad, índices de ajuste y `summary()`. También el modelo nulo, que todavía usa `normalize_stan_args()`, `get_befa_inits()` y el stub `fit_befa_model()`.
 
 ### Lo aprendido en la fase 4 (2026-10-31)
 

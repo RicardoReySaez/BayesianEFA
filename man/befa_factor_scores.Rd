@@ -10,7 +10,7 @@ befa_factor_scores(object, post_summaries = TRUE)
 \item{object}{A \code{befa} object returned by \code{\link[=befa]{befa()}}.}
 
 \item{post_summaries}{Logical. If \code{TRUE} (default), includes posterior summaries
-computed via \code{\link[posterior:draws_summary]{posterior::summarise_draws()}}. Set to \code{FALSE} to skip summaries.}
+computed via \code{\link[posterior:summarise_draws]{posterior::summarise_draws()}}. Set to \code{FALSE} to skip summaries.}
 }
 \value{
 A list of class \code{befa_factor_scores} containing:
@@ -18,7 +18,7 @@ A list of class \code{befa_factor_scores} containing:
 \item \code{eta_draws}: A \code{draws_array} (iterations \eqn{\times} chains \eqn{\times} P)
 containing the posterior draws of the factor scores.
 \item \code{summary}: (If \code{post_summaries = TRUE}) A \code{draws_summary} data frame computed
-via \code{\link[posterior:draws_summary]{posterior::summarise_draws()}}.
+via \code{\link[posterior:summarise_draws]{posterior::summarise_draws()}}.
 }
 }
 \description{

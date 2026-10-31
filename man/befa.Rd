@@ -15,372 +15,169 @@ befa(
   model = c("cor", "cov", "raw"),
   lambda_prior = c("unit_vector", "normal"),
   missing = c("listwise", "FIML"),
+  method = c("mcmc", "advi", "pathfinder"),
+  backend = "auto",
   rotate = c("varimax", "none"),
   rsp_args = NULL,
-  loo_args = NULL,
-  factor_scores = FALSE,
-  backend = c("rstan", "cmdstanr"),
   prior = list(),
+  factor_scores = FALSE,
   compute_fit_indices = TRUE,
   compute_reliability = TRUE,
+  loo_args = NULL,
   verbose = TRUE,
   ...
 )
 }
 \arguments{
-\item{data}{Numeric matrix or data.frame (N rows, J columns). Raw observations.
-Mutually exclusive with \code{sample_cov}/\code{sample_cor}.}
+\item{data}{Numeric matrix or data frame with one row per person and one
+column per item. Leave it \code{NULL} to fit summary statistics instead.}
 
-\item{n_factors}{Integer. Number of latent factors to extract.}
+\item{n_factors}{Number of latent factors, smaller than the number of
+items.}
 
-\item{ordered}{Logical. If TRUE, fits an ordinal model. Currently not implemented.}
+\item{ordered}{Ordinal factor analysis. Not implemented yet; only \code{FALSE}
+is accepted.}
 
-\item{sample_nobs}{Integer. Sample size. Required when using summary statistics instead of \code{data}.}
+\item{sample_nobs, sample_mean, sample_cov, sample_cor}{Summary statistics
+used instead of \code{data}: the sample size, the item means (raw model only),
+and the covariance or correlation matrix. The covariance and raw models
+need \code{sample_cov}.}
 
-\item{sample_mean}{Numeric vector (length J). Sample means. Used with \code{model="raw"} and summary stats.}
+\item{model}{Data model: \code{"cor"} (default) fits the correlation matrix of
+the standardized items, \code{"cov"} their covariance matrix, and \code{"raw"} the
+means and the covariance matrix.}
 
-\item{sample_cov}{Numeric matrix (J x J). Sample covariance matrix. Mutually exclusive with \code{data}.}
+\item{lambda_prior}{Prior on the loadings: \code{"unit_vector"} (default), the
+unit-vector prior of Rey-Sáez et al. (2025), or \code{"normal"}, independent
+normal priors in the metric of the items (not available for \code{"cor"}).}
 
-\item{sample_cor}{Numeric matrix (J x J). Sample correlation matrix. Mutually exclusive with \code{data}.}
+\item{missing}{Treatment of missing values: \code{"listwise"} (default) keeps
+the complete rows, and \code{"FIML"} uses every observed value. FIML needs
+\code{data}.}
 
-\item{model}{Character. Model parameterization:
-\itemize{
-\item \code{"cor"} (default): Estimates the model-implied correlation matrix.
-\item \code{"cov"}: Estimates the model-implied covariance matrix.
-\item \code{"raw"}: Full model. Estimates the model-implied mean-vector and covariance matrix.
-}}
+\item{method}{Estimation method: \code{"mcmc"} (default) samples with NUTS,
+\code{"advi"} fits automatic differentiation variational inference, and
+\code{"pathfinder"} runs Pathfinder.}
 
-\item{lambda_prior}{Character. Prior family for loadings:
-\itemize{
-\item \code{"unit_vector"} (default): Unit-vector prior distribution proposed by Rey-Sáez et al., 2025 (see details)
-\item \code{"normal"}: Independent normal priors for each factor loading. Normal priors are not available when \code{model="cor"}.
-}}
+\item{backend}{Stan interface: \code{"auto"} (default) takes the first one
+installed among cmdstanr, stanli, stanr and rstan that runs \code{method}.
+stanli needs no C++ compiler; the others compile each model once and keep
+it for later sessions (see \code{\link[=befa_compile_models]{befa_compile_models()}}).}
 
-\item{missing}{Character. Method for handling missing data:
-\itemize{
-\item \code{"listwise"} (default): Complete-case analysis (removes rows with any NA).
-\item \code{"FIML"}: Full Information Maximum Likelihood. Uses all available data,
-estimating parameters using the observed data pattern for each case.
-Requires raw data.
-}}
+\item{rotate}{\code{"varimax"} (default) aligns the draws with Varimax and E-RSP;
+\code{"none"} returns the loadings as Stan sampled them.}
 
-\item{rotate}{Character. Rotation criterion for post-processing:
-\itemize{
-\item \code{"varimax"} (default): Apply Varimax rotation and RSP alignment.
-\item \code{"none"}: No rotation or alignment applied.
-}}
+\item{rsp_args}{List with \code{max_iter} (default 1000) and \code{threshold}
+(default 1e-6) for \code{\link[=rsp_align]{rsp_align()}}.}
 
-\item{rsp_args}{List. Arguments for the efficient RSP alignment algorithm:
-\itemize{
-\item \code{max_iter}: Maximum iterations (default 1000).
-\item \code{threshold}: Convergence threshold (default 1e-6).
-}}
+\item{prior}{Named list of prior hyperparameters that replace the defaults
+(see Details): \code{xi}, \code{h2}, \code{lambda}, \code{psi}, \code{sigma} and \code{nu}.}
 
-\item{loo_args}{List. Arguments passed to \code{loo::loo()} for leave-one-out cross-validation
-when \code{compute_fit_indices = TRUE}. Common arguments include:
-\itemize{
-\item \code{cores}: Number of cores to use for parallelization.
-\item \code{r_eff}: Logical. If TRUE, computes relative effective sample sizes.
-}}
+\item{factor_scores, compute_fit_indices, compute_reliability}{Logical.
+Compute the factor scores, the Bayesian fit indices and the omega
+coefficients. They are being rebuilt for the new draws and are not
+computed in this development version.}
 
-\item{factor_scores}{Logical. If TRUE, computes and stores factor scores. Requires \code{data}.}
+\item{loo_args}{List with \code{r_eff} and \code{cores} for the PSIS-LOO of the fit
+indices.}
 
-\item{backend}{Character. Stan interface: \code{"rstan"} (default) or \code{"cmdstanr"}.}
+\item{verbose}{Logical. Show the progress bar, the convergence checks and
+other messages.}
 
-\item{prior}{Named list. User-defined prior hyperparameters (override defaults):
-\itemize{
-\item \code{xi}: Repulsion parameter (unit_vector prior). Default: \code{100}. \strong{Not recommended to
-be modified by the user}.
-\item \code{nu}: c(mean, sd) for intercepts (raw model). Default: \code{c(0, 40)} -> N(0, 40).
-\item \code{sigma}: c(df, loc, scale) for residual SDs (cov/raw models). Default: \code{c(3, 0, 2.5)} -> half-t(3, 0, 2.5).
-\item \code{h2}: c(alpha, beta) for communalities (unit_vector prior). Default: \code{c(1, 1)} -> Beta(1, 1).
-Using this default setting implies a \strong{uniform joint distribution over the factor loadings} when \code{lambda_prior = "unit_vector"}.
-\item \code{lambda}: c(mean, sd) for loadings (normal prior). Default: \code{c(0, 10)} -> N(0, 10).
-For the unidimensional model, c(alpha, beta) -> Beta(1, 1).
-\item \code{psi}: c(alpha, beta) for uniquenesses (normal prior). Default: \code{c(0.5, 0.5)} -> InvGamma(0.5, 0.5).
-}}
-
-\item{compute_fit_indices}{Logical. If TRUE (default), computes Bayesian fit indices after estimation.}
-
-\item{compute_reliability}{Logical. If TRUE (default), computes Omega reliability coefficients.}
-
-\item{verbose}{Logical. If TRUE (default), prints progress messages.}
-
-\item{...}{Additional arguments passed to Stan sampler (iter, chains, warmup, seed, etc.).}
+\item{...}{Options of the estimation method. MCMC takes \code{chains} (default
+4), \code{parallel_chains} (chains that run at once; default up to 4, leaving
+two cores free), \code{iter_warmup} and \code{iter_sampling} (default 1000 each),
+\code{adapt_delta} (0.95), \code{max_treedepth} (15), \code{seed}, \code{refresh} (iterations
+between progress updates; \code{0} hides the progress bar) and \code{init}; the
+rstan names \code{iter} (warmup included), \code{warmup}, \code{cores} and \code{control} are
+also accepted. ADVI takes \code{algorithm} (\code{"meanfield"} or \code{"fullrank"}),
+\code{iter}, \code{draws}, \code{tol_rel_obj}, \code{seed}, \code{refresh} and \code{init}; Pathfinder
+takes \code{draws}, \code{num_paths}, \code{iter}, \code{psis_resample}, \code{seed}, \code{refresh}
+and \code{init}.}
 }
 \value{
-An object of class \code{befa} containing:
+An object of class \code{befa} with:
 \itemize{
-\item \code{stanfit}: The Stan fit object with aligned posterior samples.
-\item \code{stan_data}: Data list passed to Stan.
-\item \code{n_factors}, \code{model_type}, \code{lambda_prior}, \code{rotation}: Model specifications.
-\item \code{missing}: Missing data method used (\code{"listwise"} or \code{"FIML"}).
-\item \code{has_missing}: Logical. Whether the data contained missing values.
-\item \code{priors_used}: Resolved prior hyperparameters.
-\item \code{options}: List with \code{factor_scores}, \code{ordered}, \code{rsp_args}, and \code{loo_args}.
-\item \code{rsp_objective}: Final RSP alignment objective value (NA if \code{rotate = "none"}).
-\item \code{call}: The matched function call.
-\item \code{reliability}: Omega coefficients (if \code{compute_reliability = TRUE}).
-\item \code{fit_indices}: Bayesian fit measures (if \code{compute_fit_indices = TRUE}).
+\item \verb{$draws}: A \code{draws_array} of the final parameters in the metric of the
+model: \code{Lambda_std}, \code{Psi_std} and \code{h2} for the correlation model;
+\code{Lambda}, \code{Psi}, \code{sigma}, \code{h2} and (raw model) \code{nu} for the unit-vector
+prior; \code{Lambda}, \code{Psi} and (raw model) \code{nu} for the normal prior. Use
+\code{\link[=extract_posterior_draws]{extract_posterior_draws()}} with \code{metric = "std"} for the standardized
+solution.
+\item \verb{$diagnostics}: The convergence checks (see the messages after the fit).
+\item \verb{$fit}: The method, backend, settings, sampler diagnostics, log densities
+and run times.
+\item \verb{$rsp}: The reference loadings, objective and sign and permutation
+vectors of the alignment (\code{NULL} with \code{rotate = "none"}).
+\item \verb{$spec}, \verb{$stan_code}, \verb{$stan_data}, \verb{$data}: The structure of the model,
+its Stan program, the data passed to Stan and the prepared data.
+\item \verb{$n_factors}, \verb{$model_type}, \verb{$lambda_prior}, \verb{$missing}, \verb{$method},
+\verb{$backend}, \verb{$rotation}, \verb{$priors_used}, \verb{$options} and \verb{$call}.
 }
 }
 \description{
-Estimates an Exploratory Factor Analysis model using Hamiltonian Monte Carlo (Stan).
-Posterior samples are post-processed via Varimax rotation and alignment (RSP algorithm)
-to resolve the rotational indeterminacy inherent to factor models.
+Fits an exploratory factor model with Stan and returns posterior draws of
+interpretable parameters. The loading matrix is left unrestricted during
+estimation; its rotational indeterminacy is resolved afterwards, draw by
+draw, with Varimax and the Efficient Rotation-Sign-Permutation (E-RSP)
+alignment of \code{\link[=rsp_align]{rsp_align()}}.
 }
 \details{
-\strong{\emph{The Factor Model}}
+\strong{\emph{The factor model}}
 
-The function estimates a linear factor model where each observed vector \eqn{\mathbf{y}_i}
-is decomposed as:
-\deqn{\mathbf{y}_i = \boldsymbol{\nu} + \mathbf{\Lambda} \cdot \boldsymbol{\eta}_i + \boldsymbol{\epsilon}_i}
-
-where:
-\itemize{
-\item \eqn{\mathbf{y}_i} is a \eqn{J}-dimensional observed response vector.
-\item \eqn{\boldsymbol{\nu}} is a \eqn{J \times 1} vector of intercepts.
-\item \eqn{\mathbf{\Lambda}} is the \eqn{J \times M} matrix of factor loadings.
-\item \eqn{\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_M)} represents the
-latent factors.
-\item \eqn{\boldsymbol{\epsilon}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{\Psi})} represents
-the idiosyncratic residuals (uniquenesses), with \eqn{\mathbf{\Psi}} being a diagonal matrix.
-}
-
-Under the assumption of no missing data (or using listwise deletion), the marginal
-distribution of the observed data is:
-\deqn{\mathbf{y}_i \mid \boldsymbol{\nu}, \mathbf{\Lambda}, \mathbf{\Psi} \sim \mathcal{MVN}(\boldsymbol{\nu}, \mathbf{\Sigma})}
-
-where \eqn{\mathbf{\Sigma} = \mathbf{\Lambda}\cdot\mathbf{\Lambda}^\top + \mathbf{\Psi}}
-is the model-implied covariance matrix.
-
-\strong{\emph{Model Parameterizations}}
-
-The \code{befa} function allows users to fit different versions of the marginal model
-through the following parameterizations:
-\itemize{
-\item \strong{Correlation Model} (\code{model = "cor"}):
-This parameterization assumes the observed data are standardized; thus, the
-intercept vector \eqn{\boldsymbol{\nu}} is not estimated. The model-implied
-covariance matrix \eqn{\mathbf{\Sigma}} simplifies to the model-implied
-correlation matrix \eqn{\mathbf{R}}, decomposed as:
-\deqn{\mathbf{R} = \mathbf{\Lambda} \cdot \mathbf{\Lambda}^\top + \mathbf{\Psi}}
-where \eqn{\mathbf{\Lambda}} contains the standardized factor loadings and
-\eqn{\mathbf{\Psi}} represents the proportion of unique variance (uniquenesses).
-Since the elements of \eqn{\mathbf{\Lambda}} are constrained to the range
-\eqn{[-1, 1]} and are mutually dependent (as the diagonal elements of \eqn{\mathbf{R}}
-must sum to 1), \code{lambda_prior = "normal"} is not available. Instead, the
-unit-vector prior (\code{lambda_prior = "unit_vector"}) is employed to ensure
-a valid joint distribution by accounting for this dependency.
-\item \strong{Covariance Model} (\code{model = "cov"}):
-This model focuses on the covariance structure while assuming the intercept
-vector \eqn{\boldsymbol{\nu}} is zero. It can be implemented in two ways:
-\itemize{
-\item \emph{Standardized Structure with Scale}: When using \code{lambda_prior = "unit_vector"},
-the model introduces a vector of marginal standard deviations \eqn{\boldsymbol{\sigma}}.
-The covariance matrix is reconstructed by scaling the standardized structure:
-\deqn{\mathbf{\Sigma} = \mathbf{D}_{\sigma} \cdot (\mathbf{\Lambda} \cdot \mathbf{\Lambda}^\top + \mathbf{\Psi}) \cdot \mathbf{D}_{\sigma}}
-where \eqn{\mathbf{D}_{\sigma} = \text{diag}(\boldsymbol{\sigma})} and
-\eqn{\mathbf{\Lambda}} remains in the correlation metric.
-\item \emph{Unstandardized (Metric) Structure}: When using \code{lambda_prior = "normal"},
-the loadings are estimated directly in the scale of the observed variables.
-The scale is embedded within \eqn{\mathbf{\Lambda}}, and the covariance
-matrix follows the classical fundamental equation:
-\deqn{\mathbf{\Sigma} = \mathbf{\Lambda} \cdot \mathbf{\Lambda}^\top + \mathbf{\Psi}}
-where \eqn{\mathbf{\Psi}} represents uniquenesses in the original variance scale.
-}
-\item \strong{Full Unstandardized Model} (\code{model = "raw"}):
-Unlike the previous parameterizations, this model estimates the full marginal
-distribution of the observed data, which includes estimating the intercept
-vector \eqn{\boldsymbol{\nu}} (i.e., the item means). The covariance structure
-\eqn{\mathbf{\Sigma}} is modeled exactly as in the Covariance Model
-(\code{model = "cov"}). Depending on the \code{lambda_prior} selected, the covariance
-matrix is reconstructed either by scaling a standardized factor structure
-(\code{lambda_prior = "unit_vector"}) or by estimating the loadings directly in
-the original metric (\code{lambda_prior = "normal"}).
-}
+Each observed vector is \eqn{\mathbf{y}_i = \boldsymbol{\nu} +
+\mathbf{\Lambda} \boldsymbol{\eta}_i + \boldsymbol{\epsilon}_i}, with
+\eqn{\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_M)} and
+\eqn{\boldsymbol{\epsilon}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{\Psi})},
+so that \eqn{\mathbf{y}_i \sim \mathcal{N}(\boldsymbol{\nu},
+\mathbf{\Lambda}\mathbf{\Lambda}^\top + \mathbf{\Psi})}. The correlation
+model fits the standardized items (\eqn{\boldsymbol{\nu} = \mathbf{0}}, unit
+variances), the covariance model the centered items, and the raw model
+also estimates the means.
 
 \strong{\emph{Prior distributions}}
-
-The following arguments allow users to specify the prior distributions for the
-model parameters. The exact parameters estimated depend on the chosen \code{model}
-and \code{lambda_prior}.
 \itemize{
-\item \strong{Unit-Vector Prior for Loadings} (\code{lambda_prior = "unit_vector"}):
-Rather than placing priors directly on the individual loadings, the user
-only needs to specify a prior on the communality, \eqn{h_j^2 \sim \text{Beta}(\alpha, \beta)},
-which represents the proportion of variance explained by the factors. This prior
-is coherently translated to the factor loadings via the decomposition
-\eqn{\boldsymbol{\lambda}_j = \sqrt{h_j^2} \cdot \mathbf{z}_j}, where \eqn{\mathbf{z}_j}
-is a vector uniformly distributed on the unit hypersphere. \strong{By default (using a
-\eqn{\text{Beta}(1, 1)} prior on the communalities), this approach implicitly
-assumes a uniform joint distribution over the valid space of the factor loadings.} This accounts for the dependency among loadings and strictly prevents
-Heywood cases (negative residual variances). See Rey-Sáez et al. (2025) for details.
-\item \strong{Normal Prior for Loadings} (\code{lambda_prior = "normal"}):
-This approach assigns standard independent normal priors directly to each loading:
-\eqn{\lambda_{jm} \sim \mathcal{N}(\mu_\lambda, \sigma_\lambda)}. While intuitive
-and commonly used, it does not constrain the variance partitioning and is
-unavailable for the Correlation Model (\code{model = "cor"}).
-\item \strong{Prior for Uniquenesses} (\eqn{\mathbf{\Psi}}):
-This prior is only required when using \code{lambda_prior = "normal"} in the
-Covariance (\code{"cov"}) or Full Unstandardized (\code{"raw"}) models. It defines the
-prior distribution for the residual variances, \eqn{\psi_{jj}}, which follow
-an inverse-gamma distribution: \eqn{\psi_{jj} \sim \mathcal{IG}(\alpha, \beta)}.
-\emph{(Note: When using \code{lambda_prior = "unit_vector"}, this prior is ignored
-because the uniquenesses in the standardized structure are deterministically
-defined by the communality as \eqn{1 - h_j^2}).}
-\item \strong{Prior for Scale Parameters} (\eqn{\boldsymbol{\sigma}}):
-This prior is only used when scaling the standardized structure back to the
-original metric (i.e., using \code{lambda_prior = "unit_vector"} with \code{model = "cov"}
-or \code{model = "raw"}). It assigns a Student-t prior distribution to the marginal
-standard deviations of each observed variable, \eqn{\sigma_j}:
-\eqn{\sigma_j \sim \text{Student-t}(\nu_\sigma, \mu_\sigma, \sigma_\sigma)}.
-\item \strong{Prior for Intercepts} (\eqn{\boldsymbol{\nu}}):
-This prior is exclusively used in the Full Unstandardized Model (\code{model = "raw"}),
-regardless of the chosen \code{lambda_prior}. It assigns a normal prior distribution
-to the item means, \eqn{\nu_j}: \eqn{\nu_j \sim \mathcal{N}(\mu_\nu, \sigma_\nu)}.
+\item Unit-vector prior: each row of the standardized loadings is
+\eqn{\sqrt{h^2_j}\,\mathbf{z}_j / \lVert \mathbf{z}_j \rVert}, with a
+direction uniform on the sphere and a communality
+\eqn{h^2_j \sim \text{Beta}(a, b)} (\code{h2}, default \code{c(1, 1)}, which makes
+the joint prior on the loadings uniform). The norm of \eqn{\mathbf{z}_j}
+has density proportional to \eqn{\lVert \mathbf{z}_j \rVert^{\xi}
+  e^{-\lVert \mathbf{z}_j \rVert^2/2}} (\code{xi}, default 100), which keeps it
+away from zero; it does not affect the loadings. With one factor, each
+loading follows a Beta prior scaled to (-1, 1) (\code{lambda}, default
+\code{c(1, 1)}). The uniquenesses are \eqn{1 - h^2_j}, so Heywood cases cannot
+occur. Outside the correlation model, the item standard deviations
+\eqn{\sigma_j} follow a half-Student-t (\code{sigma}, default \code{c(3, 0, 2.5)}).
+\item Normal prior (covariance and raw models): \eqn{\lambda_{jm} \sim
+  \mathcal{N}(m s_j, s\, s_j)} and \eqn{\psi_j \sim \text{Inv-Gamma}(a,
+  b\, s_j^2)}, where \eqn{s_j} is the standard deviation of item j (\code{lambda},
+default \code{c(0, 10)}; \code{psi}, default \code{c(0.5, 0.5)}). Scaling by \eqn{s_j}
+makes the prior independent of the units of the items.
+\item Means (raw model): \eqn{\nu_j \sim \mathcal{N}(m, s)} (\code{nu}, default
+\code{c(0, 40)}).
 }
+
+\strong{\emph{Estimation}}
+
+The Stan program is generated for the structure of the model and compiled
+once per backend. Each chain runs in its own background process, starting
+from the maximum-likelihood EFA that \code{\link[stats:factanal]{stats::factanal()}} computes, and the
+convergence checks use the aligned parameters only.
 }
 \examples{
 \dontrun{
-# Fit Bayesian EFA model to the famous Grant-White School Data (Holzinger & Swineford, 1939)
-befa_fit <- befa(
-  data = HS_data,
-  n_factors = 3,
-  model = "cor",
-  lambda_prior = "unit_vector",
-  rotate = "varimax",
-  factor_scores = TRUE,
-  compute_fit_indices = TRUE,
-  compute_reliability = TRUE,
-  backend = "rstan",
-  iter_sampling = 1000,
-  iter_warmup = 1000,
-  chains = 4,
-  parallel_chains = 4,
-  seed = 17
-)
-
-# Posterior draws of model parameters
-extract_posterior_draws(befa_fit, pars = "Lambda", format = "matrix")
-
-# # A draws_matrix: 1000 iterations, 4 chains, and 27 variables
-#     variable
-# draw Lambda[1,1] Lambda[2,1] Lambda[3,1] Lambda[4,1] Lambda[5,1] Lambda[6,1]
-#   1         0.63        0.50        0.66       0.053     0.02543        0.19
-#   2         0.62        0.48        0.68       0.132     0.01635        0.11
-#   3         0.55        0.43        0.69       0.199     0.00023        0.17
-#   4         0.44        0.42        0.55       0.096    -0.00680        0.14
-#   5         0.59        0.51        0.69       0.143    -0.00072        0.22
-#   6         0.65        0.42        0.57       0.075     0.03311        0.17
-#   7         0.58        0.49        0.74       0.106    -0.00305        0.20
-#   8         0.69        0.42        0.73       0.084     0.07283        0.19
-#   9         0.45        0.45        0.64       0.115     0.00454        0.15
-#   10        0.61        0.49        0.64       0.093     0.06957        0.19
-# # ... with 3990 more draws, and 21 more variables
-
-# Fast summaries using rvars format
-extract_posterior_draws(befa_fit, pars = "Lambda", format = "rvars")
-
-# # A draws_rvars: 1000 iterations, 4 chains, and 1 variables
-# $Lambda: rvar<1000,4>[9,3] mean ± sd:
-#       [,1]            [,2]            [,3]
-#  [1,]  0.594 ± 0.063   0.313 ± 0.048   0.122 ± 0.060
-#  [2,]  0.459 ± 0.062   0.130 ± 0.054  -0.038 ± 0.067
-#  [3,]  0.648 ± 0.063   0.076 ± 0.048   0.108 ± 0.054
-#  [4,]  0.110 ± 0.039   0.833 ± 0.024   0.073 ± 0.040
-#  [5,]  0.029 ± 0.037   0.862 ± 0.024   0.068 ± 0.038
-#  [6,]  0.156 ± 0.040   0.809 ± 0.025   0.062 ± 0.041
-#  [7,] -0.053 ± 0.050   0.099 ± 0.048   0.681 ± 0.077
-#  [8,]  0.171 ± 0.065   0.075 ± 0.046   0.693 ± 0.074
-#  [9,]  0.401 ± 0.071   0.165 ± 0.049   0.492 ± 0.067
-
-# Full posterior summaries
-posterior_summaries(befa_fit, pars = "h2")
-
-# # A tibble: 9 × 10
-#   variable  mean median     sd    mad    q5   q95  rhat ess_bulk ess_tail
-#   <chr>    <dbl>  <dbl>  <dbl>  <dbl> <dbl> <dbl> <dbl>    <dbl>    <dbl>
-# 1 h2[1]    0.476  0.474 0.0645 0.0622 0.370 0.584 1.00     4808.    2810.
-# 2 h2[2]    0.240  0.237 0.0569 0.0568 0.148 0.338 1.00     4910.    2645.
-# 3 h2[3]    0.447  0.442 0.0791 0.0770 0.325 0.582 1.00     4352.    2399.
-# 4 h2[4]    0.715  0.717 0.0364 0.0356 0.654 0.774 1.00     5036.    2427.
-# 5 h2[5]    0.751  0.752 0.0386 0.0384 0.686 0.812 1.00     5169.    3079.
-# 6 h2[6]    0.687  0.688 0.0358 0.0360 0.626 0.743 1.00     4945.    2674.
-# 7 h2[7]    0.486  0.479 0.103  0.0990 0.332 0.669 1.00     3504.    2121.
-# 8 h2[8]    0.527  0.523 0.0873 0.0846 0.390 0.674 1.00     3800.    2562.
-# 9 h2[9]    0.442  0.441 0.0560 0.0549 0.350 0.533 1.000    4101.    2681.
-
-# # Model summaries (inspired in psych package output)
-# summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
-#
-# Table 1. Factor Loadings (Pattern Matrix)
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-# Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
-# ———————————————————————————————————————————————————————————————————
-# Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849
-# Item_2      0.46*                0.23  0.77  1.00     4053     2741
-# Item_3      0.65*                0.44  0.56  1.00     4146     2274
-# Item_4             0.83*         0.71  0.29  1.00     4156     2607
-# Item_5             0.86*         0.75  0.25  1.00     4179     2983
-# Item_6             0.81*         0.68  0.32  1.00     4291     2817
-# Item_7                    0.68*  0.48  0.52  1.00     3343     2081
-# Item_8                    0.69*  0.52  0.48  1.00     3614     2593
-# Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-# Note: varimax rotation applied. Diagnostics show worst-case values
-# across factors (max Rhat, min ESS). The 3 latent factors accounted
-# for 52.2\% of total variance. (*) 95\% Credible Interval excludes 0.
-# Loadings with absolute values < 0.30 are hidden.
-#
-# Table 2. Bayesian Fit Measures
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-# Index         Estimate     SD    CI_Low   CI_High
-# —————————————————————————————————————————————————
-# Chi2             47.75   7.24     35.81     63.71
-# Chi2_ppp          0.12
-# Chi2_Null       918.85   0.00    918.85    918.85
-# BRMSEA            0.06   0.02      0.00      0.09
-# BGamma            0.99   0.01      0.98      1.00
-# Adj_BGamma        0.97   0.02      0.93      1.00
-# BMc               0.98   0.01      0.96      1.00
-# SRMR              0.05   0.01      0.03      0.06
-# BCFI              0.99   0.01      0.97      1.00
-# BTLI              0.99   0.02      0.93      1.00
-# ELPD          -3416.93  42.49  -3500.21  -3333.64
-# LOOIC          6833.85  84.98   6667.29   7000.42
-# p_loo            25.58   1.82     22.01     29.14
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-# Note: Intervals are 95\% Credible Intervals. PPP:
-# Posterior Predictive p-value (Ideal > .05).
-# p_loo/LOOIC derived from PSIS-LOO.
-#
-# Table 3. Factor Reliability (Coefficient Omega)
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-# Factor    Estimate    SD  CI_Low  CI_High
-# —————————————————————————————————————————
-# F1            0.60  0.04    0.52     0.67
-# F2            0.73  0.02    0.69     0.76
-# F3            0.55  0.04    0.45     0.62
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-# Full Scale Omega Total: 0.84 [0.82,
-# 0.86]. Omega coefficients use the full
-# posterior distribution.
+fit <- befa(HS_data, n_factors = 3, seed = 17)
+extract_posterior_draws(fit, pars = "Lambda_std", format = "rvars")
+posterior_summaries(fit, pars = "h2")
 }
 
 }
 \references{
-Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian
-structural equation modeling: Comparison to maximum likelihood.
-\emph{Psychological methods, 25}(1), 46–70. \url{https://doi.org/10.1037/met0000224}
-
-Holzinger, K. J., and F. A. Swineford. 1939. \emph{A Study of Factor Analysis:
-The Stability of a Bi-Factor Solution.} Supplementary Educational Monograph 48.
-Chicago: University of Chicago Press.
-
 Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2025).
-\emph{A Unified Framework for Psychometrics in Experimental Psychology: The Standardized
-Generalized Hierarchical Factor Model}. PsyArXiv. \url{https://doi.org/10.31234/osf.io/gv6k7_v1}
+\emph{A Unified Framework for Psychometrics in Experimental Psychology: The
+Standardized Generalized Hierarchical Factor Model}. PsyArXiv.
+\url{https://doi.org/10.31234/osf.io/gv6k7_v1}
 
 Rey-Sáez, R. & Revuelta, J. (2026). \emph{An Efficient
 Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in

@@ -19,7 +19,7 @@ A list of class \code{befa_fitmeasures} containing:
 containing the posterior draws of all fit indices (\code{Chi2}, \code{Chi2_Null},
 \code{BRMSEA}, \code{BGamma}, \code{Adj_BGamma}, \code{BMc}, \code{SRMR}, \code{BCFI}, \code{BTLI}).
 \item \code{summary}: A \code{draws_summary} data frame computed via
-\code{\link[posterior:draws_summary]{posterior::summarise_draws()}}.
+\code{\link[posterior:summarise_draws]{posterior::summarise_draws()}}.
 \item \code{posterior_fit}: A data frame containing the full MCMC posterior draws
 for all \eqn{\chi^2}-based indices, enabling custom plotting and density estimation.
 \item \code{loo_object}: The full \code{loo} object returned by \code{\link[loo:loo]{loo::loo()}}.

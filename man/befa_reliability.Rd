@@ -19,7 +19,7 @@ A list of class \code{befa_reliability} containing:
 containing the posterior draws of all reliability coefficients (\code{omega_total},
 \code{omega_F1}, ..., \code{omega_FM}).
 \item \code{summary}: A \code{draws_summary} data frame computed via
-\code{\link[posterior:draws_summary]{posterior::summarise_draws()}}.
+\code{\link[posterior:summarise_draws]{posterior::summarise_draws()}}.
 }
 }
 \description{

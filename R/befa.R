@@ -1,198 +1,133 @@
+# befa.R
+# Fit a Bayesian exploratory factor analysis
+# Author: Ricardo Rey-Sáez
+# Last modified: 31-10-2026
+
+# Public functions
+
 #' Bayesian Exploratory Factor Analysis
 #'
-#' Estimates an Exploratory Factor Analysis model using Hamiltonian Monte Carlo (Stan).
-#' Posterior samples are post-processed via Varimax rotation and alignment (RSP algorithm)
-#' to resolve the rotational indeterminacy inherent to factor models.
+#' Fits an exploratory factor model with Stan and returns posterior draws of
+#' interpretable parameters. The loading matrix is left unrestricted during
+#' estimation; its rotational indeterminacy is resolved afterwards, draw by
+#' draw, with Varimax and the Efficient Rotation-Sign-Permutation (E-RSP)
+#' alignment of [rsp_align()].
 #'
-#' @param data Numeric matrix or data.frame (N rows, J columns). Raw observations.
-#'   Mutually exclusive with `sample_cov`/`sample_cor`.
-#' @param n_factors Integer. Number of latent factors to extract.
-#' @param ordered Logical. If TRUE, fits an ordinal model. Currently not implemented.
-#' @param sample_nobs Integer. Sample size. Required when using summary statistics instead of `data`.
-#' @param sample_mean Numeric vector (length J). Sample means. Used with `model="raw"` and summary stats.
-#' @param sample_cov Numeric matrix (J x J). Sample covariance matrix. Mutually exclusive with `data`.
-#' @param sample_cor Numeric matrix (J x J). Sample correlation matrix. Mutually exclusive with `data`.
-#' @param model Character. Model parameterization:
-#'   * `"cor"` (default): Estimates the model-implied correlation matrix.
-#'   * `"cov"`: Estimates the model-implied covariance matrix.
-#'   * `"raw"`: Full model. Estimates the model-implied mean-vector and covariance matrix.
-#' @param lambda_prior Character. Prior family for loadings:
-#'   * `"unit_vector"` (default): Unit-vector prior distribution proposed by Rey-Sáez et al., 2025 (see details)
-#'   * `"normal"`: Independent normal priors for each factor loading. Normal priors are not available when `model="cor"`.
-#' @param missing Character. Method for handling missing data:
-#'   * `"listwise"` (default): Complete-case analysis (removes rows with any NA).
-#'   * `"FIML"`: Full Information Maximum Likelihood. Uses all available data,
-#'     estimating parameters using the observed data pattern for each case.
-#'     Requires raw data.
-#' @param rotate Character. Rotation criterion for post-processing:
-#'   * `"varimax"` (default): Apply Varimax rotation and RSP alignment.
-#'   * `"none"`: No rotation or alignment applied.
-#' @param rsp_args List. Arguments for the efficient RSP alignment algorithm:
-#'   * `max_iter`: Maximum iterations (default 1000).
-#'   * `threshold`: Convergence threshold (default 1e-6).
-#' @param loo_args List. Arguments passed to `loo::loo()` for leave-one-out cross-validation
-#'   when `compute_fit_indices = TRUE`. Common arguments include:
-#'   * `cores`: Number of cores to use for parallelization.
-#'   * `r_eff`: Logical. If TRUE, computes relative effective sample sizes.
-#' @param factor_scores Logical. If TRUE, computes and stores factor scores. Requires `data`.
-#' @param backend Character. Stan interface: `"rstan"` (default) or `"cmdstanr"`.
-#' @param prior Named list. User-defined prior hyperparameters (override defaults):
-#'   * `xi`: Repulsion parameter (unit_vector prior). Default: `100`. **Not recommended to
-#'     be modified by the user**.
-#'   * `nu`: c(mean, sd) for intercepts (raw model). Default: `c(0, 40)` -> N(0, 40).
-#'   * `sigma`: c(df, loc, scale) for residual SDs (cov/raw models). Default: `c(3, 0, 2.5)` -> half-t(3, 0, 2.5).
-#'   * `h2`: c(alpha, beta) for communalities (unit_vector prior). Default: `c(1, 1)` -> Beta(1, 1).
-#'     Using this default setting implies a **uniform joint distribution over the factor loadings** when `lambda_prior = "unit_vector"`.
-#'   * `lambda`: c(mean, sd) for loadings (normal prior). Default: `c(0, 10)` -> N(0, 10).
-#'     For the unidimensional model, c(alpha, beta) -> Beta(1, 1).
-#'   * `psi`: c(alpha, beta) for uniquenesses (normal prior). Default: `c(0.5, 0.5)` -> InvGamma(0.5, 0.5).
-#' @param compute_fit_indices Logical. If TRUE (default), computes Bayesian fit indices after estimation.
-#' @param compute_reliability Logical. If TRUE (default), computes Omega reliability coefficients.
-#' @param verbose Logical. If TRUE (default), prints progress messages.
-#' @param ... Additional arguments passed to Stan sampler (iter, chains, warmup, seed, etc.).
+#' @param data Numeric matrix or data frame with one row per person and one
+#'   column per item. Leave it `NULL` to fit summary statistics instead.
+#' @param n_factors Number of latent factors, smaller than the number of
+#'   items.
+#' @param ordered Ordinal factor analysis. Not implemented yet; only `FALSE`
+#'   is accepted.
+#' @param sample_nobs,sample_mean,sample_cov,sample_cor Summary statistics
+#'   used instead of `data`: the sample size, the item means (raw model only),
+#'   and the covariance or correlation matrix. The covariance and raw models
+#'   need `sample_cov`.
+#' @param model Data model: `"cor"` (default) fits the correlation matrix of
+#'   the standardized items, `"cov"` their covariance matrix, and `"raw"` the
+#'   means and the covariance matrix.
+#' @param lambda_prior Prior on the loadings: `"unit_vector"` (default), the
+#'   unit-vector prior of Rey-Sáez et al. (2025), or `"normal"`, independent
+#'   normal priors in the metric of the items (not available for `"cor"`).
+#' @param missing Treatment of missing values: `"listwise"` (default) keeps
+#'   the complete rows, and `"FIML"` uses every observed value. FIML needs
+#'   `data`.
+#' @param method Estimation method: `"mcmc"` (default) samples with NUTS,
+#'   `"advi"` fits automatic differentiation variational inference, and
+#'   `"pathfinder"` runs Pathfinder.
+#' @param backend Stan interface: `"auto"` (default) takes the first one
+#'   installed among cmdstanr, stanli, stanr and rstan that runs `method`.
+#'   stanli needs no C++ compiler; the others compile each model once and keep
+#'   it for later sessions (see [befa_compile_models()]).
+#' @param rotate `"varimax"` (default) aligns the draws with Varimax and E-RSP;
+#'   `"none"` returns the loadings as Stan sampled them.
+#' @param rsp_args List with `max_iter` (default 1000) and `threshold`
+#'   (default 1e-6) for [rsp_align()].
+#' @param prior Named list of prior hyperparameters that replace the defaults
+#'   (see Details): `xi`, `h2`, `lambda`, `psi`, `sigma` and `nu`.
+#' @param factor_scores,compute_fit_indices,compute_reliability Logical.
+#'   Compute the factor scores, the Bayesian fit indices and the omega
+#'   coefficients. They are being rebuilt for the new draws and are not
+#'   computed in this development version.
+#' @param loo_args List with `r_eff` and `cores` for the PSIS-LOO of the fit
+#'   indices.
+#' @param verbose Logical. Show the progress bar, the convergence checks and
+#'   other messages.
+#' @param ... Options of the estimation method. MCMC takes `chains` (default
+#'   4), `parallel_chains` (chains that run at once; default up to 4, leaving
+#'   two cores free), `iter_warmup` and `iter_sampling` (default 1000 each),
+#'   `adapt_delta` (0.95), `max_treedepth` (15), `seed`, `refresh` (iterations
+#'   between progress updates; `0` hides the progress bar) and `init`; the
+#'   rstan names `iter` (warmup included), `warmup`, `cores` and `control` are
+#'   also accepted. ADVI takes `algorithm` (`"meanfield"` or `"fullrank"`),
+#'   `iter`, `draws`, `tol_rel_obj`, `seed`, `refresh` and `init`; Pathfinder
+#'   takes `draws`, `num_paths`, `iter`, `psis_resample`, `seed`, `refresh`
+#'   and `init`.
 #'
 #' @details
-#' **_The Factor Model_**
+#' **_The factor model_**
 #'
-#' The function estimates a linear factor model where each observed vector \eqn{\mathbf{y}_i}
-#' is decomposed as:
-#' \deqn{\mathbf{y}_i = \boldsymbol{\nu} + \mathbf{\Lambda} \cdot \boldsymbol{\eta}_i + \boldsymbol{\epsilon}_i}
-#'
-#' where:
-#' \itemize{
-#'   \item \eqn{\mathbf{y}_i} is a \eqn{J}-dimensional observed response vector.
-#'   \item \eqn{\boldsymbol{\nu}} is a \eqn{J \times 1} vector of intercepts.
-#'   \item \eqn{\mathbf{\Lambda}} is the \eqn{J \times M} matrix of factor loadings.
-#'   \item \eqn{\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_M)} represents the
-#'   latent factors.
-#'   \item \eqn{\boldsymbol{\epsilon}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{\Psi})} represents
-#'   the idiosyncratic residuals (uniquenesses), with \eqn{\mathbf{\Psi}} being a diagonal matrix.
-#' }
-#'
-#' Under the assumption of no missing data (or using listwise deletion), the marginal
-#' distribution of the observed data is:
-#' \deqn{\mathbf{y}_i \mid \boldsymbol{\nu}, \mathbf{\Lambda}, \mathbf{\Psi} \sim \mathcal{MVN}(\boldsymbol{\nu}, \mathbf{\Sigma})}
-#'
-#' where \eqn{\mathbf{\Sigma} = \mathbf{\Lambda}\cdot\mathbf{\Lambda}^\top + \mathbf{\Psi}}
-#' is the model-implied covariance matrix.
-#'
-#' **_Model Parameterizations_**
-#'
-#' The `befa` function allows users to fit different versions of the marginal model
-#' through the following parameterizations:
-#'
-#' * **Correlation Model** (`model = "cor"`):
-#'   This parameterization assumes the observed data are standardized; thus, the
-#'   intercept vector \eqn{\boldsymbol{\nu}} is not estimated. The model-implied
-#'   covariance matrix \eqn{\mathbf{\Sigma}} simplifies to the model-implied
-#'   correlation matrix \eqn{\mathbf{R}}, decomposed as:
-#'   \deqn{\mathbf{R} = \mathbf{\Lambda} \cdot \mathbf{\Lambda}^\top + \mathbf{\Psi}}
-#'   where \eqn{\mathbf{\Lambda}} contains the standardized factor loadings and
-#'   \eqn{\mathbf{\Psi}} represents the proportion of unique variance (uniquenesses).
-#'   Since the elements of \eqn{\mathbf{\Lambda}} are constrained to the range
-#'   \eqn{[-1, 1]} and are mutually dependent (as the diagonal elements of \eqn{\mathbf{R}}
-#'   must sum to 1), `lambda_prior = "normal"` is not available. Instead, the
-#'   unit-vector prior (`lambda_prior = "unit_vector"`) is employed to ensure
-#'   a valid joint distribution by accounting for this dependency.
-#'
-#' * **Covariance Model** (`model = "cov"`):
-#'   This model focuses on the covariance structure while assuming the intercept
-#'   vector \eqn{\boldsymbol{\nu}} is zero. It can be implemented in two ways:
-#'
-#'   * *Standardized Structure with Scale*: When using `lambda_prior = "unit_vector"`,
-#'     the model introduces a vector of marginal standard deviations \eqn{\boldsymbol{\sigma}}.
-#'     The covariance matrix is reconstructed by scaling the standardized structure:
-#'     \deqn{\mathbf{\Sigma} = \mathbf{D}_{\sigma} \cdot (\mathbf{\Lambda} \cdot \mathbf{\Lambda}^\top + \mathbf{\Psi}) \cdot \mathbf{D}_{\sigma}}
-#'     where \eqn{\mathbf{D}_{\sigma} = \text{diag}(\boldsymbol{\sigma})} and
-#'     \eqn{\mathbf{\Lambda}} remains in the correlation metric.
-#'
-#'   * *Unstandardized (Metric) Structure*: When using `lambda_prior = "normal"`,
-#'     the loadings are estimated directly in the scale of the observed variables.
-#'     The scale is embedded within \eqn{\mathbf{\Lambda}}, and the covariance
-#'     matrix follows the classical fundamental equation:
-#'     \deqn{\mathbf{\Sigma} = \mathbf{\Lambda} \cdot \mathbf{\Lambda}^\top + \mathbf{\Psi}}
-#'     where \eqn{\mathbf{\Psi}} represents uniquenesses in the original variance scale.
-#'
-#' * **Full Unstandardized Model** (`model = "raw"`):
-#'   Unlike the previous parameterizations, this model estimates the full marginal
-#'   distribution of the observed data, which includes estimating the intercept
-#'   vector \eqn{\boldsymbol{\nu}} (i.e., the item means). The covariance structure
-#'   \eqn{\mathbf{\Sigma}} is modeled exactly as in the Covariance Model
-#'   (`model = "cov"`). Depending on the `lambda_prior` selected, the covariance
-#'   matrix is reconstructed either by scaling a standardized factor structure
-#'   (`lambda_prior = "unit_vector"`) or by estimating the loadings directly in
-#'   the original metric (`lambda_prior = "normal"`).
+#' Each observed vector is \eqn{\mathbf{y}_i = \boldsymbol{\nu} +
+#' \mathbf{\Lambda} \boldsymbol{\eta}_i + \boldsymbol{\epsilon}_i}, with
+#' \eqn{\boldsymbol{\eta}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{I}_M)} and
+#' \eqn{\boldsymbol{\epsilon}_i \sim \mathcal{N}(\mathbf{0}, \mathbf{\Psi})},
+#' so that \eqn{\mathbf{y}_i \sim \mathcal{N}(\boldsymbol{\nu},
+#' \mathbf{\Lambda}\mathbf{\Lambda}^\top + \mathbf{\Psi})}. The correlation
+#' model fits the standardized items (\eqn{\boldsymbol{\nu} = \mathbf{0}}, unit
+#' variances), the covariance model the centered items, and the raw model
+#' also estimates the means.
 #'
 #' **_Prior distributions_**
 #'
-#' The following arguments allow users to specify the prior distributions for the
-#' model parameters. The exact parameters estimated depend on the chosen `model`
-#' and `lambda_prior`.
+#' * Unit-vector prior: each row of the standardized loadings is
+#'   \eqn{\sqrt{h^2_j}\,\mathbf{z}_j / \lVert \mathbf{z}_j \rVert}, with a
+#'   direction uniform on the sphere and a communality
+#'   \eqn{h^2_j \sim \text{Beta}(a, b)} (`h2`, default `c(1, 1)`, which makes
+#'   the joint prior on the loadings uniform). The norm of \eqn{\mathbf{z}_j}
+#'   has density proportional to \eqn{\lVert \mathbf{z}_j \rVert^{\xi}
+#'   e^{-\lVert \mathbf{z}_j \rVert^2/2}} (`xi`, default 100), which keeps it
+#'   away from zero; it does not affect the loadings. With one factor, each
+#'   loading follows a Beta prior scaled to (-1, 1) (`lambda`, default
+#'   `c(1, 1)`). The uniquenesses are \eqn{1 - h^2_j}, so Heywood cases cannot
+#'   occur. Outside the correlation model, the item standard deviations
+#'   \eqn{\sigma_j} follow a half-Student-t (`sigma`, default `c(3, 0, 2.5)`).
+#' * Normal prior (covariance and raw models): \eqn{\lambda_{jm} \sim
+#'   \mathcal{N}(m s_j, s\, s_j)} and \eqn{\psi_j \sim \text{Inv-Gamma}(a,
+#'   b\, s_j^2)}, where \eqn{s_j} is the standard deviation of item j (`lambda`,
+#'   default `c(0, 10)`; `psi`, default `c(0.5, 0.5)`). Scaling by \eqn{s_j}
+#'   makes the prior independent of the units of the items.
+#' * Means (raw model): \eqn{\nu_j \sim \mathcal{N}(m, s)} (`nu`, default
+#'   `c(0, 40)`).
 #'
-#' * **Unit-Vector Prior for Loadings** (`lambda_prior = "unit_vector"`):
-#'   Rather than placing priors directly on the individual loadings, the user
-#'   only needs to specify a prior on the communality, \eqn{h_j^2 \sim \text{Beta}(\alpha, \beta)},
-#'   which represents the proportion of variance explained by the factors. This prior
-#'   is coherently translated to the factor loadings via the decomposition
-#'   \eqn{\boldsymbol{\lambda}_j = \sqrt{h_j^2} \cdot \mathbf{z}_j}, where \eqn{\mathbf{z}_j}
-#'   is a vector uniformly distributed on the unit hypersphere. **By default (using a
-#'   \eqn{\text{Beta}(1, 1)} prior on the communalities), this approach implicitly
-#'   assumes a uniform joint distribution over the valid space of the factor loadings.** This accounts for the dependency among loadings and strictly prevents
-#'   Heywood cases (negative residual variances). See Rey-Sáez et al. (2025) for details.
+#' **_Estimation_**
 #'
-#' * **Normal Prior for Loadings** (`lambda_prior = "normal"`):
-#'   This approach assigns standard independent normal priors directly to each loading:
-#'   \eqn{\lambda_{jm} \sim \mathcal{N}(\mu_\lambda, \sigma_\lambda)}. While intuitive
-#'   and commonly used, it does not constrain the variance partitioning and is
-#'   unavailable for the Correlation Model (`model = "cor"`).
+#' The Stan program is generated for the structure of the model and compiled
+#' once per backend. Each chain runs in its own background process, starting
+#' from the maximum-likelihood EFA that [stats::factanal()] computes, and the
+#' convergence checks use the aligned parameters only.
 #'
-#' * **Prior for Uniquenesses** (\eqn{\mathbf{\Psi}}):
-#'   This prior is only required when using `lambda_prior = "normal"` in the
-#'   Covariance (`"cov"`) or Full Unstandardized (`"raw"`) models. It defines the
-#'   prior distribution for the residual variances, \eqn{\psi_{jj}}, which follow
-#'   an inverse-gamma distribution: \eqn{\psi_{jj} \sim \mathcal{IG}(\alpha, \beta)}.
-#'   *(Note: When using `lambda_prior = "unit_vector"`, this prior is ignored
-#'   because the uniquenesses in the standardized structure are deterministically
-#'   defined by the communality as \eqn{1 - h_j^2}).*
-#'
-#' * **Prior for Scale Parameters** (\eqn{\boldsymbol{\sigma}}):
-#'   This prior is only used when scaling the standardized structure back to the
-#'   original metric (i.e., using `lambda_prior = "unit_vector"` with `model = "cov"`
-#'   or `model = "raw"`). It assigns a Student-t prior distribution to the marginal
-#'   standard deviations of each observed variable, \eqn{\sigma_j}:
-#'   \eqn{\sigma_j \sim \text{Student-t}(\nu_\sigma, \mu_\sigma, \sigma_\sigma)}.
-#'
-#' * **Prior for Intercepts** (\eqn{\boldsymbol{\nu}}):
-#'   This prior is exclusively used in the Full Unstandardized Model (`model = "raw"`),
-#'   regardless of the chosen `lambda_prior`. It assigns a normal prior distribution
-#'   to the item means, \eqn{\nu_j}: \eqn{\nu_j \sim \mathcal{N}(\mu_\nu, \sigma_\nu)}.
-#'
-#' @return An object of class `befa` containing:
-#'   * `stanfit`: The Stan fit object with aligned posterior samples.
-#'   * `stan_data`: Data list passed to Stan.
-#'   * `n_factors`, `model_type`, `lambda_prior`, `rotation`: Model specifications.
-#'   * `missing`: Missing data method used (`"listwise"` or `"FIML"`).
-#'   * `has_missing`: Logical. Whether the data contained missing values.
-#'   * `priors_used`: Resolved prior hyperparameters.
-#'   * `options`: List with `factor_scores`, `ordered`, `rsp_args`, and `loo_args`.
-#'   * `rsp_objective`: Final RSP alignment objective value (NA if `rotate = "none"`).
-#'   * `call`: The matched function call.
-#'   * `reliability`: Omega coefficients (if `compute_reliability = TRUE`).
-#'   * `fit_indices`: Bayesian fit measures (if `compute_fit_indices = TRUE`).
+#' @return An object of class `befa` with:
+#' * `$draws`: A `draws_array` of the final parameters in the metric of the
+#'   model: `Lambda_std`, `Psi_std` and `h2` for the correlation model;
+#'   `Lambda`, `Psi`, `sigma`, `h2` and (raw model) `nu` for the unit-vector
+#'   prior; `Lambda`, `Psi` and (raw model) `nu` for the normal prior. Use
+#'   [extract_posterior_draws()] with `metric = "std"` for the standardized
+#'   solution.
+#' * `$diagnostics`: The convergence checks (see the messages after the fit).
+#' * `$fit`: The method, backend, settings, sampler diagnostics, log densities
+#'   and run times.
+#' * `$rsp`: The reference loadings, objective and sign and permutation
+#'   vectors of the alignment (`NULL` with `rotate = "none"`).
+#' * `$spec`, `$stan_code`, `$stan_data`, `$data`: The structure of the model,
+#'   its Stan program, the data passed to Stan and the prepared data.
+#' * `$n_factors`, `$model_type`, `$lambda_prior`, `$missing`, `$method`,
+#'   `$backend`, `$rotation`, `$priors_used`, `$options` and `$call`.
 #'
 #' @references
-#'
-#' Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian
-#' structural equation modeling: Comparison to maximum likelihood.
-#' *Psychological methods, 25*(1), 46–70. <https://doi.org/10.1037/met0000224>
-#'
-#' Holzinger, K. J., and F. A. Swineford. 1939. *A Study of Factor Analysis:
-#' The Stability of a Bi-Factor Solution.* Supplementary Educational Monograph 48.
-#' Chicago: University of Chicago Press.
-#'
 #' Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2025).
-#' *A Unified Framework for Psychometrics in Experimental Psychology: The Standardized
-#' Generalized Hierarchical Factor Model*. PsyArXiv. <https://doi.org/10.31234/osf.io/gv6k7_v1>
+#' *A Unified Framework for Psychometrics in Experimental Psychology: The
+#' Standardized Generalized Hierarchical Factor Model*. PsyArXiv.
+#' <https://doi.org/10.31234/osf.io/gv6k7_v1>
 #'
 #' Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient
 #' Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in
@@ -201,304 +136,99 @@
 #'
 #' @examples
 #' \dontrun{
-#' # Fit Bayesian EFA model to the famous Grant-White School Data (Holzinger & Swineford, 1939)
-#' befa_fit <- befa(
-#'   data = HS_data,
-#'   n_factors = 3,
-#'   model = "cor",
-#'   lambda_prior = "unit_vector",
-#'   rotate = "varimax",
-#'   factor_scores = TRUE,
-#'   compute_fit_indices = TRUE,
-#'   compute_reliability = TRUE,
-#'   backend = "rstan",
-#'   iter_sampling = 1000,
-#'   iter_warmup = 1000,
-#'   chains = 4,
-#'   parallel_chains = 4,
-#'   seed = 17
-#' )
-#'
-#' # Posterior draws of model parameters
-#' extract_posterior_draws(befa_fit, pars = "Lambda", format = "matrix")
-#'
-#' # # A draws_matrix: 1000 iterations, 4 chains, and 27 variables
-#' #     variable
-#' # draw Lambda[1,1] Lambda[2,1] Lambda[3,1] Lambda[4,1] Lambda[5,1] Lambda[6,1]
-#' #   1         0.63        0.50        0.66       0.053     0.02543        0.19
-#' #   2         0.62        0.48        0.68       0.132     0.01635        0.11
-#' #   3         0.55        0.43        0.69       0.199     0.00023        0.17
-#' #   4         0.44        0.42        0.55       0.096    -0.00680        0.14
-#' #   5         0.59        0.51        0.69       0.143    -0.00072        0.22
-#' #   6         0.65        0.42        0.57       0.075     0.03311        0.17
-#' #   7         0.58        0.49        0.74       0.106    -0.00305        0.20
-#' #   8         0.69        0.42        0.73       0.084     0.07283        0.19
-#' #   9         0.45        0.45        0.64       0.115     0.00454        0.15
-#' #   10        0.61        0.49        0.64       0.093     0.06957        0.19
-#' # # ... with 3990 more draws, and 21 more variables
-#'
-#' # Fast summaries using rvars format
-#' extract_posterior_draws(befa_fit, pars = "Lambda", format = "rvars")
-#'
-#' # # A draws_rvars: 1000 iterations, 4 chains, and 1 variables
-#' # $Lambda: rvar<1000,4>[9,3] mean ± sd:
-#' #       [,1]            [,2]            [,3]
-#' #  [1,]  0.594 ± 0.063   0.313 ± 0.048   0.122 ± 0.060
-#' #  [2,]  0.459 ± 0.062   0.130 ± 0.054  -0.038 ± 0.067
-#' #  [3,]  0.648 ± 0.063   0.076 ± 0.048   0.108 ± 0.054
-#' #  [4,]  0.110 ± 0.039   0.833 ± 0.024   0.073 ± 0.040
-#' #  [5,]  0.029 ± 0.037   0.862 ± 0.024   0.068 ± 0.038
-#' #  [6,]  0.156 ± 0.040   0.809 ± 0.025   0.062 ± 0.041
-#' #  [7,] -0.053 ± 0.050   0.099 ± 0.048   0.681 ± 0.077
-#' #  [8,]  0.171 ± 0.065   0.075 ± 0.046   0.693 ± 0.074
-#' #  [9,]  0.401 ± 0.071   0.165 ± 0.049   0.492 ± 0.067
-#'
-#' # Full posterior summaries
-#' posterior_summaries(befa_fit, pars = "h2")
-#'
-#' # # A tibble: 9 × 10
-#' #   variable  mean median     sd    mad    q5   q95  rhat ess_bulk ess_tail
-#' #   <chr>    <dbl>  <dbl>  <dbl>  <dbl> <dbl> <dbl> <dbl>    <dbl>    <dbl>
-#' # 1 h2[1]    0.476  0.474 0.0645 0.0622 0.370 0.584 1.00     4808.    2810.
-#' # 2 h2[2]    0.240  0.237 0.0569 0.0568 0.148 0.338 1.00     4910.    2645.
-#' # 3 h2[3]    0.447  0.442 0.0791 0.0770 0.325 0.582 1.00     4352.    2399.
-#' # 4 h2[4]    0.715  0.717 0.0364 0.0356 0.654 0.774 1.00     5036.    2427.
-#' # 5 h2[5]    0.751  0.752 0.0386 0.0384 0.686 0.812 1.00     5169.    3079.
-#' # 6 h2[6]    0.687  0.688 0.0358 0.0360 0.626 0.743 1.00     4945.    2674.
-#' # 7 h2[7]    0.486  0.479 0.103  0.0990 0.332 0.669 1.00     3504.    2121.
-#' # 8 h2[8]    0.527  0.523 0.0873 0.0846 0.390 0.674 1.00     3800.    2562.
-#' # 9 h2[9]    0.442  0.441 0.0560 0.0549 0.350 0.533 1.000    4101.    2681.
-#'
-#' # # Model summaries (inspired in psych package output)
-#' # summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
-#' #
-#' # Table 1. Factor Loadings (Pattern Matrix)
-#' # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-#' # Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
-#' # ———————————————————————————————————————————————————————————————————
-#' # Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849
-#' # Item_2      0.46*                0.23  0.77  1.00     4053     2741
-#' # Item_3      0.65*                0.44  0.56  1.00     4146     2274
-#' # Item_4             0.83*         0.71  0.29  1.00     4156     2607
-#' # Item_5             0.86*         0.75  0.25  1.00     4179     2983
-#' # Item_6             0.81*         0.68  0.32  1.00     4291     2817
-#' # Item_7                    0.68*  0.48  0.52  1.00     3343     2081
-#' # Item_8                    0.69*  0.52  0.48  1.00     3614     2593
-#' # Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757
-#' # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-#' # Note: varimax rotation applied. Diagnostics show worst-case values
-#' # across factors (max Rhat, min ESS). The 3 latent factors accounted
-#' # for 52.2% of total variance. (*) 95% Credible Interval excludes 0.
-#' # Loadings with absolute values < 0.30 are hidden.
-#' #
-#' # Table 2. Bayesian Fit Measures
-#' # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-#' # Index         Estimate     SD    CI_Low   CI_High
-#' # —————————————————————————————————————————————————
-#' # Chi2             47.75   7.24     35.81     63.71
-#' # Chi2_ppp          0.12
-#' # Chi2_Null       918.85   0.00    918.85    918.85
-#' # BRMSEA            0.06   0.02      0.00      0.09
-#' # BGamma            0.99   0.01      0.98      1.00
-#' # Adj_BGamma        0.97   0.02      0.93      1.00
-#' # BMc               0.98   0.01      0.96      1.00
-#' # SRMR              0.05   0.01      0.03      0.06
-#' # BCFI              0.99   0.01      0.97      1.00
-#' # BTLI              0.99   0.02      0.93      1.00
-#' # ELPD          -3416.93  42.49  -3500.21  -3333.64
-#' # LOOIC          6833.85  84.98   6667.29   7000.42
-#' # p_loo            25.58   1.82     22.01     29.14
-#' # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-#' # Note: Intervals are 95% Credible Intervals. PPP:
-#' # Posterior Predictive p-value (Ideal > .05).
-#' # p_loo/LOOIC derived from PSIS-LOO.
-#' #
-#' # Table 3. Factor Reliability (Coefficient Omega)
-#' # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-#' # Factor    Estimate    SD  CI_Low  CI_High
-#' # —————————————————————————————————————————
-#' # F1            0.60  0.04    0.52     0.67
-#' # F2            0.73  0.02    0.69     0.76
-#' # F3            0.55  0.04    0.45     0.62
-#' # ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗
-#' # Full Scale Omega Total: 0.84 [0.82,
-#' # 0.86]. Omega coefficients use the full
-#' # posterior distribution.
+#' fit <- befa(HS_data, n_factors = 3, seed = 17)
+#' extract_posterior_draws(fit, pars = "Lambda_std", format = "rvars")
+#' posterior_summaries(fit, pars = "h2")
 #' }
 #'
 #' @export
-befa <- function(data = NULL,
-                 n_factors = NULL,
-                 ordered = FALSE,
-                 sample_nobs = NULL,
-                 sample_mean = NULL,
-                 sample_cov = NULL,
-                 sample_cor = NULL,
-                 model = c("cor", "cov", "raw"),
+befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
+                 sample_nobs = NULL, sample_mean = NULL, sample_cov = NULL,
+                 sample_cor = NULL, model = c("cor", "cov", "raw"),
                  lambda_prior = c("unit_vector", "normal"),
                  missing = c("listwise", "FIML"),
-                 rotate = c("varimax", "none"),
-                 rsp_args = NULL,
-                 loo_args = NULL,
-                 factor_scores = FALSE,
-                 backend = c("rstan", "cmdstanr"),
-                 prior = list(),
-                 compute_fit_indices = TRUE,
-                 compute_reliability = TRUE,
-                 verbose = TRUE, ...) {
-  # ──────────────────────────────────────── #
-  #    Input control and default settings    #
-  # ──────────────────────────────────────── #
-
-  # Extract seed from ... to ensure reproducibility across all steps (including inits)
-  args_list <- list(...)
-  if (!is.null(args_list$seed)) {
-    withr::local_seed(args_list$seed)
-  }
-
-  # Match arguments
+                 method = c("mcmc", "advi", "pathfinder"), backend = "auto",
+                 rotate = c("varimax", "none"), rsp_args = NULL, prior = list(),
+                 factor_scores = FALSE, compute_fit_indices = TRUE,
+                 compute_reliability = TRUE, loo_args = NULL, verbose = TRUE,
+                 ...) {
+  call <- match.call()
   model <- match.arg(model)
   lambda_prior <- match.arg(lambda_prior)
   missing <- match.arg(missing)
+  method <- match.arg(method)
   rotate <- match.arg(rotate)
-  backend <- match.arg(backend)
+  .check_befa_args(data, n_factors, ordered, sample_nobs, sample_cov,
+                   sample_cor, missing, factor_scores, compute_fit_indices,
+                   compute_reliability, verbose)
 
-  # Check all input arguments (minus ... )
-  input_args <- mget(setdiff(ls(all.names = TRUE), c("...")), envir = environment())
-  stan_data_base <- check_befa_inputs(input_args)
-
-  # Prepare backend and configuration
-  backend <- validate_backend(backend)
+  # Data, structure and Stan inputs
+  prepared <- .prepare_befa_data(data, model, missing, sample_nobs, sample_cov,
+                                 sample_cor, sample_mean)
+  if (n_factors >= prepared$J) {
+    .befa_stop("`n_factors` must be smaller than the number of items (",
+               prepared$J, ").")
+  }
+  spec <- .befa_spec(model, lambda_prior, n_factors, .data_patterns(prepared))
+  priors <- prepare_befa_priors(prior, model, lambda_prior, n_factors)
+  stan_data <- .stan_data(spec, prepared, n_factors, priors)
+  settings <- .sampler_settings(method, list(...))
   rsp_config <- validate_rsp_args(rsp_args)
   loo_config <- validate_loo_args(loo_args)
+  backend <- .resolve_backend(backend, method, verbose = verbose)
+  inits <- .befa_inits(settings, spec, prepared, n_factors, priors)
 
-  # Validate rotation criterion
-  rotate <- validate_rotation_criterion(rotate)
+  # Estimation, alignment and convergence checks
+  code <- .stan_code(spec)
+  fit <- .run_stan(code, stan_data, inits, backend, settings, quiet = !verbose)
+  post <- .befa_posterior(fit, spec, prepared$J, n_factors, rotate, rsp_config)
+  diagnostics <- .befa_diagnostics(post$draws, fit, settings)
+  if (verbose && settings$refresh > 0) .befa_report(diagnostics, settings)
+  .befa_warn_issues(diagnostics)
 
-  # Set prior distribution and final stan-format data
-  final_prior <- prepare_befa_priors(prior, model, lambda_prior, n_factors)
-  stan_data_final <- append_priors_to_data(stan_data_base, final_prior, model, lambda_prior)
-
-  # Set model name
-  model_name <- select_befa_model(model, lambda_prior, n_factors, verbose)
-
-  # ────────────────────────────────────────────────── #
-  #    Model estimation and post-rotation alignment    #
-  # ────────────────────────────────────────────────── #
-
-  # Sampling from the model (verbose is passed inside)
-  out <- fit_befa_model(
-    model_name   = model_name,
-    stan_data    = stan_data_final,
-    backend      = backend,
-    verbose      = verbose,
-    model_type   = model,
-    lambda_prior = lambda_prior,
-    ...
-  )
-
-  # Strip internal-only parameters (Z, Z_norm for UV; psi for normal)
-  out <- strip_stan_params(out, lambda_prior, n_factors)
-
-  if (rotate == "none") {
-    if (verbose) message("Skipping alignment (rotate = 'none')...")
-    rsp_res <- list(stanfit = out, rsp_objective = NA)
-  } else {
-    if (verbose) message("Aligning posterior samples (RSP algorithm with Varimax)...")
-    rsp_res <- update_aligned_samples(
-      stanfit = out,
-      J = stan_data_final$J,
-      M = stan_data_final$M,
-      rotation = rotate,
-      max_iter = rsp_config$max_iter,
-      threshold = rsp_config$threshold,
-      verbose = verbose
-    )
+  if (verbose && (factor_scores || compute_fit_indices || compute_reliability)) {
+    .befa_msg("factor scores, fit indices and reliability are being rebuilt ",
+              "for the new draws and are not computed in this development ",
+              "version.")
   }
 
-  out <- rsp_res$stanfit
+  # The Stan parameters behind the final draws are not identified, so only
+  # their log densities are kept.
+  keep <- intersect(c("lp__", "lp_approx__"), posterior::variables(fit$draws))
+  fit$draws <- posterior::subset_draws(fit$draws, variable = keep)
 
-  # ──────────────────────────────────────── #
-  #    Prepare Bayesian EFA Result Object    #
-  # ──────────────────────────────────────── #
+  structure(list(
+    draws = post$draws, diagnostics = diagnostics, fit = fit, rsp = post$rsp,
+    spec = spec, stan_code = code, stan_data = stan_data, data = prepared,
+    n_factors = as.integer(n_factors), model_type = model,
+    lambda_prior = lambda_prior, missing = missing, method = method,
+    backend = backend, rotation = rotate, priors_used = priors,
+    options = list(factor_scores = factor_scores, ordered = ordered,
+                   rsp_args = rsp_config, loo_args = loo_config),
+    call = call
+  ), class = "befa")
+}
 
-  result <- list(
-    stanfit = out,
-    stan_data = stan_data_final,
-    n_factors = n_factors,
-    model_type = model,
-    lambda_prior = lambda_prior,
-    missing = missing,
-    has_missing = stan_data_final$has_missing,
-    rotation = rotate,
-    priors_used = final_prior,
-    options = list(
-      factor_scores = factor_scores,
-      ordered = ordered,
-      rsp_args = rsp_config,
-      loo_args = loo_config,
-      backend = backend
-    ),
-    rsp_objective = rsp_res$rsp_objective,
-    call = match.call()
-  )
-  class(result) <- "befa"
+# Internal functions
 
-  # ─────────────────────────────────────── #
-  #    Compute Factor Scores (if required)  #
-  # ─────────────────────────────────────── #
-
-  if (factor_scores) {
-    if (is.null(data)) {
-      warning("factor_scores = TRUE but no raw 'data' provided. Skipping factor scores.",
-        call. = FALSE
-      )
-    } else {
-      if (verbose) message("Computing Bayesian Factor Scores...")
-      fs_result <- befa_factor_scores(result, post_summaries = FALSE)
-
-      # Inject factor scores into stanfit
-      result$stanfit <- inject_factor_scores(
-        stanfit = result$stanfit,
-        eta_draws = fs_result$eta_draws
-      )
-    }
+# This function returns the starting values of a fit: those given in `init`
+# (one list per chain or path, or one list for all), or the ones built from
+# the ML EFA. MCMC needs one list per chain, Pathfinder one per path and ADVI
+# a single list.
+.befa_inits <- function(settings, spec, prepared, n_factors, priors) {
+  n <- switch(settings$method, mcmc = settings$chains, advi = 1L,
+              pathfinder = settings$num_paths)
+  init <- settings$init
+  if (is.null(init)) {
+    init <- .start_values(spec, prepared, n_factors, priors, n, settings$seed)
+  } else if (!is.list(init)) {
+    .befa_stop("`init` must be a list of starting values, or one such list ",
+               "per chain.")
+  } else if (!is.null(names(init))) {
+    init <- rep(list(init), n)
+  } else if (length(init) != n) {
+    .befa_stop("`init` has ", length(init), " lists of starting values, but ",
+               "the fit needs ", n, ".")
   }
-
-  # ───────────────────────────────────────────────── #
-  #    Compute reliability estimates (if required)    #
-  # ───────────────────────────────────────────────── #
-
-  if (compute_reliability) {
-    if (verbose) message("Computing Bayesian Reliability Estimates...")
-    result$reliability <- befa_reliability(result)
-  }
-
-  # ──────────────────────────────────────────── #
-  #    Bayesian SEM Fit Indices (if required)    #
-  # ──────────────────────────────────────────── #
-
-  if (compute_fit_indices) {
-    if (is.null(data)) {
-      # Warning stays as it is crucial information even if not verbose
-      warning("compute_fit_indices = TRUE but no raw 'data' provided. Skipping fit indices.")
-    } else {
-      if (verbose) message("Computing Bayesian Fit Measures...")
-      fit_res <- tryCatch(
-        {
-          befa_fit_measures(result, loo_args = loo_config, ...)
-        },
-        error = function(e) {
-          warning("Could not compute fit measures: ", e$message)
-          return(NULL)
-        }
-      )
-      result$fit_indices <- fit_res
-    }
-  }
-
-  # Conditional final message
-  if (verbose) message("Bayesian Estimation Process Ended!")
-
-  return(result)
+  if (settings$method == "advi") init[[1L]] else init
 }
