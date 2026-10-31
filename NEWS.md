@@ -12,6 +12,16 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   of the algorithm is unchanged.
 * The pointwise log-likelihood of the null model and the EM estimate of the
   saturated moments with missing data run in C++.
+* The Stan code is generated in R from the structure of the model (data
+  model, prior on the loadings, patterns of missing values), with every
+  additive constant, the normalizing constant of the unit-vector repulsion
+  included. The likelihood needs one Cholesky decomposition per pattern of
+  observed items and reads a root of the scatter matrix of each pattern, so
+  FIML no longer evaluates every incomplete row on its own.
+* The normal prior on the loadings now models `Sigma = Lambda Lambda' + Psi`
+  directly. The location and scale of each loading follow the SD of its item,
+  and the scale of the inverse-gamma prior on each uniqueness its variance, so
+  the prior does not depend on the units of the items.
 
 # BayesianEFA 0.1.0
 

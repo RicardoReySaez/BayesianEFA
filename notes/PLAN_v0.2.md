@@ -2,7 +2,7 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
-**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (este commit) · siguiente: fase 3.
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (este commit) · siguiente: fase 4.
 
 ---
 
@@ -31,6 +31,7 @@ Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trab
 | D19 | Valores iniciales con la misma estrategia que lavaan y `stats::factanal()`: EFA por ML a partir de ψ⁰ = (1 − M/2J)/diag(R⁻¹) (§4.5). |
 | D20 | Barra de progreso y mensajes de convergencia como en uSDT (rama `dev`), iguales en los cuatro backends. Los diagnósticos se calculan solo sobre los parámetros finales, ya alineados (§4.6). |
 | D21 | Cada funcionalidad entra con sus tests en el mismo commit. El paquete pasa por Codecov, con la misma configuración que uSDT (§10.1). |
+| D22 | Con el prior normal, la escala de la InvGamma de cada unicidad se multiplica por s_j² (decidido el 2026-10-31). Así todo el prior describe la solución estandarizada. |
 
 ---
 
@@ -106,7 +107,7 @@ log C(ξ, M) = (M/2)·log π + ((ξ+M)/2)·log 2 + lgamma((ξ+M)/2) − lgamma(M
 **Prior normal.** Estima Σ = ΛΛᵀ + Ψ directamente. Esto corrige la identificación de v0.1.0, que además reescalaba con σ.
 
 - s_j es la SD observada del ítem j (con datos perdidos, la del modelo saturado por EM). Los hiperparámetros por ítem se pasan como vectores de datos, así que no hace falta recompilar.
-- **Escalar también el prior de ψ** con b·s_j² es una propuesta: si ψ ~ IG(a, b), entonces c·ψ ~ IG(a, c·b), y así el prior completo no depende de las unidades del ítem. Ver §13.
+- **El prior de ψ también se escala** con b·s_j² (D22): si ψ ~ IG(a, b), entonces c·ψ ~ IG(a, c·b), así que el prior completo no depende de las unidades del ítem.
 
 ### 2.3 Verosimilitud por patrones
 
@@ -477,8 +478,7 @@ En todas las fases, "terminada" incluye además que las líneas nuevas estén cu
 
 Las siete del primer borrador quedaron resueltas el 2026-10-31 (D12–D18). Quedan:
 
-1. **Escala del prior de ψ con el prior normal:** ¿escalamos también la InvGamma por s_j², junto con las cargas (§2.2)?
-2. **Orden de preferencia de `backend = "auto"`:** se decide con los resultados del benchmark (fase 7).
+1. **Orden de preferencia de `backend = "auto"`:** se decide con los resultados del benchmark (fase 7).
 (El estilo de código quedó resuelto: el de uSDT, D11 y §15.)
 
 ---
