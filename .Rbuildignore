@@ -7,3 +7,7 @@
 ^\.gitignore$
 ^docs$
 ^pkgdown$
+^notes$
+^bench$
+^\.vscode$
+^\.Rhistory$
