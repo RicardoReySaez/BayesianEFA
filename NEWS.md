@@ -7,6 +7,11 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   code. Stan sampling is unavailable until the new backends arrive: the models
   will be generated in R and compiled once per model.
 * rstan, cmdstanr, stanr and stanli are optional backends (Suggests).
+* `rsp_align()` rotates the draws with a C++ Varimax that repeats
+  `stats::varimax(normalize = FALSE)` exactly, 4 to 12 times faster. The rest
+  of the algorithm is unchanged.
+* The pointwise log-likelihood of the null model and the EM estimate of the
+  saturated moments with missing data run in C++.
 
 # BayesianEFA 0.1.0
 

@@ -2,7 +2,7 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
-**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (este commit) · siguiente: fase 2.
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (este commit) · siguiente: fase 3.
 
 ---
 

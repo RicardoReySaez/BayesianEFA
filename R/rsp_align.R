@@ -1,3 +1,11 @@
+# rsp_align.R
+# Efficient Rotation-Sign-Permutation alignment of posterior loading draws
+# Author: Ricardo Rey-Sáez
+# Last modified: 31-10-2026
+
+# The algorithm is the one described in Rey-Sáez & Revuelta (2026), so its
+# code is kept as published; only the per-draw Varimax rotation moved to C++.
+
 #' Efficient Rotation-Sign-Permutation (E-RSP) Alignment
 #'
 #' Applies the Efficient Rotation-Sign-Permutation (E-RSP) algorithm to MCMC draws
@@ -223,10 +231,12 @@ rsp_align <- function(lambda_draws, n_items, n_factors,
   # ────────────────────────────────────────────────── #
 
   if (n_factors > 1) {
-    # Always use Varimax for alignment
-    orth_l <- t(apply(lambda_draws, 1, function(x) {
-      c(stats::varimax(x = matrix(x, ncol = n_factors), normalize = FALSE)$loadings)
-    }))
+    # Always use Varimax for alignment. The C++ version repeats
+    # stats::varimax(normalize = FALSE) for every draw.
+    orth_l <- varimax_draws_cpp(
+      draws = matrix(as.double(lambda_draws), nrow = nrow(lambda_draws)),
+      J = n_items, M = n_factors
+    )
   } else {
     # With M = 1, just use the original draws
     orth_l <- lambda_draws

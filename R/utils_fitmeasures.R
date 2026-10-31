@@ -239,47 +239,32 @@ compute_null_metrics <- function(data, model_type, ll_saturated, stan_data, stan
       nu_idx <- grep("^nu\\[", var_names)
     }
 
-    # Pre-allocate 3D log-likelihood array (iter x chains x N)
-    log_lik_array <- array(NA, dim = c(n_iter, n_chains, N))
-    chisq_vec <- numeric(n_draws)
-
-    # ---- FIML PRE-PROCESSING ----
     # Mean-center data for cov model before computing pointwise log-likelihood
     if (model_type == "cov") {
       data <- scale(data, center = TRUE, scale = FALSE)
     }
 
-    comp_idx <- which(stats::complete.cases(data))
-    miss_idx <- which(!stats::complete.cases(data))
+    # Draws stacked chain after chain (S x J), as the chi-square vector
+    stack_chains <- function(idx) {
+      do.call(rbind, lapply(seq_len(n_chains), function(c) {
+        matrix(draws_null[, c, idx], nrow = n_iter)
+      }))
+    }
+    sigma_draws <- stack_chains(sig_idx)
+    nu_draws <- if (model_type == "raw") {
+      stack_chains(nu_idx)
+    } else {
+      matrix(0, nrow = n_draws, ncol = J)
+    }
 
-    data_fiml <- list(
-      comp_idx = comp_idx,
-      miss_idx = miss_idx,
-      Y_comp   = data[comp_idx, , drop = FALSE],
-      Y_miss   = data[miss_idx, , drop = FALSE]
-    )
+    # Pointwise FIML log-likelihood (S x N) and chi-square statistic
+    ll <- null_loglik_cpp(unname(as.matrix(data)), nu_draws, sigma_draws)
+    chisq_vec <- 2 * (ll_saturated - rowSums(ll))
 
-    # Compute log-likelihood and chi-square statistic
-    draw_idx <- 0
-    for (c in 1:n_chains) {
-      for (i in 1:n_iter) {
-        draw_idx <- draw_idx + 1
-
-        Sigma_s <- diag(as.numeric(draws_null[i, c, sig_idx])^2)
-
-        if (model_type == "raw") {
-          Nu_s <- as.numeric(draws_null[i, c, nu_idx])
-        } else {
-          Nu_s <- rep(0, J)
-        }
-
-        # Compute log-likelihood (FIML-proper: handles NAs)
-        ll_s <- compute_fiml_loglik(data_fiml, mu = Nu_s, Sigma = Sigma_s)
-        log_lik_array[i, c, ] <- ll_s
-
-        # Compute chi-square statistic
-        chisq_vec[draw_idx] <- 2 * (ll_saturated - sum(ll_s))
-      }
+    # 3D log-likelihood array (iter x chains x N) for loo
+    log_lik_array <- array(NA_real_, dim = c(n_iter, n_chains, N))
+    for (c in seq_len(n_chains)) {
+      log_lik_array[, c, ] <- ll[(c - 1) * n_iter + seq_len(n_iter), , drop = FALSE]
     }
 
     # Compute r_eff and loo for null model

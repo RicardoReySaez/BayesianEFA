@@ -11,6 +11,19 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// em_h1_moments_cpp
+Rcpp::List em_h1_moments_cpp(const arma::mat& Y, int max_iter, double tol);
+RcppExport SEXP _BayesianEFA_em_h1_moments_cpp(SEXP YSEXP, SEXP max_iterSEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(em_h1_moments_cpp(Y, max_iter, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 // compute_factor_scores_cpp
 arma::cube compute_factor_scores_cpp(const arma::cube& post_draws, const arma::mat& data, const arma::uvec& lambda_idx, const arma::uvec& sig_idx, const arma::uvec& nu_idx, int J, int M, int N, bool has_missing, const Rcpp::List& obs_patterns);
 RcppExport SEXP _BayesianEFA_compute_factor_scores_cpp(SEXP post_drawsSEXP, SEXP dataSEXP, SEXP lambda_idxSEXP, SEXP sig_idxSEXP, SEXP nu_idxSEXP, SEXP JSEXP, SEXP MSEXP, SEXP NSEXP, SEXP has_missingSEXP, SEXP obs_patternsSEXP) {
@@ -28,6 +41,19 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type has_missing(has_missingSEXP);
     Rcpp::traits::input_parameter< const Rcpp::List& >::type obs_patterns(obs_patternsSEXP);
     rcpp_result_gen = Rcpp::wrap(compute_factor_scores_cpp(post_draws, data, lambda_idx, sig_idx, nu_idx, J, M, N, has_missing, obs_patterns));
+    return rcpp_result_gen;
+END_RCPP
+}
+// null_loglik_cpp
+arma::mat null_loglik_cpp(const arma::mat& Y, const arma::mat& nu_draws, const arma::mat& sigma_draws);
+RcppExport SEXP _BayesianEFA_null_loglik_cpp(SEXP YSEXP, SEXP nu_drawsSEXP, SEXP sigma_drawsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type nu_draws(nu_drawsSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type sigma_draws(sigma_drawsSEXP);
+    rcpp_result_gen = Rcpp::wrap(null_loglik_cpp(Y, nu_draws, sigma_draws));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -71,11 +97,29 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// varimax_draws_cpp
+arma::mat varimax_draws_cpp(const arma::mat& draws, int J, int M, double eps, int max_iter);
+RcppExport SEXP _BayesianEFA_varimax_draws_cpp(SEXP drawsSEXP, SEXP JSEXP, SEXP MSEXP, SEXP epsSEXP, SEXP max_iterSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type draws(drawsSEXP);
+    Rcpp::traits::input_parameter< int >::type J(JSEXP);
+    Rcpp::traits::input_parameter< int >::type M(MSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< int >::type max_iter(max_iterSEXP);
+    rcpp_result_gen = Rcpp::wrap(varimax_draws_cpp(draws, J, M, eps, max_iter));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_BayesianEFA_em_h1_moments_cpp", (DL_FUNC) &_BayesianEFA_em_h1_moments_cpp, 3},
     {"_BayesianEFA_compute_factor_scores_cpp", (DL_FUNC) &_BayesianEFA_compute_factor_scores_cpp, 10},
+    {"_BayesianEFA_null_loglik_cpp", (DL_FUNC) &_BayesianEFA_null_loglik_cpp, 3},
     {"_BayesianEFA_compute_posterior_metrics_cpp", (DL_FUNC) &_BayesianEFA_compute_posterior_metrics_cpp, 14},
     {"_BayesianEFA_rsp_exact_eff", (DL_FUNC) &_BayesianEFA_rsp_exact_eff, 6},
+    {"_BayesianEFA_varimax_draws_cpp", (DL_FUNC) &_BayesianEFA_varimax_draws_cpp, 5},
     {NULL, NULL, 0}
 };
 

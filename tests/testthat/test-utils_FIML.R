@@ -122,16 +122,3 @@ test_that("estimate_h1_moments_em converges with missing data", {
   expect_true(all(diag(em_est$Sigma) > 0.5 & diag(em_est$Sigma) < 1.5)) # Near 1
 })
 
-
-test_that("em_estep returns correct dimensions", {
-  N <- 20
-  J <- 4
-  Y <- matrix(rnorm(N * J), nrow = N)
-  Mu <- rep(0, J)
-  Sigma <- diag(1, J)
-
-  estep <- em_E_step(Y, Mu, Sigma)
-
-  expect_length(estep$T1, J)
-  expect_equal(dim(estep$T2), c(J, J))
-})

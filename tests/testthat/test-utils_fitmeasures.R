@@ -309,13 +309,8 @@ test_that("compute_null_metrics lambda_vec is non-negative", {
   expect_true(all(result$lambda_vec >= 0))
 })
 
-test_that("compute_null_metrics raw model requires Stan estimation", {
-  skip_if_not_installed("rstan")
-  skip("Requires rstan and befa_raw_null model - integration test")
-
-  # This would actually run Stan, so skip in unit tests
-  # Full integration test should be run separately
-})
+# The raw and cov null models are tested in test-null-loglik.R, with the Stan
+# fit replaced by fixed draws.
 
 test_that("compute_null_metrics p_star calculation is correct for std", {
   J <- 5
