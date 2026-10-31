@@ -19,37 +19,21 @@ test_that("draws of the wrong shape are refused", {
   expect_error(null_loglik_cpp(Y, matrix(0, 5, 2), matrix(1, 4, 2)), "S x J")
 })
 
-# This function returns fixed null-model draws in place of a Stan fit: two
-# chains of five draws of sigma, and of nu for the raw model.
-.null_draws <- function(J, raw, seed = 21) {
-  set.seed(seed)
-  vars <- c(paste0("sigma[", seq_len(J), "]"),
-            if (raw) paste0("nu[", seq_len(J), "]"))
-  values <- c(stats::runif(5 * 2 * J, 0.8, 1.6),
-              if (raw) stats::rnorm(5 * 2 * J, 0, 0.3))
-  posterior::as_draws_array(array(values, dim = c(5, 2, length(vars)),
-                                  dimnames = list(NULL, NULL, vars)))
-}
-
 for (model_type in c("raw", "cov")) {
-  test_that(paste("compute_null_metrics() keeps the v0.1.0 chi-square for the",
+  test_that(paste(".null_metrics() keeps the v0.1.0 chi-square for the",
                   model_type, "model"), {
-    set.seed(22)
-    J <- 4
-    Y <- matrix(stats::rnorm(30 * J, 1, 1.2), ncol = J)
-    Y[c(2, 7, 15, 23)] <- NA
+    object <- .fake_befa(model_type, missing = "FIML", N = 30L, n_iter = 5L)
+    J <- object$stan_data$J
     draws <- .null_draws(J, raw = model_type == "raw")
-    local_mocked_bindings(fit_befa_model = function(...) draws)
+    local_mocked_bindings(.run_stan = function(...) list(draws = draws))
 
     # The raw case also exercises the relative efficiencies of loo.
-    res <- compute_null_metrics(
-      data = Y, model_type = model_type, ll_saturated = -150,
-      stan_data = list(), stan_args_list = list(), lambda_prior = "unit_vector",
-      loo_config = list(r_eff = model_type == "raw", cores = 1)
-    )
+    res <- .null_metrics(object, ll_saturated = -150,
+                         loo_config = list(r_eff = model_type == "raw", cores = 1))
 
-    # Reference: the R loop of v0.1.0 over draws, chain after chain
-    data <- if (model_type == "cov") scale(Y, center = TRUE, scale = FALSE) else Y
+    # Reference: the R loop of v0.1.0 over draws, chain after chain, on the
+    # data the model was fitted to (centered in the covariance model)
+    data <- object$data$Y
     data_fiml <- list(
       comp_idx = which(stats::complete.cases(data)),
       miss_idx = which(!stats::complete.cases(data)),
@@ -74,3 +58,15 @@ for (model_type in c("raw", "cov")) {
     expect_gte(res$df, 1)
   })
 }
+
+test_that("the null correlation model needs no fit", {
+  object <- .fake_befa("cor", missing = "FIML", N = 30L, n_iter = 5L)
+  local_mocked_bindings(.run_stan = function(...) stop("no fit expected"))
+  res <- .null_metrics(object, ll_saturated = -150, loo_config = list())
+  Y <- object$data$Y
+  chisq <- 2 * (-150 - sum(stats::dnorm(Y[!is.na(Y)], log = TRUE)))
+  expect_equal(res$chisq_vec, rep(chisq, 10))
+  expect_identical(res$pD, 0)
+  expect_identical(res$df, 10)
+  expect_equal(res$lambda_vec, rep(max(0, chisq - 10), 10))
+})

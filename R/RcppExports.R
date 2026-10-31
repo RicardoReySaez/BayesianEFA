@@ -5,16 +5,16 @@ em_h1_moments_cpp <- function(Y, max_iter = 500L, tol = 1e-5) {
     .Call(`_BayesianEFA_em_h1_moments_cpp`, Y, max_iter, tol)
 }
 
-compute_factor_scores_cpp <- function(post_draws, data, lambda_idx, sig_idx, nu_idx, J, M, N, has_missing, obs_patterns) {
-    .Call(`_BayesianEFA_compute_factor_scores_cpp`, post_draws, data, lambda_idx, sig_idx, nu_idx, J, M, N, has_missing, obs_patterns)
+compute_factor_scores_cpp <- function(lambda, psi, nu, data, J, M, has_missing, obs_patterns) {
+    .Call(`_BayesianEFA_compute_factor_scores_cpp`, lambda, psi, nu, data, J, M, has_missing, obs_patterns)
 }
 
 null_loglik_cpp <- function(Y, nu_draws, sigma_draws) {
     .Call(`_BayesianEFA_null_loglik_cpp`, Y, nu_draws, sigma_draws)
 }
 
-compute_posterior_metrics_cpp <- function(post_draws, data, sig_idx, nu_idx, M_sat, S_sat, ll_saturated, model_type, has_missing, Y_comp, Y_miss, comp_idx_0, miss_idx_0, obs_patterns_miss) {
-    .Call(`_BayesianEFA_compute_posterior_metrics_cpp`, post_draws, data, sig_idx, nu_idx, M_sat, S_sat, ll_saturated, model_type, has_missing, Y_comp, Y_miss, comp_idx_0, miss_idx_0, obs_patterns_miss)
+compute_posterior_metrics_cpp <- function(lambda, psi, nu, M, n_iter, data, M_sat, S_sat, ll_saturated, model_type, has_missing, Y_comp, Y_miss, comp_idx_0, miss_idx_0, obs_patterns_miss) {
+    .Call(`_BayesianEFA_compute_posterior_metrics_cpp`, lambda, psi, nu, M, n_iter, data, M_sat, S_sat, ll_saturated, model_type, has_missing, Y_comp, Y_miss, comp_idx_0, miss_idx_0, obs_patterns_miss)
 }
 
 rsp_exact_eff <- function(Lambda_tilde, Lambda_star_init, J, M, maxIter, threshold) {

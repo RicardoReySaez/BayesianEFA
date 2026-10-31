@@ -57,29 +57,6 @@ validate_rsp_args <- function(rsp_args) {
   return(out)
 }
 
-#' Validate Rotation Criterion (Internal)
-#'
-#' Validates that the rotation criterion is either 'varimax' or 'none'.
-#'
-#' @param rotate Character. The rotation criterion name.
-#' @return Character. The validated rotation criterion ('varimax' or 'none').
-#' @keywords internal
-#' @noRd
-validate_rotation_criterion <- function(rotate) {
-  valid_rotations <- c("varimax", "none")
-  rotate_clean <- tolower(trimws(rotate))
-
-  if (!rotate_clean %in% valid_rotations) {
-    stop(sprintf(
-      "Invalid rotation '%s'. Valid options are: %s",
-      rotate, paste(valid_rotations, collapse = ", ")
-    ), call. = FALSE)
-  }
-
-  return(rotate_clean)
-}
-
-
 #' Validate loo_args (Internal)
 #'
 #' Validates and sets defaults for loo configuration.

@@ -73,10 +73,16 @@ it for later sessions (see \code{\link[=befa_compile_models]{befa_compile_models
 \item{prior}{Named list of prior hyperparameters that replace the defaults
 (see Details): \code{xi}, \code{h2}, \code{lambda}, \code{psi}, \code{sigma} and \code{nu}.}
 
-\item{factor_scores, compute_fit_indices, compute_reliability}{Logical.
-Compute the factor scores, the Bayesian fit indices and the omega
-coefficients. They are being rebuilt for the new draws and are not
-computed in this development version.}
+\item{factor_scores}{Logical. Draw the factor scores of every person (see
+\code{\link[=befa_factor_scores]{befa_factor_scores()}}); needs \code{data}. The draws follow \code{seed}.}
+
+\item{compute_fit_indices}{Logical. Compute the Bayesian fit indices and
+PSIS-LOO (see \code{\link[=befa_fit_measures]{befa_fit_measures()}}); needs \code{data}. Outside the
+correlation model, this fits the null model with the same backend and
+method.}
+
+\item{compute_reliability}{Logical. Compute the omega coefficients (see
+\code{\link[=befa_reliability]{befa_reliability()}}).}
 
 \item{loo_args}{List with \code{r_eff} and \code{cores} for the PSIS-LOO of the fit
 indices.}
@@ -111,6 +117,10 @@ and run times.
 vectors of the alignment (\code{NULL} with \code{rotate = "none"}).
 \item \verb{$spec}, \verb{$stan_code}, \verb{$stan_data}, \verb{$data}: The structure of the model,
 its Stan program, the data passed to Stan and the prepared data.
+\item \verb{$eta}: The draws of the factor scores (if \code{factor_scores = TRUE}), also
+returned by \code{\link[=extract_posterior_draws]{extract_posterior_draws()}} in every metric.
+\item \verb{$reliability}: The omega coefficients (if \code{compute_reliability = TRUE}).
+\item \verb{$fit_indices}: The fit indices (if \code{compute_fit_indices = TRUE}).
 \item \verb{$n_factors}, \verb{$model_type}, \verb{$lambda_prior}, \verb{$missing}, \verb{$method},
 \verb{$backend}, \verb{$rotation}, \verb{$priors_used}, \verb{$options} and \verb{$call}.
 }

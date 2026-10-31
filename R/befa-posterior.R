@@ -89,25 +89,45 @@
 .metric_draws <- function(object, metric = c("model", "std", "raw")) {
   metric <- match.arg(metric)
   draws <- object$draws
-  if (metric == "model") return(draws)
-  if (object$model_type == "cor") {
-    if (metric == "raw") {
-      .befa_stop("The correlation model has no metric of the items; use ",
-                 "`metric = \"std\"` or fit the covariance or raw model.")
-    }
-    return(draws)
+  if (object$model_type == "cor" && metric == "raw") {
+    .befa_stop("The correlation model has no metric of the items; use ",
+               "`metric = \"std\"` or fit the covariance or raw model.")
   }
-  if (metric == "raw") return(draws)
+  if (metric == "std" && object$model_type != "cor") {
+    J <- object$stan_data$J
+    M <- object$n_factors
+    Lambda <- .stacked_draws(draws, "Lambda")
+    Psi <- .stacked_draws(draws, "Psi")
+    variance <- .item_sums(Lambda^2, J, M) + Psi
+    parts <- list(Lambda_std = Lambda / .repeat_items(sqrt(variance), M),
+                  Psi_std = Psi / variance, h2 = 1 - Psi / variance)
+    dims <- dim(draws)
+    draws <- .as_chains(.named_draws(parts, J, M), dims[1L], dims[2L])
+  }
+  # The factor scores are standardized in every metric.
+  if (!is.null(object$eta)) draws <- posterior::bind_draws(draws, object$eta)
+  draws
+}
 
+# This function returns, draw by draw (chains stacked), the loadings,
+# uniquenesses and means in the metric of the data the model was fitted to:
+# standardized for the correlation model, in the units of the items
+# otherwise, with zero means outside the raw model. The factor scores and the
+# fit indices are computed from them.
+.fitted_parameters <- function(object) {
+  draws <- object$draws
   J <- object$stan_data$J
-  M <- object$n_factors
-  Lambda <- .stacked_draws(draws, "Lambda")
-  Psi <- .stacked_draws(draws, "Psi")
-  variance <- .item_sums(Lambda^2, J, M) + Psi
-  parts <- list(Lambda_std = Lambda / .repeat_items(sqrt(variance), M),
-                Psi_std = Psi / variance, h2 = 1 - Psi / variance)
+  std <- object$model_type == "cor"
+  lambda <- .stacked_draws(draws, if (std) "Lambda_std" else "Lambda")
+  psi <- .stacked_draws(draws, if (std) "Psi_std" else "Psi")
+  nu <- if (object$model_type == "raw") {
+    .stacked_draws(draws, "nu")
+  } else {
+    matrix(0, nrow(psi), J)
+  }
   dims <- dim(draws)
-  .as_chains(.named_draws(parts, J, M), dims[1L], dims[2L])
+  list(lambda = lambda, psi = psi, nu = nu, J = J, M = object$n_factors,
+       n_iter = dims[1L], n_chains = dims[2L])
 }
 
 # This function returns the draws of one Stan parameter as a plain matrix,

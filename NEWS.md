@@ -45,8 +45,21 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   (above 400), computed on the aligned parameters only, and warns with the
   remedy when a check fails. ADVI and Pathfinder report the Pareto k of the
   approximation.
-* Factor scores, fit indices, reliability and `summary()` are being rebuilt
-  for the new draws and are not available in this development version.
+* Factor scores, reliability, fit indices and `summary()` read the final
+  (aligned) draws. `befa_factor_scores()`, `befa_reliability()`,
+  `befa_fit_measures()` and `summary()` work on any fit, and `befa()` stores
+  their results unless asked not to.
+  * The factor scores are drawn in the metric the model was fitted to,
+    follow `seed`, and are also returned by `extract_posterior_draws()`.
+  * Omega uses the standardized solution in every data model.
+  * The null model of the incremental fit indices (BCFI, BTLI) is fitted
+    with the backend and method of the fit; the null correlation model has
+    no free parameters and needs no fit. PSIS-LOO treats the draws of ADVI
+    and Pathfinder as independent.
+  * `summary()` shows the standardized loadings, communalities and
+    uniquenesses in every data model, with the convergence of each item and
+    the problems the fit reported.
+  * Removed: the internal helpers that read a `stanfit`.
 * The normal prior on the loadings now models `Sigma = Lambda Lambda' + Psi`
   directly. The location and scale of each loading follow the SD of its item,
   and the scale of the inverse-gamma prior on each uniqueness its variance, so

@@ -3,7 +3,7 @@
  *
  * Author: Ricardo Rey-Sáez
  * email: ricardoreysaez95@gmail.com
- * Modification date: 23/02/2026
+ * Modification date: 31/10/2026
  *
  * Computes pointwise log-likelihood, chi-square, chi-square replicated (PPP),
  * and SRMR for each MCMC posterior draw. This replaces the R-level loop in
@@ -156,10 +156,11 @@ static double compute_srmr(const arma::mat &Sample_Cor,
 // ──────────────────────────────────────────────────────────────────────
 // [[Rcpp::export]]
 Rcpp::List compute_posterior_metrics_cpp(
-    const arma::cube &post_draws, // (n_iter x n_chains x n_vars)
-    const arma::mat &data,        // (N x J) — already scaled for cor model
-    const arma::uvec &sig_idx,    // 0-based indices for Sigma/Rho
-    const arma::uvec &nu_idx,     // 0-based indices for nu (empty if cor/cov)
+    const arma::mat &lambda,      // (S x J*M) loadings, draws stacked chain after chain
+    const arma::mat &psi,         // (S x J) uniquenesses
+    const arma::mat &nu,          // (S x J) item means (zeros for cor/cov)
+    int M, int n_iter,            // factors and iterations per chain
+    const arma::mat &data,        // (N x J) — in the metric of the model
     const arma::vec &M_sat,       // saturated mean vector (J)
     const arma::mat &S_sat,       // saturated cov/cor matrix (J x J)
     double ll_saturated,          // pre-computed saturated LL
@@ -172,12 +173,10 @@ Rcpp::List compute_posterior_metrics_cpp(
     const Rcpp::List &obs_patterns_miss // list of 0-based observed indices for each miss row
 ) {
 
-  const int n_iter = post_draws.n_rows;
-  const int n_chains = post_draws.n_cols;
-  const int n_draws = n_iter * n_chains;
+  const int n_draws = lambda.n_rows;
+  const int n_chains = n_draws / n_iter;
   const int N = data.n_rows;
   const int J = data.n_cols;
-  const bool has_nu = (nu_idx.n_elem > 0);
 
   // Pre-compute MVN normalization constant (constant across all draws)
   const double half_J_log2pi = 0.5 * J * LOG_2PI;
@@ -202,20 +201,11 @@ Rcpp::List compute_posterior_metrics_cpp(
     for (int s = 0; s < n_iter; ++s) {
       draw_idx = c * n_iter + s;
 
-      // Extract Sigma_s (J x J) from draws
-      arma::vec sig_vec(sig_idx.n_elem);
-      for (arma::uword k = 0; k < sig_idx.n_elem; ++k) {
-        sig_vec(k) = post_draws(s, c, sig_idx(k));
-      }
-      arma::mat Sigma_s = arma::reshape(sig_vec, J, J);
-
-      // Extract Nu_s (J) from draws
-      arma::vec Nu_s(J, arma::fill::zeros);
-      if (has_nu) {
-        for (arma::uword k = 0; k < nu_idx.n_elem; ++k) {
-          Nu_s(k) = post_draws(s, c, nu_idx(k));
-        }
-      }
+      // Model-implied moments of this draw: Sigma = L L' + Psi
+      arma::mat L_s = arma::reshape(lambda.row(draw_idx).t(), J, M);
+      arma::mat Sigma_s = L_s * L_s.t();
+      Sigma_s.diag() += psi.row(draw_idx).t();
+      arma::vec Nu_s = nu.row(draw_idx).t();
 
       // Pointwise log-likelihood
       arma::vec ll_s = compute_fiml_ll(Y_comp, Y_miss, comp_idx_0, miss_idx_0, Nu_s, Sigma_s,

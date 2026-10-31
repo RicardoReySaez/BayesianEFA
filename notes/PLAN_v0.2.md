@@ -2,11 +2,14 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
-**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (`a0d721c`) · fase 5 ✔ (este commit) · siguiente: fase 6.
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (`a0d721c`) · fase 5 ✔ (`64b830c`) · fase 6 ✔ (este commit) · siguiente: fase 7.
 
 **Fase 5 (2026-10-31).** `befa(HS_data, 3)` con stanli reproduce v0.1.0. Las medias de h² coinciden hasta 0,02 y las cargas alineadas hasta 0,05 con la tabla de la documentación de v0.1.0. El ajuste no da ningún aviso de convergencia.
 
-**Quedan para la fase 6**, porque aún leen `stanfit`: puntuaciones factoriales, fiabilidad, índices de ajuste y `summary()`. También el modelo nulo, que todavía usa `normalize_stan_args()`, `get_befa_inits()` y el stub `fit_befa_model()`.
+**Fase 6 (2026-10-31).** Puntuaciones factoriales, fiabilidad, índices de ajuste y `summary()` leen los draws finales.
+- El C++ recibe Λ, ψ y ν por draw (cadenas apiladas) y reproduce las fixtures de v0.1.0 hasta 1e−10, números aleatorios incluidos.
+- El modelo nulo se ajusta con el backend y el método del ajuste. Con `HS_data` y stanli, el ajuste completo (puntuaciones, omega e índices) tarda 7 s.
+- Los tests unitarios usan un objeto `befa` falso (`helper-befa.R`), sin Stan, para que covr los mida.
 
 ### Lo aprendido en la fase 4 (2026-10-31)
 

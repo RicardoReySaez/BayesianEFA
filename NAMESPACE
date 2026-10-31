@@ -22,13 +22,7 @@ importFrom(mvnfast,
   dmvn,
   rmvn
 )
-importFrom(posterior,
-  as_draws_array,
-  as_draws_matrix,
-  default_convergence_measures,
-  quantile2,
-  summarise_draws
-)
+importFrom(posterior,as_draws_array)
 importFrom(stats,
   complete.cases,
   dnorm,

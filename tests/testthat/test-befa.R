@@ -163,7 +163,56 @@ test_that("befa() reports the fit and warns when it is too short", {
   expect_match(msgs, "Bayesian exploratory factor analysis")
   expect_match(msgs, "Sampled 2 chains")
   expect_match(msgs, "Largest R-hat")
-  expect_match(msgs, "being rebuilt")
+  expect_match(msgs, "Computing the fit indices")
+})
+
+test_that("befa() adds the scores, omega and fit indices of a fit", {
+  .skip_without_stanli()
+  fit <- .quick_befa(model = "cov", factor_scores = TRUE)
+  expect_s3_class(fit$eta, "draws_array")
+  expect_identical(posterior::nvariables(fit$eta), 600L)
+  expect_s3_class(fit$reliability, "befa_reliability")
+  expect_s3_class(fit$fit_indices, "befa_fitmeasures")
+  # The null covariance model is fitted with stanli and fits far worse.
+  fm <- fit$fit_indices$posterior_fit
+  expect_gt(min(fm$Chi2_Null), max(fm$Chi2))
+  expect_gt(mean(fm$BCFI), 0.9)
+  expect_true("eta[1,1]" %in% posterior::variables(
+    extract_posterior_draws(fit, format = "array", metric = "std")))
+  out <- utils::capture.output(print(summary(fit)))
+  expect_true(any(grepl("Table 3", out)))
+
+  again <- .quick_befa(model = "cov", factor_scores = TRUE,
+                       compute_fit_indices = FALSE, compute_reliability = FALSE)
+  expect_identical(again$eta, fit$eta)
+  expect_null(again$fit_indices)
+  expect_null(again$reliability)
+})
+
+test_that("the scores and fit indices are skipped with summary statistics", {
+  object <- .fake_befa()
+  object$data$summary <- TRUE
+  expect_warning(
+    expect_warning(res <- .befa_downstream(object, TRUE, TRUE, TRUE, 1L, FALSE),
+                   "Factor scores need the raw `data`"),
+    "Fit indices need the raw `data`")
+  expect_null(res$eta)
+  expect_null(res$fit_indices)
+  expect_s3_class(res$reliability, "befa_reliability")
+})
+
+test_that("the scores follow the seed and a failing fit index only warns", {
+  object <- .fake_befa()
+  expect_message(first <- .befa_downstream(object, TRUE, FALSE, FALSE, 11L, TRUE),
+                 "factor scores")
+  second <- .befa_downstream(object, TRUE, FALSE, FALSE, 11L, FALSE)
+  expect_identical(second$eta, first$eta)
+  expect_null(first$reliability)
+
+  local_mocked_bindings(befa_fit_measures = function(...) stop("singular"))
+  expect_warning(res <- .befa_downstream(object, FALSE, FALSE, TRUE, 1L, FALSE),
+                 "could not be computed: singular")
+  expect_null(res$fit_indices)
 })
 
 test_that("befa() reproduces v0.1.0 on the Holzinger-Swineford data", {

@@ -45,10 +45,14 @@
 #'   (default 1e-6) for [rsp_align()].
 #' @param prior Named list of prior hyperparameters that replace the defaults
 #'   (see Details): `xi`, `h2`, `lambda`, `psi`, `sigma` and `nu`.
-#' @param factor_scores,compute_fit_indices,compute_reliability Logical.
-#'   Compute the factor scores, the Bayesian fit indices and the omega
-#'   coefficients. They are being rebuilt for the new draws and are not
-#'   computed in this development version.
+#' @param factor_scores Logical. Draw the factor scores of every person (see
+#'   [befa_factor_scores()]); needs `data`. The draws follow `seed`.
+#' @param compute_fit_indices Logical. Compute the Bayesian fit indices and
+#'   PSIS-LOO (see [befa_fit_measures()]); needs `data`. Outside the
+#'   correlation model, this fits the null model with the same backend and
+#'   method.
+#' @param compute_reliability Logical. Compute the omega coefficients (see
+#'   [befa_reliability()]).
 #' @param loo_args List with `r_eff` and `cores` for the PSIS-LOO of the fit
 #'   indices.
 #' @param verbose Logical. Show the progress bar, the convergence checks and
@@ -120,6 +124,10 @@
 #'   vectors of the alignment (`NULL` with `rotate = "none"`).
 #' * `$spec`, `$stan_code`, `$stan_data`, `$data`: The structure of the model,
 #'   its Stan program, the data passed to Stan and the prepared data.
+#' * `$eta`: The draws of the factor scores (if `factor_scores = TRUE`), also
+#'   returned by [extract_posterior_draws()] in every metric.
+#' * `$reliability`: The omega coefficients (if `compute_reliability = TRUE`).
+#' * `$fit_indices`: The fit indices (if `compute_fit_indices = TRUE`).
 #' * `$n_factors`, `$model_type`, `$lambda_prior`, `$missing`, `$method`,
 #'   `$backend`, `$rotation`, `$priors_used`, `$options` and `$call`.
 #'
@@ -186,18 +194,12 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
   if (verbose && settings$refresh > 0) .befa_report(diagnostics, settings)
   .befa_warn_issues(diagnostics)
 
-  if (verbose && (factor_scores || compute_fit_indices || compute_reliability)) {
-    .befa_msg("factor scores, fit indices and reliability are being rebuilt ",
-              "for the new draws and are not computed in this development ",
-              "version.")
-  }
-
   # The Stan parameters behind the final draws are not identified, so only
   # their log densities are kept.
   keep <- intersect(c("lp__", "lp_approx__"), posterior::variables(fit$draws))
   fit$draws <- posterior::subset_draws(fit$draws, variable = keep)
 
-  structure(list(
+  object <- structure(list(
     draws = post$draws, diagnostics = diagnostics, fit = fit, rsp = post$rsp,
     spec = spec, stan_code = code, stan_data = stan_data, data = prepared,
     n_factors = as.integer(n_factors), model_type = model,
@@ -207,9 +209,42 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
                    rsp_args = rsp_config, loo_args = loo_config),
     call = call
   ), class = "befa")
+  .befa_downstream(object, factor_scores, compute_reliability,
+                   compute_fit_indices, settings$seed, verbose)
 }
 
 # Internal functions
+
+# This function adds to a fit the quantities computed from its final draws:
+# the factor scores (drawn from `seed`, so a fit is reproducible), the omega
+# coefficients and the fit indices. The scores and the fit indices need the
+# raw data; with summary statistics they are skipped with a warning. A fit
+# index that fails leaves the fit intact and is reported as a warning.
+.befa_downstream <- function(object, factor_scores, compute_reliability,
+                             compute_fit_indices, seed, verbose) {
+  summary_data <- object$data$summary
+  if (factor_scores && summary_data) {
+    .befa_warn("Factor scores need the raw `data`; they are skipped with ",
+               "summary statistics.")
+  } else if (factor_scores) {
+    if (verbose) cli::cli_alert_info("Drawing the factor scores.")
+    object$eta <- withr::with_seed(seed, .factor_score_draws(object))
+  }
+  if (compute_reliability) object$reliability <- befa_reliability(object)
+  if (compute_fit_indices && summary_data) {
+    .befa_warn("Fit indices need the raw `data`; they are skipped with ",
+               "summary statistics.")
+  } else if (compute_fit_indices) {
+    if (verbose) {
+      cli::cli_alert_info("Computing the fit indices and the null model.")
+    }
+    object$fit_indices <- tryCatch(befa_fit_measures(object), error = function(e) {
+      .befa_warn("The fit indices could not be computed: ", conditionMessage(e))
+      NULL
+    })
+  }
+  object
+}
 
 # This function returns the starting values of a fit: those given in `init`
 # (one list per chain or path, or one list for all), or the ones built from
