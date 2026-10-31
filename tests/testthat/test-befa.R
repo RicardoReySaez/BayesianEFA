@@ -466,6 +466,9 @@ test_that("befa errors: cor + normal is blocked", {
 # Covers: cor/cov/raw models, unit_vector/normal priors, M=1/2, listwise/FIML.
 
 test_that("befa runs successfully on all valid parameter combinations", {
+  # The precompiled Stan models are gone; this grid returns with the new
+  # backend layer (phase 4 of the v0.2.0 rewrite).
+  skip("Stan sampling is rebuilt in phase 4 of the v0.2.0 rewrite.")
   skip_if_not_installed("rstan")
   skip_on_cran()
 

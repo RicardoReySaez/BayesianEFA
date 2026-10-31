@@ -2,6 +2,8 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (este commit) · siguiente: fase 2.
+
 ---
 
 ## 0. Decisiones tomadas
@@ -28,6 +30,7 @@ Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trab
 | D18 | `ordered = TRUE` se mantiene como argumento y da error de "no implementado". |
 | D19 | Valores iniciales con la misma estrategia que lavaan y `stats::factanal()`: EFA por ML a partir de ψ⁰ = (1 − M/2J)/diag(R⁻¹) (§4.5). |
 | D20 | Barra de progreso y mensajes de convergencia como en uSDT (rama `dev`), iguales en los cuatro backends. Los diagnósticos se calculan solo sobre los parámetros finales, ya alineados (§4.6). |
+| D21 | Cada funcionalidad entra con sus tests en el mismo commit. El paquete pasa por Codecov, con la misma configuración que uSDT (§10.1). |
 
 ---
 
@@ -413,6 +416,27 @@ Los resultados se guardan en CSV en `bench/results/`.
 - **Integración:** modelos minúsculos por backend y método (`skip_if_not_installed`, `skip_on_cran`). stanli es el backend rápido de los tests.
 - **Caché:** la segunda llamada no compila y una sesión nueva reutiliza el binario.
 
+### 10.1 Cobertura (Codecov)
+
+**Regla de trabajo:**
+- Ninguna función nueva entra sin tests en el mismo commit.
+- Al cerrar cada fase se ejecuta `covr::package_coverage()` en local. El resumen por fichero se reporta junto con el commit.
+- Objetivo: cubrir prácticamente todas las líneas nuevas, tanto en `R/` como en `src/`. covr mide también el C++ (gcov), así que las funciones C++ necesitan tests directos.
+- `# nocov` solo para ramas que de verdad no se pueden probar (por ejemplo, las que dependen de una consola interactiva), con un comentario que explique por qué.
+
+**Cómo cubrir el código que depende de un backend:**
+- **Sin backend:** traducción de argumentos, conversión de la salida a `draws_array`, capacidades, errores y caché. Se prueban con `testthat::local_mocked_bindings()` y objetos falsos que imitan la salida de cada backend.
+- **Con backend real:** modelos minúsculos, con `skip_if_not_installed()` y `skip_on_cran()`. stanli no compila, así que estos tests son rápidos y se pueden ejecutar siempre en CI.
+- **Barra de progreso e informe:** `cli` con `cli.dynamic = FALSE` y `expect_snapshot()` para la salida; la ruta de consola dinámica se prueba forzando `cli.dynamic = TRUE` con `withr::local_options()`.
+
+**Infraestructura**, copiada de uSDT (fase 1):
+- `codecov.yml`, con los checks de project y patch informativos y sin comentarios en los PR. Va en `.Rbuildignore`.
+- `.github/workflows/test-coverage.yaml`, derivado de r-lib/actions, con `covr` → `to_cobertura()` → `codecov/codecov-action`.
+  - Añadimos `dev` a las ramas que lo disparan, para ver la cobertura mientras trabajamos.
+  - El workflow instala stanli desde r-universe y ejecuta `stanli::stanli_install()`, para que los tests con backend real cuenten en la cobertura.
+- Badge de Codecov en el README.
+- **Tienes que hacerlo tú en GitHub:** añadir el secreto `CODECOV_TOKEN` al repositorio, como en uSDT.
+
 ---
 
 ## 11. Dependencias y CRAN
@@ -436,14 +460,16 @@ Los resultados se guardan en CSV en `bench/results/`.
 | Fase | Contenido | Terminada cuando |
 |---|---|---|
 | 0. Preparación | Pasar a la rama `dev`; `.gitignore` y `.Rbuildignore`; instalar stanr y actualizar stanli a ≥ 0.25; fixtures de v0.1.0. | Fixtures guardadas y backends disponibles. |
-| 1. Quitar el Stan precompilado | Borrar `stanmodels`, `inst/stan`, `stanExports` y `configure`; actualizar DESCRIPTION y Makevars. | El paquete instala en segundos y carga. |
+| 1. Quitar el Stan precompilado | Borrar `stanmodels`, `inst/stan`, `stanExports` y `configure`; actualizar DESCRIPTION y Makevars; `codecov.yml` y `test-coverage.yaml` (§10.1). | El paquete instala en segundos y carga; los tests que no usan Stan pasan; primera medida de cobertura. |
 | 2. C++ base | Varimax en C++ dentro de `rsp_align`; modelo nulo y EM en C++. | Tests de igualdad en verde. |
 | 3. Generador y datos | Spec, componentes, ensamblador, patrones y raíces, constantes; motor Cholesky. | Snapshots, sintaxis y `lp` frente a la referencia en verde. |
 | 4. Backends y caché | Los 4 adaptadores, capacidades, argumentos, inits y caché; cadenas en sesiones de fondo con la barra de progreso de uSDT. | Un modelo pequeño corre en los 4 backends con cada método, con la misma barra, y solo compila una vez. |
 | 5. Nuevo `befa()` | Objeto nuevo, reconstrucción, alineamiento y métrica; `extract_posterior_draws()` y `posterior_summaries()`; informe de convergencia sobre los parámetros finales. | `befa(HS_data, 3)` reproduce v0.1.0: cargas alineadas iguales dentro del error de Monte Carlo. |
 | 6. Post-procesado | Puntuaciones, fiabilidad, ajuste y `summary()`. | Los tests de esas funciones en verde. |
 | 7. Woodbury y benchmark | Motor Woodbury; benchmark; regla `auto`; valores por defecto de NUTS; backend por defecto. | Informe del benchmark y valores por defecto fijados. |
-| 8. Documentación y check | Roxygen, viñetas, README, NEWS; `R CMD check --as-cran`. | Check limpio. |
+| 8. Documentación y check | Roxygen, viñetas, README (con el badge de Codecov), NEWS; `R CMD check --as-cran`. | Check limpio. |
+
+En todas las fases, "terminada" incluye además que las líneas nuevas estén cubiertas por tests y que el resumen de `covr` acompañe al commit (§10.1).
 
 ---
 

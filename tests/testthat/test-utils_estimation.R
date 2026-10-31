@@ -2,19 +2,19 @@
 # SECTION 1: fit_befa_model
 # ─────────────────────────────────────────────────────────────────────────────
 
-test_that("fit_befa_model errors if model not found", {
+test_that("sampling stops with a clear error until the Stan models are rebuilt", {
   fake_stan_data <- list(N = 100, J = 5, M = 2)
 
   expect_error(
     fit_befa_model(
-      model_name = "nonexistent_model",
+      model_name = "befa_efa",
       stan_data = fake_stan_data,
       backend = "rstan",
       verbose = FALSE,
       model_type = "cor",
       lambda_prior = "unit_vector"
     ),
-    "not found"
+    "not available in this development version"
   )
 })
 

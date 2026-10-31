@@ -1,3 +1,13 @@
+# BayesianEFA (development version)
+
+The v0.2.0 rewrite is in progress on the `dev` branch.
+
+* The Stan models are no longer precompiled into the package. The package now
+  installs in seconds and depends on Rcpp and RcppArmadillo only for its C++
+  code. Stan sampling is unavailable until the new backends arrive: the models
+  will be generated in R and compiled once per model.
+* rstan, cmdstanr, stanr and stanli are optional backends (Suggests).
+
 # BayesianEFA 0.1.0
 
 * Initial CRAN release.

@@ -1,90 +1,11 @@
-﻿#' Fit BEFA Model (Internal)
-#'
-#' Handles the backend selection, verbose messaging, and sampling execution.
-#'
-#' @param model_name Character. Name of the pre-compiled stanmodel (e.g., "befa_efa").
-#' @param stan_data List. The data prepared for Stan.
-#' @param backend Character. "cmdstanr" or "rstan".
-#' @param verbose Logical. Whether to print start-up messages.
-#' @param model_type Character. "cor", "cov", or "raw" (for printing).
-#' @param lambda_prior Character. Prior name (for printing).
-#' @param ... Additional arguments passed to sampling (iter, chains, etc.).
-#'
-#' @return A \code{stanfit} object.
-#' @keywords internal
-#' @noRd
-fit_befa_model <- function(model_name, stan_data, backend, verbose, model_type, lambda_prior, ...) {
-  # Check stan model existence
-  if (!exists(model_name, where = stanmodels)) {
-    stop(sprintf("Stan model '%s' not found internally.", model_name), call. = FALSE)
-  }
-  rstan_obj <- stanmodels[[model_name]]
-
-  # Messages for users
-  if (verbose) {
-    txt_title <- "Bayesian Exploratory Factor Analysis (BEFA)"
-    N_total <- stan_data$N_complete + stan_data$N_incomplete
-    txt_dims <- sprintf("   Data  : N = %d observations | J = %d items", N_total, stan_data$J)
-    txt_spec <- sprintf("   Model : %d Factors | %s | %s Prior", stan_data$M, toupper(model_type), toupper(lambda_prior))
-    txt_eng <- sprintf("   Engine: %s", ifelse(backend == "cmdstanr", "CmdStanR", "RStan"))
-
-    width <- max(nchar(txt_title), nchar(txt_dims), nchar(txt_spec), nchar(txt_eng)) + 2
-    thick_line <- paste0(rep("\u2017", width), collapse = "")
-
-    message("\n", txt_title)
-    message(thick_line)
-    message(txt_spec)
-    message(txt_dims)
-    message(txt_eng)
-    message(thick_line)
-    message("   Sampling posterior draws...\n")
-  }
-
-  # Normalize arguments
-  stan_args <- normalize_stan_args(backend, model_type, lambda_prior, stan_data, list(...))
-  stan_data_for_sampling <- stan_data
-  stan_data_for_sampling$Y_original <- NULL
-  stan_data_for_sampling$Y <- NULL
-
-  stan_args$data <- stan_data_for_sampling
-
-  out <- tryCatch(
-    {
-      # Cmdstanr estimation: save model on cache
-      if (backend == "cmdstanr") {
-        # Save .exe files in cache
-        cache_dir <- tools::R_user_dir("BayesianEFA", which = "cache")
-        if (!dir.exists(cache_dir)) dir.create(cache_dir, recursive = TRUE)
-        # Get Stan model code and write cmdstanr file
-        stan_code <- rstan::get_stancode(rstan_obj)
-        stan_file <- cmdstanr::write_stan_file(
-          code = stan_code,
-          dir = cache_dir,
-          basename = paste0(model_name, "_hash")
-        )
-        # Compile cmdstanr .exe file
-        mod <- cmdstanr::cmdstan_model(stan_file, quiet = TRUE)
-        # Sampling from the model
-        fit_cmd <- do.call(mod$sample, stan_args)
-        # Make the output equivalent to rstan
-        if (!requireNamespace("brms", quietly = TRUE)) {
-          stop("Package 'brms' is required for the 'cmdstanr' backend. ",
-               "Install it with: install.packages('brms')", call. = FALSE)
-        }
-        brms::read_csv_as_stanfit(fit_cmd$output_files())
-
-        # Rstan branch: simple
-      } else {
-        stan_args$object <- rstan_obj
-        do.call(rstan::sampling, stan_args)
-      }
-    },
-    error = function(e) {
-      stop("Stan sampling failed: ", e$message, call. = FALSE)
-    }
-  )
-
-  return(out)
+﻿# This function sampled the Stan models that v0.1.0 shipped precompiled. The
+# v0.2.0 rewrite removed them: the models are now generated in R and run
+# through the new backend layer, which is not in place yet, so sampling stops
+# here with a clear error until then.
+fit_befa_model <- function(model_name, stan_data, backend, verbose, model_type,
+                           lambda_prior, ...) {
+  .befa_stop("Stan sampling is not available in this development version: ",
+             "the Stan models are being rebuilt.")
 }
 
 #' Normalize Stan Arguments (Internal)

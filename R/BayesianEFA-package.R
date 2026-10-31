@@ -12,9 +12,6 @@
 #' @useDynLib BayesianEFA, .registration = TRUE
 #' @import methods
 #' @import Rcpp
-#' @importFrom rstan sampling extract get_stancode
-#' @importFrom rstantools rstan_config
-#' @importFrom RcppParallel RcppParallelLibs
 #' @importFrom loo loo relative_eff
 #' @importFrom posterior as_draws_array
 #' @importFrom mvnfast dmvn rmvn

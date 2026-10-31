@@ -12,32 +12,35 @@ export(posterior_summaries)
 export(rsp_align)
 import(Rcpp)
 import(methods)
-importFrom(RcppParallel,RcppParallelLibs)
-importFrom(loo,loo)
-importFrom(loo,relative_eff)
-importFrom(mvnfast,dmvn)
-importFrom(mvnfast,rmvn)
-importFrom(posterior,as_draws)
-importFrom(posterior,as_draws_array)
-importFrom(posterior,as_draws_df)
-importFrom(posterior,as_draws_list)
-importFrom(posterior,as_draws_matrix)
-importFrom(posterior,as_draws_rvars)
-importFrom(posterior,default_convergence_measures)
-importFrom(posterior,quantile2)
-importFrom(posterior,subset_draws)
-importFrom(posterior,summarise_draws)
-importFrom(rstan,extract)
-importFrom(rstan,get_stancode)
-importFrom(rstan,sampling)
-importFrom(rstantools,rstan_config)
-importFrom(stats,complete.cases)
-importFrom(stats,dnorm)
-importFrom(stats,na.omit)
-importFrom(stats,qnorm)
-importFrom(stats,quantile)
-importFrom(stats,rnorm)
-importFrom(stats,sd)
+importFrom(loo,
+  loo,
+  relative_eff
+)
+importFrom(mvnfast,
+  dmvn,
+  rmvn
+)
+importFrom(posterior,
+  as_draws,
+  as_draws_array,
+  as_draws_df,
+  as_draws_list,
+  as_draws_matrix,
+  as_draws_rvars,
+  default_convergence_measures,
+  quantile2,
+  subset_draws,
+  summarise_draws
+)
+importFrom(stats,
+  complete.cases,
+  dnorm,
+  na.omit,
+  qnorm,
+  quantile,
+  rnorm,
+  sd
+)
 importFrom(utils,packageVersion)
 importFrom(withr,local_seed)
 useDynLib(BayesianEFA, .registration = TRUE)
