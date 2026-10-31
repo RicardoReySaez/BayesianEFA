@@ -6,30 +6,7 @@
 # This function returns every model structure the generator supports, named
 # by its label: the correlation, covariance and raw models with each prior on
 # the loadings and each kind of pattern, and the null models.
-.all_specs <- function() {
-  specs <- list()
-  for (model_type in c("cor", "cov", "raw")) {
-    for (loadings in c("uv", "uni", "normal")) {
-      if (model_type == "cor" && loadings == "normal") next
-      for (patterns in c("single", "multiple")) {
-        spec <- .befa_spec(
-          model_type,
-          lambda_prior = if (loadings == "normal") "normal" else "unit_vector",
-          n_factors = if (loadings == "uni") 1L else 2L,
-          patterns = patterns
-        )
-        specs[[.spec_label(spec)]] <- spec
-      }
-    }
-  }
-  for (model_type in c("cov", "raw")) {
-    for (patterns in c("single", "multiple")) {
-      spec <- .befa_null_spec(model_type, patterns)
-      specs[[.spec_label(spec)]] <- spec
-    }
-  }
-  specs
-}
+.all_specs <- function() .spec_grid()
 
 # This function returns the number of factors a structure is tested with.
 .spec_factors <- function(spec) if (spec$loadings == "uni") 1L else 2L

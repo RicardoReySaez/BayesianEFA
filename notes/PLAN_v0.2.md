@@ -2,7 +2,24 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
-**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (este commit) · siguiente: fase 4.
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (este commit) · siguiente: fase 5.
+
+### Lo aprendido en la fase 4 (2026-10-31)
+
+- **Procesos aparte.** Los backends no se cargan nunca en la sesión del usuario. Compilan y muestrean en procesos `Rscript` aparte, lanzados con `callr::rscript_process`, que escriben su salida en ficheros que la sesión principal lee para la barra. En Windows, rstan no carga si stanr ya está cargado en la misma sesión (choque de DLLs de TBB).
+- **rstan no compilaba en este equipo.** CRAN distribuye rstan 2.32.7 con StanHeaders 2.39.1, una pareja que falla en el propio C++ de rstan. El registro lo detecta (`.rstan_mismatch()`) y marca rstan como no disponible, con el motivo. Se resolvió instalando rstan 2.39.0.9000 desde el r-universe de stan-dev y manteniendo StanHeaders 2.39.1 de CRAN. rstanarm, blavaan y metaBMA siguen funcionando.
+- **El ADVI de rstan y el de stanr no devuelven `lp_approx__`** (stanr tampoco `lp__`). En la fase 5, el k de Pareto solo se podrá calcular cuando estén las dos.
+- **Progreso por backend.** rstan, cmdstanr y stanli imprimen `Iteration: N`. stanr no imprime nada en un proceso de fondo, así que su barra avanza cadena a cadena.
+- **Valores iniciales.** stanli quiere inits sin restringir; el trabajo los convierte con `stanli::unconstrain()`. El Pathfinder de cmdstanr pide un init por camino. stanli ejecuta un solo camino.
+- **Nombres en ADVI y Pathfinder.** cmdstanr y stanli devuelven `lp__` y `lp_approx__`. El ADVI de stanr solo trae `lp_approx__`. `.standardize_draws()` unifica los nombres (`log_p__` y `log_g__` de rstan) y quita `path__`.
+- **Tiempos con un modelo de 6 ítems y 2 factores** (`cor-uv-single`, N = 200):
+
+  | Backend | Compilación (una vez) | 2 cadenas × 600 iteraciones | ADVI | Pathfinder |
+  |---|---|---|---|---|
+  | stanli | — | 1,2 s | 0,8 s | 0,8 s |
+  | cmdstanr | 33 s | 2,7 s | 2,3 s | 2,3 s |
+  | stanr | 30 s | 2,1 s | 1,8 s | 1,6 s |
+  | rstan | 58 s | 2,9 s | 2,1 s | — |
 
 ---
 
@@ -269,7 +286,7 @@ Es la misma estrategia que usan lavaan, `stats::factanal()` y `psych::fa(fm = "m
    - `uni`: lambda_std = clamp(λ, −0.95, 0.95).
    - `normal`: Lambda = D_s·Λ y psi = s²·ψ, en métrica original.
    - `sigma` = SD observadas; `nu` = medias observadas.
-5. **Respaldo:** si la EFA por ML falla (no converge o da un caso Heywood en la cota), se recurre a las SMC como en psych: h2 = SMC y la dirección de Λ de los primeros M autovectores.
+5. **Respaldo:** si la EFA por ML falla o no converge, se recurre al eje principal de un paso con las SMC como comunalidades, como en psych. Los casos Heywood no hacen falta como respaldo, porque h2 ya se recorta a [0,05; 0,95].
 
 ### 4.6 Barra de progreso y diagnósticos (como uSDT)
 
