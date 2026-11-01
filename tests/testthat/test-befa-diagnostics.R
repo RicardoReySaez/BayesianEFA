@@ -82,6 +82,12 @@ test_that("approximations are judged by the Pareto k of their importance ratios"
   expect_gt(bad$pareto_k, 0.7)
   expect_match(paste(capture_messages(.befa_report(bad, list())), collapse = ""), "above 0.7")
   expect_warning(.befa_warn_issues(bad), "method = \"mcmc\"")
+
+  # The Pareto k of all the candidates of Pathfinder, before resampling, wins.
+  resampled <- .befa_diagnostics(NULL, list(method = "pathfinder", backend = "cmdstanr",
+                                            draws = .fake_approx(5), pareto_k = 0.3),
+                                 list())
+  expect_identical(resampled$pareto_k, 0.3)
 })
 
 test_that("the Pareto k is missing when the backend lacks a density", {

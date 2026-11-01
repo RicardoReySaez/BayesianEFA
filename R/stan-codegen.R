@@ -45,7 +45,10 @@
 # pattern are stacked one after another.
 .stan_dims <- function(spec) {
   raw <- spec$model_type == "raw"
-  null <- spec$loadings == "none"
+  # The null model and the Woodbury engine with one pattern read the squared
+  # norms of the rows of the scatter roots, which are data.
+  norms <- spec$loadings == "none" ||
+    (spec$engine == "woodbury" && spec$patterns == "single")
   M <- switch(spec$loadings,
               uv = .stan_decl("int<lower=2> M;", "factors"),
               normal = .stan_decl("int<lower=1> M;", "factors"))
@@ -61,7 +64,7 @@
     )
     tdata <- c(
       "real ll_const = -0.5 * N * J * log(2 * pi());",
-      if (null) "vector[J] root_r2 = rows_dot_self(S_root);"
+      if (norms) "vector[J] root_r2 = rows_dot_self(S_root);"
     )
     return(list(data = data, transformed_data = tdata))
   }
@@ -80,7 +83,7 @@
   )
   tdata <- c(
     "real ll_const;",
-    if (null) "vector[sum(J_p)] root_r2;",
+    if (norms) "vector[sum(J_p)] root_r2;",
     "{",
     "  int n_cells = 0;",
     "  int n_check = 0;",
@@ -93,7 +96,7 @@
     "  }",
     "  ll_const = -0.5 * n_cells * log(2 * pi());",
     "}",
-    if (null) c(
+    if (norms) c(
       "{",
       "  int pos_j = 1;",
       "  int pos_r = 1;",
@@ -109,8 +112,10 @@
   list(data = data, transformed_data = tdata)
 }
 
-# This function returns the loadings, their prior and the expression of the
-# standardized structure they imply. Unit-vector loadings are sqrt(h2) times
+# This function returns the loadings, their prior and the expressions of the
+# standardized structure they imply: the whole matrix (`structure`), and its
+# factor part (`factor`, with `rank` columns) and uniquenesses (`unique`) for
+# the Woodbury engine. Unit-vector loadings are sqrt(h2) times
 # the direction of each row of Z, whose density
 # ||z||^xi exp(-||z||^2 / 2) keeps the norm away from zero; its normalizing
 # constant per row is log_C, as ||z||^2 follows a chi-squared distribution
@@ -135,7 +140,8 @@
         "target += beta_lpdf(h2 | pr_h2[1], pr_h2[2]);",
         "target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;"
       ),
-      structure = "add_diag(tcrossprod(Lambda_std), 1 - h2)"
+      structure = "add_diag(tcrossprod(Lambda_std), 1 - h2)",
+      factor = "Lambda_std", unique = "1 - h2", rank = "M"
     ),
     uni = list(
       functions = c(
@@ -150,7 +156,8 @@
                         "scaled Beta prior on the loadings"),
       parameters = "vector<lower=-1, upper=1>[J] lambda_std;",
       model = "target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);",
-      structure = "add_diag(lambda_std * lambda_std', 1 - square(lambda_std))"
+      structure = "add_diag(lambda_std * lambda_std', 1 - square(lambda_std))",
+      factor = "lambda_std", unique = "1 - square(lambda_std)", rank = "1"
     ),
     normal = list(
       data = c(.stan_decl("vector[J] pr_lambda_loc;", "normal prior on the loadings"),
@@ -165,7 +172,8 @@
         "}",
         "target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);"
       ),
-      structure = "add_diag(tcrossprod(Lambda), psi)"
+      structure = "add_diag(tcrossprod(Lambda), psi)",
+      factor = "Lambda", unique = "psi", rank = "M"
     ),
     none = list()
   )
@@ -202,9 +210,11 @@
 #         + n_p ||L_p^-1 (y_bar_p - nu_p)||^2],
 # where L_p is the Cholesky factor of Sigma_p, so one decomposition gives both
 # the determinant and the quadratic forms. The null model has a diagonal
-# Sigma and needs no decomposition.
+# Sigma and needs no decomposition, and the Woodbury engine avoids the J x J
+# matrix (see .stan_likelihood_woodbury()).
 .stan_likelihood <- function(spec) {
   if (spec$loadings == "none") return(.stan_likelihood_diagonal(spec))
+  if (spec$engine == "woodbury") return(.stan_likelihood_woodbury(spec))
   raw <- spec$model_type == "raw"
   sigma <- .stan_loadings(spec)$structure
   if (.spec_has_scale(spec)) sigma <- paste0("quad_form_diag(", sigma, ", sigma)")
@@ -244,6 +254,114 @@
     "}"
   )
   list(model = model)
+}
+
+# This function returns the log-likelihood with the Woodbury identity. With
+# Sigma = A A' + U, U = diag(u) and the capacitance matrix
+# C = I + A' U^-1 A = L_C L_C' (M x M), each pattern needs
+#   log|Sigma_p| = sum(log(u_p)) + 2 sum(log(diag(L_C)))
+#   tr(Sigma_p^-1 R_p R_p') = sum(root_r2_p ./ u_p) - ||L_C^-1 W_p' R_p||^2,
+# with W = U^-1 A, so the cost grows with J M instead of J^3 and no J x J
+# matrix is formed. The mean term of the raw model follows the same way.
+.stan_likelihood_woodbury <- function(spec) {
+  raw <- spec$model_type == "raw"
+  parts <- .stan_loadings(spec)
+  R <- parts$rank
+  A <- parts$factor
+  u <- parts$unique
+  if (.spec_has_scale(spec)) {
+    A <- if (R == "1") paste0("sigma .* ", A) else paste0("diag_pre_multiply(sigma, ", A, ")")
+    u <- paste0("square(sigma) .* (", u, ")")
+  }
+  if (R == "1") A <- paste0("to_matrix(", A, ")")
+  model <- c(
+    sprintf("matrix[J, %s] A = %s;", R, A),
+    sprintf("vector[J] inv_u = inv(%s);", u),
+    sprintf("matrix[J, %s] B = diag_pre_multiply(sqrt(inv_u), A);", R),
+    sprintf("matrix[J, %s] W = diag_pre_multiply(inv_u, A);", R)
+  )
+
+  if (spec$patterns == "single") {
+    model <- c(
+      model,
+      sprintf("matrix[%s, %s] L_C = cholesky_decompose(add_diag(crossprod(B), 1));", R, R),
+      "target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))",
+      "          - 0.5 * (dot_product(root_r2, inv_u)",
+      "                   - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));",
+      if (raw) c(
+        "target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)",
+        "                      - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));"
+      )
+    )
+    return(list(model = model))
+  }
+
+  # With several patterns, everything that grows with J is computed for all
+  # patterns at once: the capacitance matrices from the products of the
+  # columns of B (C_flat), the projections W' R_p of every column of the
+  # roots (Q), and the terms in u from counts and sums per item. Each pattern
+  # then needs only the Cholesky factor of its M x M matrix.
+  RR <- if (R == "1") "1" else "M * M"
+  model <- c(
+    model,
+    sprintf("matrix[J, %s] BB;", RR),
+    sprintf("for (k in 1:%s) {", R),
+    sprintf("  for (l in 1:%s) {", R),
+    sprintf("    BB[, (k - 1) * %s + l] = B[, k] .* B[, l];", R),
+    "  }",
+    "}",
+    sprintf("matrix[P, %s] C_flat = obs_mat * BB;", RR),
+    sprintf("matrix[K_tot, %s] Q = root_pad * W;", R),
+    if (raw) c(
+      "matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);",
+      sprintf("matrix[P, %s] Q_d = D * W;", R)
+    ),
+    "real logdet_C = 0;",
+    "real quad_C = 0;",
+    if (raw) "real mean_C = 0;",
+    "{",
+    "  int pos_k = 1;",
+    "  for (p in 1:P) {",
+    sprintf("    matrix[%s, %s] L_C", R, R),
+    sprintf("      = cholesky_decompose(add_diag(to_matrix(C_flat[p], %s, %s), 1));", R, R),
+    "    logdet_C += n_p[p] * sum(log(diagonal(L_C)));",
+    sprintf("    quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], %s)')));", R),
+    if (raw) "    mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));",
+    "    pos_k += K_p[p];",
+    "  }",
+    "}",
+    "target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C",
+    "          - 0.5 * (dot_product(r2_item, inv_u) - quad_C);",
+    if (raw) {
+      "target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);"
+    }
+  )
+
+  tdata <- c(
+    "int K_tot = sum(K_p);",
+    "matrix[P, J] obs_mat = rep_matrix(0, P, J);",
+    "matrix[K_tot, J] root_pad = rep_matrix(0, K_tot, J);",
+    "vector[J] n_obs = rep_vector(0, J);",
+    if (raw) "matrix[P, J] ybar_pad = rep_matrix(0, P, J);",
+    "{",
+    "  int pos_j = 1;",
+    "  int pos_r = 1;",
+    "  int pos_k = 1;",
+    "  for (p in 1:P) {",
+    "    array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);",
+    "    obs_mat[p, idx] = rep_row_vector(1, J_p[p]);",
+    "    n_obs[idx] = n_obs[idx] + n_p[p];",
+    "    root_pad[pos_k:(pos_k + K_p[p] - 1), idx]",
+    "      = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p])';",
+    if (raw) "    ybar_pad[p, idx] = segment(ybar_flat, pos_j, J_p[p])';",
+    "    pos_j += J_p[p];",
+    "    pos_r += J_p[p] * K_p[p];",
+    "    pos_k += K_p[p];",
+    "  }",
+    "}",
+    "vector[J] r2_item = columns_dot_self(root_pad)';"
+  )
+  list(transformed_data = tdata, model = model)
 }
 
 # This function returns the log-likelihood of the null model, whose diagonal

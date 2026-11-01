@@ -136,6 +136,21 @@ test_that("befa() fits one factor and summary statistics", {
                tolerance = 0.1)
 })
 
+test_that("both likelihood engines give the same posterior", {
+  .skip_without_stanli()
+  data <- .simulated_data(N = 300, missing = TRUE)
+  woodbury <- .quick_befa(data, model = "raw", missing = "FIML",
+                          compute_fit_indices = FALSE)
+  withr::local_options(BayesianEFA.engine = "cholesky")
+  cholesky <- .quick_befa(data, model = "raw", missing = "FIML",
+                          compute_fit_indices = FALSE)
+  expect_identical(woodbury$spec$engine, "woodbury")
+  expect_identical(cholesky$spec$engine, "cholesky")
+  mean_of <- function(fit, par) colMeans(.stacked_draws(fit$draws, par))
+  expect_lt(max(abs(mean_of(woodbury, "h2") - mean_of(cholesky, "h2"))), 0.05)
+  expect_lt(max(abs(mean_of(woodbury, "nu") - mean_of(cholesky, "nu"))), 0.1)
+})
+
 test_that("befa() runs ADVI and Pathfinder and can skip the alignment", {
   .skip_without_stanli()
   advi <- .quick_befa(method = "advi")

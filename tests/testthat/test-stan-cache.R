@@ -96,13 +96,15 @@ test_that("every structure can be compiled in advance", {
   })
   dirs <- befa_compile_models("cmdstanr", quiet = TRUE)
   expect_length(dirs, length(.spec_grid()))
-  expect_identical(length(unique(seen)), 20L)
+  expect_identical(length(unique(seen)), 36L)
   expect_message(none <- befa_compile_models("stanli"), "needs no compilation")
   expect_length(none, 0L)
 })
 
-test_that("the grid holds the 16 models and the 4 null models", {
+test_that("the grid holds the 16 models with each engine and the 4 null models", {
   grid <- .spec_grid()
-  expect_length(grid, 20L)
+  expect_length(grid, 36L)
+  engines <- vapply(grid, `[[`, "", "engine")
+  expect_identical(as.vector(table(engines)), c(16L, 4L, 16L))
   expect_identical(sum(vapply(grid, function(s) s$loadings == "none", TRUE)), 4L)
 })

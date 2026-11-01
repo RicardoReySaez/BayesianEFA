@@ -68,6 +68,8 @@ test_that("auto chooses the first usable backend for the method", {
   expect_message(b <- .resolve_backend("auto", "mcmc"), "using the stanli backend")
   expect_identical(b, "stanli")
   expect_identical(.resolve_backend("auto", "advi", verbose = FALSE), "stanli")
+  local_mocked_bindings(.backend_status = function(...) .fake_status(c("cmdstanr", "stanli")))
+  expect_identical(.resolve_backend("auto", "mcmc", verbose = FALSE), "stanli")
 
   local_mocked_bindings(.backend_status = function(...) .fake_status("rstan"))
   expect_identical(.resolve_backend("auto", "mcmc", verbose = FALSE), "rstan")

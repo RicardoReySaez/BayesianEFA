@@ -36,7 +36,7 @@
 #'   `"advi"` fits automatic differentiation variational inference, and
 #'   `"pathfinder"` runs Pathfinder.
 #' @param backend Stan interface: `"auto"` (default) takes the first one
-#'   installed among cmdstanr, stanli, stanr and rstan that runs `method`.
+#'   installed among stanli, cmdstanr, stanr and rstan that runs `method`.
 #'   stanli needs no C++ compiler; the others compile each model once and keep
 #'   it for later sessions (see [befa_compile_models()]).
 #' @param rotate `"varimax"` (default) aligns the draws with Varimax and E-RSP;
@@ -60,7 +60,7 @@
 #' @param ... Options of the estimation method. MCMC takes `chains` (default
 #'   4), `parallel_chains` (chains that run at once; default up to 4, leaving
 #'   two cores free), `iter_warmup` and `iter_sampling` (default 1000 each),
-#'   `adapt_delta` (0.95), `max_treedepth` (15), `seed`, `refresh` (iterations
+#'   `adapt_delta` (0.9), `max_treedepth` (15), `seed`, `refresh` (iterations
 #'   between progress updates; `0` hides the progress bar) and `init`; the
 #'   rstan names `iter` (warmup included), `warmup`, `cores` and `control` are
 #'   also accepted. ADVI takes `algorithm` (`"meanfield"` or `"fullrank"`),
@@ -106,8 +106,11 @@
 #' **_Estimation_**
 #'
 #' The Stan program is generated for the structure of the model and compiled
-#' once per backend. Each chain runs in its own background process, starting
-#' from the maximum-likelihood EFA that [stats::factanal()] computes, and the
+#' once per backend. Its likelihood uses the Woodbury identity, whose cost
+#' grows with the number of items times the number of factors instead of the
+#' cube of the number of items; under FIML, the rows are grouped by the items
+#' they observe. Each chain runs in its own background process, starting from
+#' the maximum-likelihood EFA that [stats::factanal()] computes, and the
 #' convergence checks use the aligned parameters only.
 #'
 #' @return An object of class `befa` with:
@@ -177,7 +180,8 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
     .befa_stop("`n_factors` must be smaller than the number of items (",
                prepared$J, ").")
   }
-  spec <- .befa_spec(model, lambda_prior, n_factors, .data_patterns(prepared))
+  spec <- .befa_spec(model, lambda_prior, n_factors, .data_patterns(prepared),
+                     .choose_engine())
   priors <- prepare_befa_priors(prior, model, lambda_prior, n_factors)
   stan_data <- .stan_data(spec, prepared, n_factors, priors)
   settings <- .sampler_settings(method, list(...))

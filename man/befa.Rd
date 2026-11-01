@@ -60,7 +60,7 @@ the complete rows, and \code{"FIML"} uses every observed value. FIML needs
 \code{"pathfinder"} runs Pathfinder.}
 
 \item{backend}{Stan interface: \code{"auto"} (default) takes the first one
-installed among cmdstanr, stanli, stanr and rstan that runs \code{method}.
+installed among stanli, cmdstanr, stanr and rstan that runs \code{method}.
 stanli needs no C++ compiler; the others compile each model once and keep
 it for later sessions (see \code{\link[=befa_compile_models]{befa_compile_models()}}).}
 
@@ -93,7 +93,7 @@ other messages.}
 \item{...}{Options of the estimation method. MCMC takes \code{chains} (default
 4), \code{parallel_chains} (chains that run at once; default up to 4, leaving
 two cores free), \code{iter_warmup} and \code{iter_sampling} (default 1000 each),
-\code{adapt_delta} (0.95), \code{max_treedepth} (15), \code{seed}, \code{refresh} (iterations
+\code{adapt_delta} (0.9), \code{max_treedepth} (15), \code{seed}, \code{refresh} (iterations
 between progress updates; \code{0} hides the progress bar) and \code{init}; the
 rstan names \code{iter} (warmup included), \code{warmup}, \code{cores} and \code{control} are
 also accepted. ADVI takes \code{algorithm} (\code{"meanfield"} or \code{"fullrank"}),
@@ -171,8 +171,11 @@ makes the prior independent of the units of the items.
 \strong{\emph{Estimation}}
 
 The Stan program is generated for the structure of the model and compiled
-once per backend. Each chain runs in its own background process, starting
-from the maximum-likelihood EFA that \code{\link[stats:factanal]{stats::factanal()}} computes, and the
+once per backend. Its likelihood uses the Woodbury identity, whose cost
+grows with the number of items times the number of factors instead of the
+cube of the number of items; under FIML, the rows are grouped by the items
+they observe. Each chain runs in its own background process, starting from
+the maximum-likelihood EFA that \code{\link[stats:factanal]{stats::factanal()}} computes, and the
 convergence checks use the aligned parameters only.
 }
 \examples{

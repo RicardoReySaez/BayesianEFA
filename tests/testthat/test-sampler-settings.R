@@ -3,7 +3,7 @@ test_that("each method gets its defaults", {
   expect_identical(mcmc[c("chains", "iter_warmup", "iter_sampling", "max_treedepth")],
                    list(chains = 4L, iter_warmup = 1000L, iter_sampling = 1000L,
                         max_treedepth = 15L))
-  expect_identical(mcmc$adapt_delta, 0.95)
+  expect_identical(mcmc$adapt_delta, 0.9)
   expect_identical(mcmc$refresh, 20L)
   expect_identical(mcmc$method, "mcmc")
 

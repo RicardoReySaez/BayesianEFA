@@ -1,0 +1,3 @@
+"backend","data","engine","wall","chain_seconds","min_ess_bulk","ess_per_chain_second","us_per_leapfrog"
+"cmdstanr","sim_J60_M4_N1000","woodbury",31.0981929302216,101.506467819214,5687.97054337878,56.0355479367998,97.8220963811155
+"stanli","sim_J60_M4_N1000","woodbury",35.7961640357971,117.174871921539,6440.09308713883,54.9613836271239,113.103158225424

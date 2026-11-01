@@ -190,3 +190,56 @@ test_that("cmdstanr and stanr fit the same model (opt-in, they compile)", {
     }
   }
 })
+
+# This function returns a Pathfinder-like fit: one chain of candidate draws
+# from N(0, 1) with their target density and that of a wider normal.
+.fake_pathfinder <- function(n = 4000, seed = 31) {
+  set.seed(seed)
+  x <- stats::rnorm(n, 0, 1.2)
+  draws <- posterior::as_draws_array(array(
+    c(x, stats::dnorm(x, log = TRUE), stats::dnorm(x, 0, 1.2, log = TRUE)),
+    dim = c(n, 1, 3), dimnames = list(NULL, NULL, c("mu", "lp__", "lp_approx__"))))
+  structure(list(draws = draws, method = "pathfinder"), class = "befa_draws")
+}
+
+test_that("multi-path Pathfinder is resampled after its Pareto k", {
+  settings <- list(psis_resample = TRUE, draws = 1000L, seed = 2L)
+  fit <- .pathfinder_resample(.fake_pathfinder(), settings)
+  expect_lt(fit$pareto_k, 0.5)
+  expect_identical(posterior::ndraws(fit$draws), 1000L)
+  # The PSIS weights move the draws from N(0, 1.2^2) towards N(0, 1).
+  expect_equal(stats::sd(.stacked_draws(fit$draws, "mu")), 1, tolerance = 0.08)
+  expect_identical(.pathfinder_resample(.fake_pathfinder(), settings)$draws,
+                   fit$draws)
+
+  settings$psis_resample <- FALSE
+  kept <- .pathfinder_resample(.fake_pathfinder(), settings)
+  expect_identical(posterior::ndraws(kept$draws), 4000L)
+  expect_identical(kept$pareto_k, fit$pareto_k)
+})
+
+test_that("Pathfinder draws without both densities are left as they are", {
+  fit <- .fake_pathfinder()
+  fit$draws <- posterior::subset_draws(fit$draws, variable = c("mu", "lp__"))
+  settings <- list(psis_resample = TRUE, draws = 1000L, seed = 2L)
+  expect_identical(.pathfinder_resample(fit, settings), fit)
+  fit <- .fake_pathfinder()
+  fit$draws[1, 1, "lp__"] <- -Inf
+  expect_null(.pathfinder_resample(fit, settings)$pareto_k)
+})
+
+test_that(".run_stan() resamples the Pathfinder of the compiled backends", {
+  candidates <- .fake_pathfinder()
+  local_mocked_bindings(
+    .compiled_model = function(...) list(stan_file = "model.stan"),
+    .run_jobs = function(...) list(list(draws = candidates$draws, sampler = NULL,
+                                        seconds = 1))
+  )
+  s <- .sampler_settings("pathfinder", list(seed = 3, refresh = 0))
+  fit <- .run_stan("code", list(), list(list()), "cmdstanr", s, quiet = TRUE)
+  expect_identical(posterior::ndraws(fit$draws), 1000L)
+  expect_lt(fit$pareto_k, 0.5)
+  kept <- .run_stan("code", list(), list(list()), "stanli", s, quiet = TRUE)
+  expect_identical(posterior::ndraws(kept$draws), 4000L)
+  expect_null(kept$pareto_k)
+})

@@ -35,7 +35,34 @@
                          done = paste("Ran", .method_name(settings$method)),
                          quiet = !show)
   }
-  .combine_jobs(results, backend, settings)
+  fit <- .combine_jobs(results, backend, settings)
+  if (settings$method == "pathfinder" && backend %in% c("cmdstanr", "stanr")) {
+    fit <- .pathfinder_resample(fit, settings)
+  }
+  fit
+}
+
+# This function finishes multi-path Pathfinder: it records the Pareto k of
+# the importance ratios of all the candidate draws and, with
+# `psis_resample = TRUE`, resamples `draws` of them with their PSIS weights.
+# CmdStan could resample itself, but its resampled draws repeat, and the
+# ties in the tail leave the Pareto k undefined.
+.pathfinder_resample <- function(fit, settings) {
+  if (!all(c("lp__", "lp_approx__") %in% posterior::variables(fit$draws))) {
+    return(fit)
+  }
+  ratios <- as.vector(.stacked_draws(fit$draws, "lp__") -
+                        .stacked_draws(fit$draws, "lp_approx__"))
+  if (!all(is.finite(ratios))) return(fit)
+  psis <- suppressWarnings(loo::psis(ratios, r_eff = 1))
+  fit$pareto_k <- as.numeric(psis$diagnostics$pareto_k)
+  if (isTRUE(settings$psis_resample)) {
+    weights <- exp(as.vector(stats::weights(psis, log = TRUE)))
+    fit$draws <- withr::with_seed(settings$seed, posterior::resample_draws(
+      posterior::merge_chains(fit$draws), weights = weights,
+      method = "stratified", ndraws = settings$draws))
+  }
+  fit
 }
 
 # This function joins the results of the jobs into a `befa_draws` object: the
@@ -135,10 +162,11 @@
                                iter = s$iter, draws = s$draws,
                                tol_rel_obj = s$tol_rel_obj, seed = s$seed,
                                init = list(init), refresh = s$refresh),
+      # Every candidate draw comes back; .pathfinder_resample() resamples them.
       pathfinder = model$pathfinder(data = data, draws = s$draws,
                                     num_paths = s$num_paths,
                                     max_lbfgs_iters = s$iter,
-                                    psis_resample = s$psis_resample,
+                                    psis_resample = FALSE,
                                     seed = s$seed, init = init,
                                     refresh = s$refresh)
     )
@@ -158,10 +186,11 @@
                                iter = s$iter, draws = s$draws,
                                tol_rel_obj = s$tol_rel_obj, seed = s$seed,
                                init = init, refresh = s$refresh),
+      # Every candidate draw comes back; .pathfinder_resample() resamples them.
       pathfinder = model$pathfinder(data = data, draws = s$draws,
                                     num_paths = s$num_paths,
                                     max_lbfgs_iters = s$iter,
-                                    psis_resample = s$psis_resample,
+                                    psis_resample = FALSE,
                                     seed = s$seed, init = init,
                                     refresh = s$refresh)
     )

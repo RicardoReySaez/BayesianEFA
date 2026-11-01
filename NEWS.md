@@ -64,6 +64,18 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   directly. The location and scale of each loading follow the SD of its item,
   and the scale of the inverse-gamma prior on each uniqueness its variance, so
   the prior does not depend on the units of the items.
+* The likelihood uses the Woodbury identity, which works with an M x M
+  matrix instead of the J x J covariance matrix. One gradient costs up to 14
+  times less with complete data, and under FIML up to 175 times less, as
+  everything that grows with the number of items is computed for all the
+  patterns of missing values at once. The benchmark is in `bench/`, outside
+  the package.
+* New defaults: `backend = "auto"` tries stanli first (then cmdstanr, stanr
+  and rstan), since it needs no compilation and samples these models as fast
+  as the compiled backends; MCMC uses `adapt_delta = 0.9` (was 0.95), which
+  gave more effective draws per second without divergent transitions.
+* Pathfinder with cmdstanr or stanr reports a finite Pareto k: the PSIS
+  resampling now happens after k is computed on all the candidate draws.
 
 # BayesianEFA 0.1.0
 

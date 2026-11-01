@@ -137,7 +137,7 @@ befa_clear_cache <- function() {
 }
 
 # This function keeps the `keep` most recently used models in the cache and
-# removes the others. There are about 30 programs for each backend.
+# removes the others. There are 36 programs for each backend.
 .prune_cache <- function(keep = getOption("BayesianEFA.cache_keep", 100L)) {
   models <- .cached_models()
   if (length(models) <= keep) return(invisible(character(0)))
@@ -147,20 +147,22 @@ befa_clear_cache <- function() {
 }
 
 # This function lists every structure the generator supports: the 16 models
-# and the 4 null models.
+# with each engine and the 4 null models.
 .spec_grid <- function() {
   specs <- list()
   for (model_type in c("cor", "cov", "raw")) {
     for (loadings in c("uv", "uni", "normal")) {
       if (model_type == "cor" && loadings == "normal") next
       for (patterns in c("single", "multiple")) {
-        spec <- .befa_spec(
-          model_type,
-          lambda_prior = if (loadings == "normal") "normal" else "unit_vector",
-          n_factors = if (loadings == "uni") 1L else 2L,
-          patterns = patterns
-        )
-        specs[[.spec_label(spec)]] <- spec
+        for (engine in c("cholesky", "woodbury")) {
+          spec <- .befa_spec(
+            model_type,
+            lambda_prior = if (loadings == "normal") "normal" else "unit_vector",
+            n_factors = if (loadings == "uni") 1L else 2L,
+            patterns = patterns, engine = engine
+          )
+          specs[[.spec_label(spec)]] <- spec
+        }
       }
     }
   }

@@ -2,7 +2,13 @@
 
 Borrador para discutir · 2026-10-31 · base: `24c15ac` (v0.1.0) · rama de trabajo: `dev`
 
-**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (`a0d721c`) · fase 5 ✔ (`64b830c`) · fase 6 ✔ (este commit) · siguiente: fase 7.
+**Estado:** fase 0 ✔ (`3ad095b`) · fase 1 ✔ (`8e3c442`) · fase 2 ✔ (`9b6eaf1`) · fase 3 ✔ (`1923239`) · fase 4 ✔ (`a0d721c`) · fase 5 ✔ (`64b830c`) · fase 6 ✔ (`a730011`) · fase 7 ✔ (este commit) · siguiente: fase 8.
+
+**Fase 7 (2026-11-01).** Motor Woodbury, benchmark y valores por defecto; el informe está en `bench/README.md`.
+- `engine = "auto"` es siempre Woodbury: nunca cuesta más por gradiente que Cholesky. Cholesky queda como opción interna y referencia de los tests.
+- FIML vectorizado: lo que crece con J se calcula para todos los patrones a la vez; por patrón solo queda la Cholesky de M × M.
+- `backend = "auto"`: stanli → cmdstanr → stanr → rstan. `adapt_delta = 0.9`; `max_treedepth` sigue en 15.
+- Pathfinder (cmdstanr y stanr): el k de Pareto se calcula sobre todos los candidatos y el remuestreo PSIS lo hace BayesianEFA.
 
 **Fase 5 (2026-10-31).** `befa(HS_data, 3)` con stanli reproduce v0.1.0. Las medias de h² coinciden hasta 0,02 y las cargas alineadas hasta 0,05 con la tabla de la documentación de v0.1.0. El ajuste no da ningún aviso de convergencia.
 

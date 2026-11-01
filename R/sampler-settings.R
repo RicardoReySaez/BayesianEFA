@@ -53,16 +53,18 @@
   s
 }
 
-# This function returns the default options of a method. MCMC keeps the
-# defaults of v0.1.0: four chains of 1000 warmup and 1000 kept iterations,
-# adapt_delta = 0.95 and max_treedepth = 15. ADVI and Pathfinder return 1000
+# This function returns the default options of a method. MCMC runs four
+# chains of 1000 warmup and 1000 kept iterations with max_treedepth = 15, as
+# in v0.1.0, and adapt_delta = 0.9: in bench/bench-nuts.R, 0.95 gave the
+# smallest effective sample size per second on every data set, and no value
+# from 0.8 up gave a divergent transition. ADVI and Pathfinder return 1000
 # draws; Pathfinder runs four paths and resamples them with PSIS.
 .sampler_defaults <- function(method) {
   common <- list(seed = NULL, refresh = NULL, init = NULL)
   switch(method,
     mcmc = c(list(chains = 4L, parallel_chains = .default_cores(),
                   iter_warmup = 1000L, iter_sampling = 1000L,
-                  adapt_delta = 0.95, max_treedepth = 15L), common),
+                  adapt_delta = 0.9, max_treedepth = 15L), common),
     advi = c(list(algorithm = "meanfield", iter = 10000L, draws = 1000L,
                   tol_rel_obj = 0.01), common),
     pathfinder = c(list(iter = 1000L, draws = 1000L, num_paths = 4L,

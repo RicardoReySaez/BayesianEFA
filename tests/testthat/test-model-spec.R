@@ -4,7 +4,7 @@ test_that("the prior and the number of factors choose the loadings", {
   expect_identical(.befa_spec("raw", "normal", 1L)$loadings, "normal")
   spec <- .befa_spec("raw", "normal", 2L, patterns = "multiple")
   expect_s3_class(spec, "befa_spec")
-  expect_identical(.spec_label(spec), "raw-normal-multiple-cholesky")
+  expect_identical(.spec_label(spec), "raw-normal-multiple-woodbury")
 })
 
 test_that("the normal prior is refused in the correlation model", {
@@ -35,4 +35,18 @@ test_that("matrices are checked", {
   expect_error(.check_matrix(1:3, "x"), "`x` must be a numeric matrix")
   expect_error(.check_matrix(matrix("a"), "x"), "numeric matrix")
   expect_true(.check_matrix(diag(2), "x"))
+})
+
+test_that("the engine is Woodbury unless an option forces it", {
+  expect_identical(.choose_engine(), "woodbury")
+  withr::local_options(BayesianEFA.engine = "cholesky")
+  expect_identical(.choose_engine(), "cholesky")
+  withr::local_options(BayesianEFA.engine = "qr")
+  expect_error(.choose_engine(), "must be one of")
+})
+
+test_that("a structure knows its engine", {
+  spec <- .befa_spec("cov", "normal", 3L, "multiple", "woodbury")
+  expect_identical(.spec_label(spec), "cov-normal-multiple-woodbury")
+  expect_error(.befa_spec("cor", "unit_vector", 2L, engine = "qr"))
 })

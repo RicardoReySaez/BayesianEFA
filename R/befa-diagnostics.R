@@ -33,7 +33,8 @@
       out$treedepth <- as.integer(sum(depth >= settings$max_treedepth))
     }
   } else {
-    out$pareto_k <- .approximation_k(fit$draws)
+    out$pareto_k <- fit$pareto_k
+    if (is.null(out$pareto_k)) out$pareto_k <- .approximation_k(fit$draws)
   }
   out$issues <- .diagnostic_issues(out)
   out

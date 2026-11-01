@@ -10,3 +10,4 @@ src/*.gcda
 *.gcov
 tests/testthat/_problems/
 .vscode/
+bench/.exe/

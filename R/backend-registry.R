@@ -10,9 +10,12 @@
 
 # Internal functions
 
-# The backends in the order `backend = "auto"` tries them. The order will be
-# revised with the benchmark of the rewrite.
-.backend_order <- c("cmdstanr", "stanli", "stanr", "rstan")
+# The backends in the order `backend = "auto"` tries them, from the benchmark
+# in bench/ (see bench/README.md). stanli needs no compilation, and on models
+# up to 30 items it samples as fast as or faster than the compiled backends
+# once those are cached; with 60 items, cmdstanr is 13% faster per step. The
+# compiled backends follow, with rstan last for its older Stan.
+.backend_order <- c("stanli", "cmdstanr", "stanr", "rstan")
 
 # The estimation methods: Hamiltonian Monte Carlo (NUTS), automatic
 # differentiation variational inference and Pathfinder.

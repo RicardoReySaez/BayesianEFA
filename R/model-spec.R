@@ -12,16 +12,17 @@
 # scaled Beta on each loading), and "normal" for independent normal loadings
 # in the metric of the items. `patterns` is "single" when every row has the
 # same observed items and "multiple" otherwise. `engine` names how the
-# likelihood is computed.
+# likelihood is computed: "cholesky" decomposes each J x J covariance matrix,
+# and "woodbury" works with the M x M capacitance matrix instead.
 .befa_spec <- function(model_type = c("cor", "cov", "raw"),
                        lambda_prior = c("unit_vector", "normal"),
                        n_factors,
                        patterns = c("single", "multiple"),
-                       engine = "cholesky") {
+                       engine = c("woodbury", "cholesky")) {
   model_type <- match.arg(model_type)
   lambda_prior <- match.arg(lambda_prior)
   patterns <- match.arg(patterns)
-  engine <- match.arg(engine, "cholesky")
+  engine <- match.arg(engine)
   .check_count(n_factors, "n_factors")
 
   if (lambda_prior == "normal" && model_type == "cor") {
@@ -38,6 +39,19 @@
   structure(list(model_type = model_type, loadings = loadings,
                  patterns = patterns, engine = engine),
             class = "befa_spec")
+}
+
+# This function chooses the likelihood engine. In bench/bench-engines.R (see
+# bench/README.md), one gradient never costs more with Woodbury than with
+# Cholesky: 1.02 to 1.2 times less with 10 items and complete data, 7 to 14
+# times less with 100, and 1.3 to 175 times less with missing values. The
+# internal option `BayesianEFA.engine` forces "cholesky", for the tests and
+# the benchmarks.
+.choose_engine <- function() {
+  engine <- .check_choice(getOption("BayesianEFA.engine", "auto"),
+                          c("auto", "cholesky", "woodbury"),
+                          "options(BayesianEFA.engine)")
+  if (engine == "auto") "woodbury" else engine
 }
 
 # This function returns the structure of the null (independence) model that
