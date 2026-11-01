@@ -290,9 +290,11 @@ head(matrix(scores$summary$mean, ncol = 3))
 - `method = "pathfinder"` and `method = "advi"` approximate the posterior in
   seconds. `befa()` reports the Pareto k of the approximation, and warns when
   it is above 0.7.
-- `befa_bridge_sampler()` estimates the log marginal likelihood of a fit, so
-  the Bayes factor between two numbers of factors is
-  `bridgesampling::bf(befa_bridge_sampler(fit3), befa_bridge_sampler(fit2))`.
+- `befa_compare(two = fit2, three = fit3)` compares fits to the same data
+  with different numbers of factors: the fit indices, PSIS-LOO with stacking
+  and pseudo-BMA+ weights, the information criteria with Akaike weights, and
+  the model evidence from bridge sampling (`befa_bridge_sampler()`) with
+  posterior model probabilities, each table ordered from the best model.
 
 ## References
 

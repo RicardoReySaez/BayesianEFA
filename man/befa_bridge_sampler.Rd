@@ -33,8 +33,10 @@ draws.}
 The \code{bridge} object of \code{\link[bridgesampling:bridge_sampler]{bridgesampling::bridge_sampler()}} (a
 \code{bridge_list} with repetitions), whose \code{logml} already includes
 \eqn{\log \mathrm{Vol}(O(M))}, so it works with \code{\link[bridgesampling:bf]{bridgesampling::bf()}}
-and \code{\link[bridgesampling:post_prob]{bridgesampling::post_prob()}}. Its attribute \code{"befa"} holds the
-anchors, their pivots (residual communalities) and the coordinates used.
+and \code{\link[bridgesampling:post_prob]{bridgesampling::post_prob()}}. Its \code{mcse_logml} is the Monte Carlo
+standard error of \code{logml} of Micaletto and Vehtari (2025), reliable
+below 0.3. Its attribute \code{"befa"} holds the anchors, their pivots
+(residual communalities) and the coordinates used.
 }
 \description{
 Estimates the log marginal likelihood (evidence) of a fitted model with
@@ -82,6 +84,9 @@ bridgesampling::bf(ml3, ml2)
 Gronau, Q. F., Singmann, H., & Wagenmakers, E.-J. (2020). bridgesampling:
 An R package for estimating normalizing constants. \emph{Journal of
 Statistical Software, 92}(10), 1-29. \doi{10.18637/jss.v092.i10}
+
+Micaletto, G., & Vehtari, A. (2025). \emph{Bridge sampling diagnostics}.
+arXiv:2508.14487. \doi{10.48550/arXiv.2508.14487}
 
 Meng, X.-L., & Wong, W. H. (1996). Simulating ratios of normalizing
 constants via a simple identity: A theoretical exploration. \emph{Statistica

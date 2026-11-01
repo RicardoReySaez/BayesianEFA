@@ -54,13 +54,18 @@
 #' @return The `bridge` object of [bridgesampling::bridge_sampler()] (a
 #'   `bridge_list` with repetitions), whose `logml` already includes
 #'   \eqn{\log \mathrm{Vol}(O(M))}, so it works with [bridgesampling::bf()]
-#'   and [bridgesampling::post_prob()]. Its attribute `"befa"` holds the
-#'   anchors, their pivots (residual communalities) and the coordinates used.
+#'   and [bridgesampling::post_prob()]. Its `mcse_logml` is the Monte Carlo
+#'   standard error of `logml` of Micaletto and Vehtari (2025), reliable
+#'   below 0.3. Its attribute `"befa"` holds the anchors, their pivots
+#'   (residual communalities) and the coordinates used.
 #'
 #' @references
 #' Gronau, Q. F., Singmann, H., & Wagenmakers, E.-J. (2020). bridgesampling:
 #' An R package for estimating normalizing constants. *Journal of
 #' Statistical Software, 92*(10), 1-29. \doi{10.18637/jss.v092.i10}
+#'
+#' Micaletto, G., & Vehtari, A. (2025). *Bridge sampling diagnostics*.
+#' arXiv:2508.14487. \doi{10.48550/arXiv.2508.14487}
 #'
 #' Meng, X.-L., & Wong, W. H. (1996). Simulating ratios of normalizing
 #' constants via a simple identity: A theoretical exploration. *Statistica

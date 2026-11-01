@@ -66,6 +66,8 @@ reference:
     contents:
       - befa_fit_measures
       - print.befa_fitmeasures
+      - befa_compare
+      - print.befa_comparison
       - befa_bridge_sampler
       - befa_reliability
       - befa_factor_scores

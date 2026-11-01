@@ -104,6 +104,15 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   equivalent copy. The log density runs in C++ with the vectorized Woodbury
   likelihood of the Stan code. `befa()` now keeps the draws of the Stan
   parameters in `$fit$draws`, which this needs.
+* New `befa_compare()`: compares two or more fits to the same data in four
+  tables, each ordered from the best model: the posterior means of the
+  Bayesian fit indices (by BRMSEA), the PSIS-LOO comparison (differences
+  from the best model, `p_worse`, and stacking and pseudo-BMA+ weights), the
+  information criteria with Akaike weights (by WAIC), and the model evidence
+  from bridge sampling with posterior model probabilities. The Monte Carlo
+  error of each evidence is the closed form of Micaletto and Vehtari (2025)
+  from bridgesampling 1.2.1, so no repetitions are needed; the probability
+  intervals propagate it, and prior model probabilities can be given.
 * The references cite the published papers: the standardized generalized
   hierarchical factor model in *Psychological Methods*
   (doi:10.1037/met0000846) and the E-RSP algorithm in *Bayesian Analysis*
