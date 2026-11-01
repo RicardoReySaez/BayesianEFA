@@ -7,8 +7,15 @@ for (case in cases) for (fmt in formats) {
     res <- do.call(rsp_align, fx$inputs)
     res$summary <- NULL
     # The per-draw Varimax now runs in C++; the rest of the algorithm is the
-    # published one, so only rounding may differ.
-    expect_equal(res, fx$output, tolerance = 1e-8)
+    # published one, so only rounding may differ. The algorithm stops when the
+    # objective stops improving, so once it is flat a rounding-size rise can
+    # add one iteration on some platforms: the trace is compared by its final
+    # value.
+    expect_equal(res[names(res) != "objective"],
+                 fx$output[names(fx$output) != "objective"], tolerance = 1e-8)
+    expect_equal(tail(res$objective, 1L), tail(fx$output$objective, 1L),
+                 tolerance = 1e-8)
+    expect_lte(abs(length(res$objective) - length(fx$output$objective)), 1L)
   })
 }
 

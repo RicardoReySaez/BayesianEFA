@@ -111,10 +111,13 @@
 # This function returns a root R of a symmetric positive semidefinite matrix
 # S (R %*% t(R) = S): its Cholesky factor or, when S is singular, the scaled
 # eigenvectors of its positive eigenvalues. A null matrix gives one column of
-# zeros, since the Stan code needs at least one column.
+# zeros, since the Stan code needs at least one column. A Cholesky factor
+# with a pivot near zero also counts as singular: whether chol() fails on a
+# singular matrix or ends with a pivot of rounding size depends on the
+# platform's LAPACK.
 .matrix_root <- function(S) {
   R <- tryCatch(t(chol(S)), error = function(e) NULL)
-  if (!is.null(R)) return(R)
+  if (!is.null(R) && min(diag(R))^2 > max(diag(S), 0) * 1e-12) return(R)
   e <- eigen(S, symmetric = TRUE)
   keep <- e$values > max(e$values, 0) * 1e-12
   if (!any(keep)) return(matrix(0, nrow(S), 1L))

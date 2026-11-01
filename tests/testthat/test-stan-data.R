@@ -77,6 +77,17 @@ test_that("scatter roots rebuild the scatter matrix with few columns", {
   expect_equal(tcrossprod(root), crossprod(singular), tolerance = 1e-10)
 
   expect_identical(.matrix_root(matrix(0, 2, 2)), matrix(0, 2, 1))
+
+  # A Cholesky factor that ends with a pivot of rounding size, as some LAPACK
+  # libraries return for a singular matrix, is not used. Adding 1e-14 along
+  # the null direction lets chol() succeed on every platform.
+  S <- crossprod(singular)
+  v <- c(1, -1, 0) / sqrt(2)
+  nearly <- S + 1e-14 * max(diag(S)) * tcrossprod(v)
+  expect_false(is.null(tryCatch(chol(nearly), error = function(e) NULL)))
+  root <- .matrix_root(nearly)
+  expect_identical(ncol(root), 2L)
+  expect_equal(tcrossprod(root), nearly, tolerance = 1e-10)
 })
 
 test_that("item SDs come from the data, the EM or the summary statistics", {

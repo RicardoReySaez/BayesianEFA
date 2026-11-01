@@ -33,6 +33,7 @@ test_that("the generated code compiles under Stan 2.32 (rstan)", {
 
 test_that("the generated code passes the syntax check of stanli", {
   skip_if_not_installed("stanli", "0.25.0")
+  skip_if_not(stanli::stanli_available(), "the stanli runtime is not installed")
   for (label in names(specs)) {
     expect_true(stanli::stanli_check_syntax(.stan_code(specs[[label]])), label = label)
   }
