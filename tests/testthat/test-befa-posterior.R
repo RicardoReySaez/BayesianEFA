@@ -106,8 +106,33 @@ test_that("the draws are aligned unless the rotation is switched off", {
   # The fake draws barely vary, which posterior notes while summarising them.
   post <- suppressWarnings(.befa_posterior(fit, spec, 5L, 2L))
   L <- .stacked_draws(post$draws, "Lambda_std")
-  expect_named(post$rsp, c("Lambda_star", "objective", "sign_vectors", "perm_vectors"))
+  expect_named(post$rsp, c("Lambda_star", "objective", "sign_vectors",
+                           "perm_vectors", "factor_order"))
   expect_lt(max(apply(L, 2, stats::sd)), 0.1)
+})
+
+test_that("the aligned factors are ordered by the variance they explain", {
+  skip_on_cran()
+  spec <- .befa_spec("cor", "unit_vector", 2L)
+  set.seed(63)
+  n <- 40L
+  # Items 1-2 load on the first column of Z and items 3-5 on the second, so
+  # the second explains more variance.
+  Z <- matrix(c(4, 4, 0.5, 0.5, 0.5, 0.5, 0.5, 4, 4, 4), 5, 2)
+  rows <- lapply(seq_len(n), function(s) {
+    c(rep(0.6, 5), c(Z + matrix(stats::rnorm(10, 0, 0.1), 5, 2)))
+  })
+  m <- do.call(rbind, rows)
+  colnames(m) <- c(paste0("h2[", 1:5, "]"),
+                   paste0("Z[", rep(1:5, 2), ",", rep(1:2, each = 5), "]"))
+  fit <- list(draws = .as_chains(m, n / 2, 2L))
+  post <- suppressWarnings(.befa_posterior(fit, spec, 5L, 2L))
+  L <- matrix(colMeans(.stacked_draws(post$draws, "Lambda_std")), 5, 2)
+  expect_gt(sum(L[, 1]^2), sum(L[, 2]^2))
+  expect_true(all(abs(L[3:5, 1]) > 0.6) && all(abs(L[1:2, 2]) > 0.6))
+  expect_identical(.factor_order(matrix(c(L[, 2], L[, 1]), nrow = 1), 5L, 2L),
+                   c(2L, 1L))
+  expect_identical(.factor_columns(c(2L, 1L), 3L), c(4:6, 1:3))
 })
 
 test_that("draws are converted to the standardized metric on demand", {

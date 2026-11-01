@@ -80,6 +80,30 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   precomputed (`vignettes/*.Rmd.orig`, knitted by `vignettes/precompile.R`),
   so building the package and R CMD check run no Stan. The README shows the
   Codecov badge, and the pkgdown reference is grouped by topic.
+* The aligned factors are ordered by the variance they explain, so F1 is the
+  strongest factor in the draws, `summary()`, the factor scores and omega.
+* `summary()` shows the names of the items (from the columns of `data` or of
+  the summary statistics) instead of `Item_1`, ..., in a column of fixed
+  width (`name_width`, default 8) that keeps the width of the table: longer
+  names are shortened in the middle. The items are sorted by their main
+  factor by default (`sort = TRUE`), omega total is the last row of the
+  reliability table, and every note wraps to the width of its table.
+* Information criteria: `befa_fit_measures()` adds WAIC, the DIC of
+  Spiegelhalter et al. (2002) with the posterior means of the aligned
+  parameters, the parameterization-invariant DIC_i of Xiao and Rabe-Hesketh
+  (2026), and the BPIC, to ELPD, LOOIC and p_loo, each with its standard
+  error across persons (by the jackknife for DIC_i and p_V). `summary()`
+  shows them in their own table, between the fit measures and the
+  reliability.
+* New `befa_bridge_sampler()`: the log marginal likelihood by bridge
+  sampling (through the bridgesampling package), for Bayes factors between
+  numbers of factors. Since the posterior is invariant under rotations of
+  the loadings, every draw is rotated to a canonical representative (QR
+  decomposition of a block of anchor rows) and the integral over the
+  orthogonal group is taken exactly, so the raw draws need not visit every
+  equivalent copy. The log density runs in C++ with the vectorized Woodbury
+  likelihood of the Stan code. `befa()` now keeps the draws of the Stan
+  parameters in `$fit$draws`, which this needs.
 * The references cite the published papers: the standardized generalized
   hierarchical factor model in *Psychological Methods*
   (doi:10.1037/met0000846) and the E-RSP algorithm in *Bayesian Analysis*

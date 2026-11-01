@@ -86,9 +86,12 @@ communalities.
 
 ## Model summary
 
-`summary()` prints tables inspired by the `psych` package. `cutoff` hides the
-loadings below a threshold, and `signif_stars` marks those whose 95% credible
-interval excludes zero:
+`summary()` prints tables inspired by the `psych` package. The factors are
+ordered by the variance they explain, and the items, listed by their names,
+are grouped by the factor of their largest loading (`sort = FALSE` keeps their
+original order; long names are shortened to keep the width of the table).
+`cutoff` hides the loadings below a threshold, and `signif_stars` marks those
+whose 95% credible interval excludes zero:
 
 ```{r summary}
 summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
@@ -105,11 +108,11 @@ diagnostics:
 ```{r draws}
 draws <- extract_posterior_draws(befa_fit, pars = "Lambda_std")
 
-hist(draws[, "Lambda_std[4,3]"],
+hist(draws[, "Lambda_std[4,1]"],
   breaks = 50,
   col = "#2780e3",
   border = "white",
-  main = "Posterior of Lambda_std[4,3]",
+  main = "Posterior of Lambda_std[4,1]",
   xlab = "Value"
 )
 
@@ -144,6 +147,9 @@ head(matrix(scores$summary$mean, ncol = 3))
 - `method = "pathfinder"` and `method = "advi"` approximate the posterior in
   seconds. `befa()` reports the Pareto k of the approximation, and warns when
   it is above 0.7.
+- `befa_bridge_sampler()` estimates the log marginal likelihood of a fit, so
+  the Bayes factor between two numbers of factors is
+  `bridgesampling::bf(befa_bridge_sampler(fit3), befa_bridge_sampler(fit2))`.
 
 ## References
 

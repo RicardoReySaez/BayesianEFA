@@ -17,5 +17,6 @@
 \code{x}, invisibly.
 }
 \description{
-Displays the fit indices of a \code{befa_fitmeasures} object as a table.
+Displays the fit indices and the information criteria of a
+\code{befa_fitmeasures} object as two tables.
 }

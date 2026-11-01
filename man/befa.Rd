@@ -64,8 +64,9 @@ installed among stanli, cmdstanr, stanr and rstan that runs \code{method}.
 stanli needs no C++ compiler; the others compile each model once and keep
 it for later sessions (see \code{\link[=befa_compile_models]{befa_compile_models()}}).}
 
-\item{rotate}{\code{"varimax"} (default) aligns the draws with Varimax and E-RSP;
-\code{"none"} returns the loadings as Stan sampled them.}
+\item{rotate}{\code{"varimax"} (default) aligns the draws with Varimax and E-RSP,
+and orders the factors by the variance they explain (F1 explains the
+most); \code{"none"} returns the loadings as Stan sampled them.}
 
 \item{rsp_args}{List with \code{max_iter} (default 1000) and \code{threshold}
 (default 1e-6) for \code{\link[=rsp_align]{rsp_align()}}.}
@@ -111,10 +112,13 @@ prior; \code{Lambda}, \code{Psi} and (raw model) \code{nu} for the normal prior.
 \code{\link[=extract_posterior_draws]{extract_posterior_draws()}} with \code{metric = "std"} for the standardized
 solution.
 \item \verb{$diagnostics}: The convergence checks (see the messages after the fit).
-\item \verb{$fit}: The method, backend, settings, sampler diagnostics, log densities
-and run times.
+\item \verb{$fit}: The method, backend, settings, sampler diagnostics and run times,
+and the draws of the parameters of the Stan program with their log
+densities. Those parameters are not identified and are not meant for
+inference; \code{\link[=befa_bridge_sampler]{befa_bridge_sampler()}} needs them.
 \item \verb{$rsp}: The reference loadings, objective and sign and permutation
-vectors of the alignment (\code{NULL} with \code{rotate = "none"}).
+vectors of the alignment, and \code{factor_order}, the order in which the
+aligned factors were placed (\code{NULL} with \code{rotate = "none"}).
 \item \verb{$spec}, \verb{$stan_code}, \verb{$stan_data}, \verb{$data}: The structure of the model,
 its Stan program, the data passed to Stan and the prepared data.
 \item \verb{$eta}: The draws of the factor scores (if \code{factor_scores = TRUE}), also

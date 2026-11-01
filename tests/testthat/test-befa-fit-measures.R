@@ -1,4 +1,4 @@
-# Bayesian fit indices and PSIS-LOO from the final draws
+# Bayesian fit indices and information criteria from the final draws
 
 test_that("the sample moments count the means and the covariances", {
   expect_identical(.sample_moments("raw", 5), 20)
@@ -70,21 +70,65 @@ test_that("summary statistics and stored indices are handled", {
   expect_null(res)
 })
 
-test_that("the fit measures print as a table", {
+test_that("the fit measures and information criteria print as two tables", {
   fm <- befa_fit_measures(.fake_befa())
   out <- capture.output(res <- print(fm, digits = 2))
   expect_identical(res, fm)
   out <- paste(out, collapse = "\n")
-  for (index in c("Bayesian Fit Measures", "Chi2_ppp", "BRMSEA", "BTLI",
-                  "ELPD", "LOOIC", "p_loo", "PSIS-LOO")) {
+  for (index in c("Table 1. Bayesian Fit Measures", "Chi2_ppp", "BRMSEA", "BTLI",
+                  "Table 2. Information Criteria", "ELPD", "LOOIC", "DIC_i",
+                  "BPIC", "SEs across persons")) {
     expect_match(out, index, fixed = TRUE)
   }
   tab <- build_fit_summary_table(fm)
   expect_identical(rownames(tab)[1:2], c("Chi2", "Chi2_ppp"))
   expect_identical(colnames(tab), c("Estimate", "SD", "CI_Low", "CI_High"))
   expect_true(all(is.na(tab["Chi2_ppp", -1])))
+  expect_false("LOOIC" %in% rownames(tab))
+
+  ic <- build_information_table(fm, probs = c(0.05, 0.95))
   looic <- fm$loo_object$estimates["looic", ]
-  expect_equal(unname(tab["LOOIC", 1:2]), unname(looic))
+  expect_equal(unname(ic["LOOIC", 1:2]), unname(looic))
+  expect_equal(unname(ic["LOOIC", 3:4]),
+               unname(looic[1] + stats::qnorm(c(0.05, 0.95)) * looic[2]))
+})
+
+test_that("the information criteria follow their definitions", {
+  object <- .fake_befa("raw", missing = "FIML")
+  m <- .posterior_metrics(object)
+  lo <- .loo_fit(m$log_lik, "mcmc", validate_loo_args(NULL))
+  ic <- .information_criteria(object, m$log_lik, lo)
+  expect_identical(rownames(ic), c("ELPD", "LOOIC", "p_loo", "WAIC", "p_WAIC",
+                                   "DIC", "p_D", "DIC_i", "p_V", "BPIC"))
+  expect_true(all(ic[, "SE"] > 0))
+
+  ll <- matrix(m$log_lik, prod(dim(m$log_lik)[1:2]))
+  D <- -2 * rowSums(ll)
+  # Deviance at the posterior means of the parameters, row by row
+  p <- .fitted_parameters(object)
+  Sigma <- tcrossprod(matrix(colMeans(p$lambda), 5, 2)) + diag(colMeans(p$psi))
+  nu <- colMeans(p$nu)
+  Y <- object$data$Y
+  D_hat <- -2 * sum(vapply(seq_len(nrow(Y)), function(i) {
+    o <- which(!is.na(Y[i, ]))
+    mvnfast::dmvn(Y[i, o], nu[o], Sigma[o, o, drop = FALSE], log = TRUE)
+  }, 0))
+  p_D <- mean(D) - D_hat
+  expect_equal(ic["p_D", "Estimate"], p_D)
+  expect_equal(ic["DIC", "Estimate"], mean(D) + p_D)
+  expect_equal(ic["BPIC", "Estimate"], mean(D) + 2 * p_D)
+  expect_equal(ic["p_V", "Estimate"], stats::var(D) / 2)
+  expect_equal(ic["DIC_i", "Estimate"], mean(D) + stats::var(D) / 2)
+  waic <- suppressWarnings(loo::waic(ll))$estimates
+  expect_equal(unname(ic["WAIC", ]), unname(waic["waic", ]))
+
+  # The jackknife leaves each person out by recomputing the deviances.
+  N <- ncol(ll)
+  jack <- vapply(seq_len(N), function(i) {
+    Di <- -2 * rowSums(ll[, -i, drop = FALSE])
+    mean(Di) + stats::var(Di) / 2
+  }, 0)
+  expect_equal(ic["DIC_i", "SE"], sqrt((N - 1) / N * sum((jack - mean(jack))^2)))
 })
 
 test_that("the null model of an ADVI fit starts from one list of values", {

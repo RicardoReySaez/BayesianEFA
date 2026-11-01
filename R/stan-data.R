@@ -1,7 +1,7 @@
 # stan-data.R
 # Prepare the data of a BEFA model and translate them for the Stan code
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 01-11-2026
 
 # Internal functions
 
@@ -23,6 +23,7 @@
                                  sample_cor, sample_mean))
   }
 
+  item_names <- colnames(data)
   Y <- unname(as.matrix(data))
   .check_matrix(Y, "data")
   N_in <- nrow(Y)
@@ -44,7 +45,8 @@
   if (model_type == "cor") Y <- sweep(Y, 2L, apply(Y, 2L, .ml_sd), "/")
 
   list(Y = Y, N = nrow(Y), J = ncol(Y), groups = .missing_patterns(Y),
-       summary = FALSE, model_type = model_type)
+       summary = FALSE, model_type = model_type,
+       item_names = .item_labels(item_names, ncol(Y)))
 }
 
 # This function prepares summary statistics: the sample size, the
@@ -68,13 +70,23 @@
   S <- if (use_cor) sample_cor else sample_cov
   .check_matrix(S, if (use_cor) "sample_cor" else "sample_cov")
   N <- as.integer(sample_nobs)
+  item_names <- colnames(S)
+  if (is.null(item_names)) item_names <- names(sample_mean)
   S <- unname(if (model_type == "cor") stats::cov2cor(S) else S * (N - 1) / N)
   J <- ncol(S)
   list(Y = NULL, N = N, J = J,
        groups = list(list(rows = seq_len(N), obs = seq_len(J))),
        summary = TRUE, S = S,
        y_bar = if (model_type == "raw") as.numeric(sample_mean),
-       model_type = model_type)
+       model_type = model_type, item_names = .item_labels(item_names, J))
+}
+
+# This function returns the names of the items: those of the data or of the
+# summary statistics when every item has one and no two are equal, and
+# Item_1, ..., Item_J otherwise.
+.item_labels <- function(x, J) {
+  usable <- length(x) == J && !anyNA(x) && all(nzchar(x)) && !anyDuplicated(x)
+  if (usable) as.character(x) else paste0("Item_", seq_len(J))
 }
 
 # This function tells whether every row observes every item, which the Stan

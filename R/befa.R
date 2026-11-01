@@ -1,7 +1,7 @@
 # befa.R
 # Fit a Bayesian exploratory factor analysis
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 01-11-2026
 
 # Public functions
 
@@ -39,8 +39,9 @@
 #'   installed among stanli, cmdstanr, stanr and rstan that runs `method`.
 #'   stanli needs no C++ compiler; the others compile each model once and keep
 #'   it for later sessions (see [befa_compile_models()]).
-#' @param rotate `"varimax"` (default) aligns the draws with Varimax and E-RSP;
-#'   `"none"` returns the loadings as Stan sampled them.
+#' @param rotate `"varimax"` (default) aligns the draws with Varimax and E-RSP,
+#'   and orders the factors by the variance they explain (F1 explains the
+#'   most); `"none"` returns the loadings as Stan sampled them.
 #' @param rsp_args List with `max_iter` (default 1000) and `threshold`
 #'   (default 1e-6) for [rsp_align()].
 #' @param prior Named list of prior hyperparameters that replace the defaults
@@ -121,10 +122,13 @@
 #'   [extract_posterior_draws()] with `metric = "std"` for the standardized
 #'   solution.
 #' * `$diagnostics`: The convergence checks (see the messages after the fit).
-#' * `$fit`: The method, backend, settings, sampler diagnostics, log densities
-#'   and run times.
+#' * `$fit`: The method, backend, settings, sampler diagnostics and run times,
+#'   and the draws of the parameters of the Stan program with their log
+#'   densities. Those parameters are not identified and are not meant for
+#'   inference; [befa_bridge_sampler()] needs them.
 #' * `$rsp`: The reference loadings, objective and sign and permutation
-#'   vectors of the alignment (`NULL` with `rotate = "none"`).
+#'   vectors of the alignment, and `factor_order`, the order in which the
+#'   aligned factors were placed (`NULL` with `rotate = "none"`).
 #' * `$spec`, `$stan_code`, `$stan_data`, `$data`: The structure of the model,
 #'   its Stan program, the data passed to Stan and the prepared data.
 #' * `$eta`: The draws of the factor scores (if `factor_scores = TRUE`), also
@@ -197,11 +201,6 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
   diagnostics <- .befa_diagnostics(post$draws, fit, settings)
   if (verbose && settings$refresh > 0) .befa_report(diagnostics, settings)
   .befa_warn_issues(diagnostics)
-
-  # The Stan parameters behind the final draws are not identified, so only
-  # their log densities are kept.
-  keep <- intersect(c("lp__", "lp_approx__"), posterior::variables(fit$draws))
-  fit$draws <- posterior::subset_draws(fit$draws, variable = keep)
 
   object <- structure(list(
     draws = post$draws, diagnostics = diagnostics, fit = fit, rsp = post$rsp,

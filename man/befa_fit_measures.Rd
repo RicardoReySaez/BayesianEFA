@@ -20,6 +20,8 @@ A list of class \code{befa_fitmeasures} with:
 \code{BGamma}, \code{Adj_BGamma}, \code{BMc}, \code{SRMR}, \code{BCFI} and \code{BTLI}.
 \item \verb{$summary}: Their posterior summaries.
 \item \verb{$posterior_fit}: The same draws as a data frame.
+\item \verb{$information}: A matrix with the estimate and standard error of ELPD,
+LOOIC, p_loo, WAIC, p_WAIC, DIC, p_D, DIC_i, p_V and BPIC.
 \item \verb{$loo_object}: The \code{loo} object of the model.
 \item \verb{$details}: \code{p_star}, \code{pD}, \code{N} and \code{chi2_ppp}.
 }
@@ -27,8 +29,8 @@ A list of class \code{befa_fitmeasures} with:
 \description{
 Computes the Bayesian analogues of the usual structural equation modeling
 fit indices proposed by Garnier-Villarreal and Jorgensen (2020), at every
-posterior draw, together with the PSIS-LOO estimate of out-of-sample
-predictive accuracy.
+posterior draw, together with information criteria of out-of-sample
+predictive accuracy (PSIS-LOO, WAIC, DIC, DIC_i and BPIC).
 }
 \details{
 \strong{\emph{The DevM framework}}
@@ -54,9 +56,32 @@ replicated data deviate more than the observed data (ideally above .05).
 is fitted with the same backend and method (in the covariance and raw
 models; the null correlation model has no free parameters). Both are
 bounded to [0, 1].
-\item ELPD, LOOIC and p_loo from PSIS-LOO. With ADVI and Pathfinder, PSIS-LOO
-treats the draws as independent, and the approximation can bias it.
 }
+
+\strong{\emph{Information criteria}}
+
+They use the marginal log-likelihood of each person (the factor scores
+integrated out), with deviance \eqn{D = -2 \log p(y \mid \theta)}.
+\itemize{
+\item ELPD, LOOIC and p_loo from PSIS-LOO (Vehtari et al., 2017), and WAIC
+with \eqn{p_{WAIC}}, the sum of the posterior variances of the pointwise
+log-likelihood (Watanabe, 2010).
+\item DIC \eqn{= \bar D + p_D}, with \eqn{p_D = \bar D - D(\bar\theta)}
+(Spiegelhalter et al., 2002); \eqn{\bar\theta} holds the posterior means
+of the aligned parameters. A negative \eqn{p_D} means those means
+describe the posterior poorly (for instance, with \code{rotate = "none"}).
+\item DIC_i \eqn{= \bar D + p_V}, with \eqn{p_V = \mathrm{Var}(D) / 2}, the
+parameterization-invariant DIC of Xiao and Rabe-Hesketh (2026), which
+needs no point estimate.
+\item BPIC \eqn{= \bar D + 2 p_D} (Ando, 2007).
+}
+
+None of them is a function of a single draw, so they have no posterior
+distribution. Their standard errors are computed across persons: from the
+pointwise contributions, or by the jackknife over persons for DIC_i and
+\eqn{p_V}, whose variance term does not split into persons. With ADVI and
+Pathfinder, PSIS-LOO treats the draws as independent, and the
+approximation can bias every criterion.
 
 With missing values, the log-likelihood uses every observed value (FIML)
 and the saturated model is estimated with the EM algorithm.
@@ -69,11 +94,26 @@ befa_fit_measures(fit)
 
 }
 \references{
+Ando, T. (2007). Bayesian predictive information criterion for the
+evaluation of hierarchical Bayesian and empirical Bayes models.
+\emph{Biometrika, 94}(2), 443-458.
+
 Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for
 Bayesian structural equation modeling: Comparison to maximum likelihood.
 \emph{Psychological Methods, 25}(1), 46-70. \doi{10.1037/met0000224}
 
+Spiegelhalter, D. J., Best, N. G., Carlin, B. P., & van der Linde, A.
+(2002). Bayesian measures of model complexity and fit. \emph{Journal of the
+Royal Statistical Society: Series B, 64}(4), 583-639.
+
 Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
 evaluation using leave-one-out cross-validation and WAIC. \emph{Statistics and
 Computing, 27}(5), 1413-1432. \doi{10.1007/s11222-016-9696-4}
+
+Watanabe, S. (2010). Asymptotic equivalence of Bayes cross validation and
+widely applicable information criterion in singular learning theory.
+\emph{Journal of Machine Learning Research, 11}, 3571-3594.
+
+Xiao, X., & Rabe-Hesketh, S. (2026). \emph{A parameterization-invariant DIC}.
+arXiv:2605.27844. \doi{10.48550/arXiv.2605.27844}
 }

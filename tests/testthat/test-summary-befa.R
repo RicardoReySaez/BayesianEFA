@@ -29,8 +29,14 @@ test_that("the summary holds the standardized solution of the fit", {
   expect_true(all(s$sig_matrix[cbind(1:5, c(1, 1, 1, 2, 2))]))
   expect_identical(s$header$N, 60L)
   expect_identical(names(s$tables), c("table1_loadings", "table2_fit_measures",
-                                      "table3_reliability"))
-  expect_identical(rownames(s$tables$table3_reliability), c("F1", "F2"))
+                                      "table3_information", "table4_reliability"))
+  expect_identical(rownames(s$tables$table3_information)[c(1, 8)], c("ELPD", "DIC_i"))
+  expect_identical(rownames(s$tables$table4_reliability), c("F1", "F2", "Total"))
+  total <- unlist(s$tables$table4_reliability["Total", ])
+  expect_equal(unname(total[1:2]), c(object$reliability$total$Estimate,
+                                     object$reliability$total$SD))
+  expect_identical(s$estimates$Variable, paste0("Item_", 1:5))
+  expect_true(s$print_options$sort)
 })
 
 test_that("the summary uses the standardized metric of every model", {
@@ -44,8 +50,11 @@ test_that("the summary prints its tables with their options", {
   out <- .printed(summary(object))
   for (text in c("Table 1. Standardized Factor Loadings",
                  "Table 2. Bayesian Fit Measures",
-                 "Table 3. Factor Reliability (Coefficient Omega)",
-                 "Full Scale Omega Total", "varimax rotation applied; MCMC with stanli",
+                 "Table 3. Information Criteria",
+                 "SEs across persons (jackknife for DIC_i and p_V)",
+                 "Table 4. Factor Reliability (Omega)",
+                 "Total is the omega of the full scale",
+                 "varimax rotation applied; MCMC with stanli",
                  "the posterior may be unreliable")) {
     expect_match(out, text, fixed = TRUE)
   }
@@ -89,4 +98,61 @@ test_that("the table helpers sort, format and split their values", {
   rel <- build_reliability_table(befa_reliability(.fake_befa()))
   expect_named(rel$total, c("Estimate", "SD", "CI_Low", "CI_High"))
   expect_identical(rownames(rel$subscales), c("F1", "F2"))
+})
+
+test_that("long item names are shortened in the middle and stay unique", {
+  expect_identical(.short_names(c("x1", "Variable")), c("x1", "Variable"))
+  expect_identical(.short_names("neuroticism_12"), "neur\u2026_12")
+  # Two names that would become equal end with their item number instead.
+  short <- .short_names(c("speeded_addition", "cubes", "speeded_discrimination"))
+  expect_identical(short, c("speede\u20261", "cubes", "speede\u20263"))
+  expect_true(all(nchar(short) <= 8L))
+  expect_identical(.short_names("neuroticism_12", 6L), "neu\u202612")
+})
+
+test_that("the loadings table keeps its width whatever the item names", {
+  object <- .fake_befa()
+  # This function returns the width of the first table that print() draws.
+  .table_width <- function(s, ...) {
+    out <- utils::capture.output(print(s, ...))
+    nchar(trimws(out[grepl("^\u2017", out)][1L], "right"))
+  }
+  short <- summary(object)
+  object$data$item_names <- c("visual_perception", "cubes", "lozenges",
+                              "paragraph_comprehension", "sentence_completion")
+  long <- summary(object)
+  expect_identical(long$estimates$Variable, object$data$item_names)
+  expect_identical(.table_width(long), .table_width(short))
+  out <- paste(utils::capture.output(print(long)), collapse = "\n")
+  expect_match(out, "visu\u2026ion", fixed = TRUE)
+  expect_match(out, "lozenges", fixed = TRUE)
+  wide <- .table_width(long, name_width = 12)
+  expect_identical(wide, .table_width(short) + 4L)
+  # Every note line fits within the table.
+  lines <- utils::capture.output(print(long))
+  expect_true(all(nchar(trimws(lines, "right")) <= .table_width(long)))
+  expect_error(summary(object, name_width = 2), "`name_width`")
+})
+
+test_that("the items are sorted by their main factor unless asked not to", {
+  object <- .fake_befa()
+  # The fake loadings put items 1-3 on F1 and 4-5 on F2, where item 5 loads
+  # more than item 4, so it comes first.
+  object$data$item_names <- paste0("q", 1:5)
+  rows <- function(s, ...) {
+    out <- utils::capture.output(print(s, ...))
+    sub(" .*", "", out[grepl("^q[0-9]", out)])
+  }
+  s <- summary(object)
+  expect_identical(rows(s), c("q1", "q2", "q3", "q5", "q4"))
+  expect_identical(rows(s, sort = FALSE), paste0("q", 1:5))
+})
+
+test_that("summaries of fits from earlier versions still print", {
+  object <- .fake_befa()
+  object$data$item_names <- NULL
+  s <- summary(object)
+  expect_identical(s$estimates$Variable, paste0("Item_", 1:5))
+  s$print_options$name_width <- NULL
+  expect_output(print(s), "Item_1", fixed = TRUE)
 })

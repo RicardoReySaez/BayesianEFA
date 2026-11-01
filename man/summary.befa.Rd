@@ -8,8 +8,9 @@
   object,
   probs = c(0.025, 0.975),
   cutoff = 0,
-  sort = FALSE,
+  sort = TRUE,
   signif_stars = FALSE,
+  name_width = 8L,
   ...
 )
 }
@@ -22,19 +23,27 @@ intervals (default \code{c(0.025, 0.975)}).}
 \item{cutoff}{Loadings whose absolute posterior mean is below \code{cutoff} are
 hidden when printing.}
 
-\item{sort}{Logical. Sort the items by the factor of their largest loading.}
+\item{sort}{Logical. If \code{TRUE} (default), the items are grouped by the
+factor of their largest loading, from the largest loading to the
+smallest within each factor, as \code{psych::fa.sort()} does. The factors
+themselves are always ordered by the variance they explain.}
 
 \item{signif_stars}{Logical. Mark the loadings whose credible interval
 excludes zero with an asterisk.}
+
+\item{name_width}{Width of the column of item names when printing (default
+8, so the table keeps its width). Longer names are shortened in the
+middle, which keeps their start and end.}
 
 \item{...}{Ignored.}
 }
 \value{
 A \code{summary.befa} object with:
 \itemize{
-\item \verb{$estimates}: One row per item with the standardized loadings, \code{h2},
-\code{u2}, the largest R-hat and the smallest bulk and tail ESS of its
-loadings.
+\item \verb{$estimates}: One row per item with its full name (from the columns of
+\code{data} or of the summary statistics; \code{Item_1}, ... when they have none),
+the standardized loadings, \code{h2}, \code{u2}, the largest R-hat and the
+smallest bulk and tail ESS of its loadings.
 \item \verb{$sig_matrix}: Which loadings have a credible interval that excludes 0.
 \item \verb{$variance}: The share of the variance of the standardized items that
 each factor, and all of them, account for.

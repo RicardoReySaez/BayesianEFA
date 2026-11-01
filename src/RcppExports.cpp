@@ -42,6 +42,66 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// befa_density_cpp
+SEXP befa_density_cpp(const Rcpp::List& model, const Rcpp::List& data);
+RcppExport SEXP _BayesianEFA_befa_density_cpp(SEXP modelSEXP, SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(befa_density_cpp(model, data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// befa_log_density_cpp
+double befa_log_density_cpp(SEXP density, const arma::vec& u);
+RcppExport SEXP _BayesianEFA_befa_log_density_cpp(SEXP densitySEXP, SEXP uSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type density(densitySEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type u(uSEXP);
+    rcpp_result_gen = Rcpp::wrap(befa_log_density_cpp(density, u));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bridge_map_cpp
+SEXP bridge_map_cpp(const Rcpp::List& map);
+RcppExport SEXP _BayesianEFA_bridge_map_cpp(SEXP mapSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type map(mapSEXP);
+    rcpp_result_gen = Rcpp::wrap(bridge_map_cpp(map));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bridge_coords_to_T_cpp
+arma::mat bridge_coords_to_T_cpp(SEXP map, const arma::vec& phi);
+RcppExport SEXP _BayesianEFA_bridge_coords_to_T_cpp(SEXP mapSEXP, SEXP phiSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type map(mapSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type phi(phiSEXP);
+    rcpp_result_gen = Rcpp::wrap(bridge_coords_to_T_cpp(map, phi));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bridge_log_posterior_cpp
+double bridge_log_posterior_cpp(SEXP density, SEXP map, const arma::vec& x);
+RcppExport SEXP _BayesianEFA_bridge_log_posterior_cpp(SEXP densitySEXP, SEXP mapSEXP, SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type density(densitySEXP);
+    Rcpp::traits::input_parameter< SEXP >::type map(mapSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(bridge_log_posterior_cpp(density, map, x));
+    return rcpp_result_gen;
+END_RCPP
+}
 // null_loglik_cpp
 arma::mat null_loglik_cpp(const arma::mat& Y, const arma::mat& nu_draws, const arma::mat& sigma_draws);
 RcppExport SEXP _BayesianEFA_null_loglik_cpp(SEXP YSEXP, SEXP nu_drawsSEXP, SEXP sigma_drawsSEXP) {
@@ -116,6 +176,11 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_BayesianEFA_em_h1_moments_cpp", (DL_FUNC) &_BayesianEFA_em_h1_moments_cpp, 3},
     {"_BayesianEFA_compute_factor_scores_cpp", (DL_FUNC) &_BayesianEFA_compute_factor_scores_cpp, 8},
+    {"_BayesianEFA_befa_density_cpp", (DL_FUNC) &_BayesianEFA_befa_density_cpp, 2},
+    {"_BayesianEFA_befa_log_density_cpp", (DL_FUNC) &_BayesianEFA_befa_log_density_cpp, 2},
+    {"_BayesianEFA_bridge_map_cpp", (DL_FUNC) &_BayesianEFA_bridge_map_cpp, 1},
+    {"_BayesianEFA_bridge_coords_to_T_cpp", (DL_FUNC) &_BayesianEFA_bridge_coords_to_T_cpp, 2},
+    {"_BayesianEFA_bridge_log_posterior_cpp", (DL_FUNC) &_BayesianEFA_bridge_log_posterior_cpp, 3},
     {"_BayesianEFA_null_loglik_cpp", (DL_FUNC) &_BayesianEFA_null_loglik_cpp, 3},
     {"_BayesianEFA_compute_posterior_metrics_cpp", (DL_FUNC) &_BayesianEFA_compute_posterior_metrics_cpp, 16},
     {"_BayesianEFA_rsp_exact_eff", (DL_FUNC) &_BayesianEFA_rsp_exact_eff, 6},

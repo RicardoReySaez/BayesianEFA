@@ -1,7 +1,7 @@
 # befa-fit-measures.R
-# Bayesian fit indices (DevM framework) and PSIS-LOO
+# Bayesian fit indices (DevM framework) and information criteria
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 01-11-2026
 
 # Public functions
 
@@ -9,8 +9,8 @@
 #'
 #' Computes the Bayesian analogues of the usual structural equation modeling
 #' fit indices proposed by Garnier-Villarreal and Jorgensen (2020), at every
-#' posterior draw, together with the PSIS-LOO estimate of out-of-sample
-#' predictive accuracy.
+#' posterior draw, together with information criteria of out-of-sample
+#' predictive accuracy (PSIS-LOO, WAIC, DIC, DIC_i and BPIC).
 #'
 #' @param object A `befa` object returned by [befa()], fitted to raw `data`.
 #' @param loo_args List with `r_eff` (logical; relative efficiencies of the
@@ -41,8 +41,30 @@
 #'   is fitted with the same backend and method (in the covariance and raw
 #'   models; the null correlation model has no free parameters). Both are
 #'   bounded to \[0, 1\].
-#' * ELPD, LOOIC and p_loo from PSIS-LOO. With ADVI and Pathfinder, PSIS-LOO
-#'   treats the draws as independent, and the approximation can bias it.
+#'
+#' **_Information criteria_**
+#'
+#' They use the marginal log-likelihood of each person (the factor scores
+#' integrated out), with deviance \eqn{D = -2 \log p(y \mid \theta)}.
+#'
+#' * ELPD, LOOIC and p_loo from PSIS-LOO (Vehtari et al., 2017), and WAIC
+#'   with \eqn{p_{WAIC}}, the sum of the posterior variances of the pointwise
+#'   log-likelihood (Watanabe, 2010).
+#' * DIC \eqn{= \bar D + p_D}, with \eqn{p_D = \bar D - D(\bar\theta)}
+#'   (Spiegelhalter et al., 2002); \eqn{\bar\theta} holds the posterior means
+#'   of the aligned parameters. A negative \eqn{p_D} means those means
+#'   describe the posterior poorly (for instance, with `rotate = "none"`).
+#' * DIC_i \eqn{= \bar D + p_V}, with \eqn{p_V = \mathrm{Var}(D) / 2}, the
+#'   parameterization-invariant DIC of Xiao and Rabe-Hesketh (2026), which
+#'   needs no point estimate.
+#' * BPIC \eqn{= \bar D + 2 p_D} (Ando, 2007).
+#'
+#' None of them is a function of a single draw, so they have no posterior
+#' distribution. Their standard errors are computed across persons: from the
+#' pointwise contributions, or by the jackknife over persons for DIC_i and
+#' \eqn{p_V}, whose variance term does not split into persons. With ADVI and
+#' Pathfinder, PSIS-LOO treats the draws as independent, and the
+#' approximation can bias every criterion.
 #'
 #' With missing values, the log-likelihood uses every observed value (FIML)
 #' and the saturated model is estimated with the EM algorithm.
@@ -52,17 +74,34 @@
 #'   `BGamma`, `Adj_BGamma`, `BMc`, `SRMR`, `BCFI` and `BTLI`.
 #' * `$summary`: Their posterior summaries.
 #' * `$posterior_fit`: The same draws as a data frame.
+#' * `$information`: A matrix with the estimate and standard error of ELPD,
+#'   LOOIC, p_loo, WAIC, p_WAIC, DIC, p_D, DIC_i, p_V and BPIC.
 #' * `$loo_object`: The `loo` object of the model.
 #' * `$details`: `p_star`, `pD`, `N` and `chi2_ppp`.
 #'
 #' @references
+#' Ando, T. (2007). Bayesian predictive information criterion for the
+#' evaluation of hierarchical Bayesian and empirical Bayes models.
+#' *Biometrika, 94*(2), 443-458.
+#'
 #' Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for
 #' Bayesian structural equation modeling: Comparison to maximum likelihood.
 #' *Psychological Methods, 25*(1), 46-70. \doi{10.1037/met0000224}
 #'
+#' Spiegelhalter, D. J., Best, N. G., Carlin, B. P., & van der Linde, A.
+#' (2002). Bayesian measures of model complexity and fit. *Journal of the
+#' Royal Statistical Society: Series B, 64*(4), 583-639.
+#'
 #' Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
 #' evaluation using leave-one-out cross-validation and WAIC. *Statistics and
 #' Computing, 27*(5), 1413-1432. \doi{10.1007/s11222-016-9696-4}
+#'
+#' Watanabe, S. (2010). Asymptotic equivalence of Bayes cross validation and
+#' widely applicable information criterion in singular learning theory.
+#' *Journal of Machine Learning Research, 11*, 3571-3594.
+#'
+#' Xiao, X., & Rabe-Hesketh, S. (2026). *A parameterization-invariant DIC*.
+#' arXiv:2605.27844. \doi{10.48550/arXiv.2605.27844}
 #'
 #' @examples
 #' \dontrun{
@@ -84,6 +123,7 @@ befa_fit_measures <- function(object, loo_args = NULL) {
   metrics <- .posterior_metrics(object)
   loo_res <- .loo_fit(metrics$log_lik, object$method, loo_config)
   p_loo <- loo_res$estimates["p_loo", "Estimate"]
+  information <- .information_criteria(object, metrics$log_lik, loo_res)
   null <- .null_metrics(object, metrics$ll_saturated, loo_config)
 
   N <- nrow(object$data$Y)
@@ -116,6 +156,7 @@ befa_fit_measures <- function(object, loo_args = NULL) {
     fit_draws = fit_draws,
     summary = posterior::summarise_draws(fit_draws),
     posterior_fit = posterior_df,
+    information = information,
     loo_object = loo_res,
     details = list(p_star = p_star, pD = p_loo, N = N,
                    chi2_ppp = mean(metrics$chisq_rep >= metrics$chisq))
@@ -124,7 +165,8 @@ befa_fit_measures <- function(object, loo_args = NULL) {
 
 #' Print Bayesian Fit Measures
 #'
-#' Displays the fit indices of a `befa_fitmeasures` object as a table.
+#' Displays the fit indices and the information criteria of a
+#' `befa_fitmeasures` object as two tables.
 #'
 #' @param x A `befa_fitmeasures` object from [befa_fit_measures()].
 #' @param digits Number of decimal places.
@@ -134,16 +176,8 @@ befa_fit_measures <- function(object, loo_args = NULL) {
 #' @method print befa_fitmeasures
 #' @export
 print.befa_fitmeasures <- function(x, digits = 3, ...) {
-  tab <- build_fit_summary_table(x)
-  out <- as.data.frame(lapply(as.data.frame(tab), .format_numeric, digits = digits))
-  out <- cbind(Index = rownames(tab), out)
-  rownames(out) <- NULL
-  cat("\n")
-  width <- .print_styled_table(out, title = "Bayesian Fit Measures")
-  note <- paste("Note: Intervals are 95% credible intervals. For ELPD and",
-                "LOOIC, SD is the standard error. p_loo and LOOIC come from",
-                "PSIS-LOO (loo package).")
-  cat(paste(strwrap(note, width = width), collapse = "\n"), "\n")
+  .print_fit_tables(build_fit_summary_table(x), build_information_table(x),
+                    c(0.025, 0.975), digits, first = 1L)
   invisible(x)
 }
 
@@ -167,6 +201,63 @@ print.befa_fitmeasures <- function(x, digits = 3, ...) {
     1
   }
   suppressWarnings(loo::loo(log_lik, r_eff = r_eff, cores = loo_config$cores))
+}
+
+# This function returns the information criteria of a fit (rows) with their
+# estimate and standard error across persons (columns), from the pointwise
+# log-likelihood array (iterations x chains x persons): PSIS-LOO and WAIC
+# from the loo package; DIC, p_D and BPIC summed person by person, with the
+# deviance at the posterior means of the aligned parameters; and DIC_i and
+# p_V, whose variance term does not split into persons, with the jackknife
+# over persons. Leaving person i out adds 2 log p(y_i | theta) to the
+# deviance of every draw, so the jackknife needs no refit.
+.information_criteria <- function(object, log_lik, loo_res) {
+  ll <- matrix(log_lik, prod(dim(log_lik)[1:2]))
+  N <- ncol(ll)
+  mean_ll <- colMeans(ll)
+  p_d <- 2 * (.plugin_loglik(object) - mean_ll)
+  waic <- suppressWarnings(loo::waic(ll))$estimates
+  person_sum <- function(x) c(sum(x), sqrt(N * stats::var(x)))
+
+  D <- -2 * rowSums(ll)
+  p_v <- stats::var(D) / 2
+  jack_p_v <- (stats::var(D) + 4 * apply(ll, 2L, stats::var) +
+                 4 * drop(stats::cov(D, ll))) / 2
+  jack_dic_i <- mean(D) + 2 * mean_ll + jack_p_v
+  jack_se <- function(x) sqrt((N - 1) / N * sum((x - mean(x))^2))
+
+  out <- rbind(
+    ELPD = loo_res$estimates["elpd_loo", ],
+    LOOIC = loo_res$estimates["looic", ],
+    p_loo = loo_res$estimates["p_loo", ],
+    WAIC = waic["waic", ],
+    p_WAIC = waic["p_waic", ],
+    DIC = person_sum(-2 * mean_ll + p_d),
+    p_D = person_sum(p_d),
+    DIC_i = c(mean(D) + p_v, jack_se(jack_dic_i)),
+    p_V = c(p_v, jack_se(jack_p_v)),
+    BPIC = person_sum(-2 * mean_ll + 2 * p_d)
+  )
+  colnames(out) <- c("Estimate", "SE")
+  out
+}
+
+# This function returns the log-likelihood of each person at the posterior
+# means of the aligned parameters, in the metric the model was fitted to,
+# pattern by pattern of observed items.
+.plugin_loglik <- function(object) {
+  p <- .fitted_parameters(object)
+  L <- matrix(colMeans(p$lambda), p$J, p$M)
+  Sigma <- tcrossprod(L) + diag(colMeans(p$psi), p$J)
+  nu <- colMeans(p$nu)
+  Y <- object$data$Y
+  out <- numeric(nrow(Y))
+  for (g in object$data$groups) {
+    o <- g$obs
+    out[g$rows] <- mvnfast::dmvn(Y[g$rows, o, drop = FALSE], nu[o],
+                                 Sigma[o, o, drop = FALSE], log = TRUE)
+  }
+  out
 }
 
 # This function returns, for every draw, the pointwise log-likelihood of the

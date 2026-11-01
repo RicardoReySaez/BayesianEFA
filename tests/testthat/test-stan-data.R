@@ -156,3 +156,23 @@ test_that("the normal prior is scaled by the item SDs", {
   expect_named(.stan_prior_data(.befa_spec("cor", "unit_vector", 1L), list(lambda = c(2, 2))),
                "pr_lambda")
 })
+
+test_that("the prepared data keep the names of the items", {
+  Y <- .simulated_data()
+  expect_identical(.prepare_befa_data(Y, "cor")$item_names, paste0("Item_", 1:5))
+  colnames(Y) <- paste0("q", 1:5)
+  expect_identical(.prepare_befa_data(Y, "cor")$item_names, paste0("q", 1:5))
+  expect_identical(.prepare_befa_data(as.data.frame(Y), "raw", "FIML")$item_names,
+                   paste0("q", 1:5))
+  summ <- .prepare_befa_data(model_type = "raw", sample_nobs = 40,
+                             sample_cov = unname(stats::cov(Y)),
+                             sample_mean = colMeans(Y))
+  expect_identical(summ$item_names, paste0("q", 1:5))
+  expect_identical(.prepare_befa_data(model_type = "cor", sample_nobs = 40,
+                                      sample_cor = stats::cor(Y))$item_names,
+                   paste0("q", 1:5))
+  # Incomplete or repeated names are replaced as a whole.
+  expect_identical(.item_labels(c("a", "", "c"), 3), paste0("Item_", 1:3))
+  expect_identical(.item_labels(c("a", "a", "c"), 3), paste0("Item_", 1:3))
+  expect_identical(.item_labels(c("a", NA, "c"), 3), paste0("Item_", 1:3))
+})

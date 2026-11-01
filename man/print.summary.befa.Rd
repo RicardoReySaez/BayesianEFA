@@ -4,14 +4,22 @@
 \alias{print.summary.befa}
 \title{Print BEFA Summary}
 \usage{
-\method{print}{summary.befa}(x, digits = 2, cutoff = NULL, sort = NULL, signif_stars = NULL, ...)
+\method{print}{summary.befa}(
+  x,
+  digits = 2,
+  cutoff = NULL,
+  sort = NULL,
+  signif_stars = NULL,
+  name_width = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{summary.befa} object.}
 
 \item{digits}{Number of decimal places.}
 
-\item{cutoff, sort, signif_stars}{Override the options given to
+\item{cutoff, sort, signif_stars, name_width}{Override the options given to
 \code{\link[=summary.befa]{summary.befa()}}.}
 
 \item{...}{Ignored.}
@@ -21,5 +29,6 @@
 }
 \description{
 Prints the tables of \code{\link[=summary.befa]{summary.befa()}}: the standardized loadings, the
-Bayesian fit measures and the omega coefficients.
+Bayesian fit measures, the information criteria and the omega
+coefficients.
 }

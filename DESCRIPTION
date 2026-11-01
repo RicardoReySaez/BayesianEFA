@@ -40,7 +40,9 @@ LinkingTo:
     Rcpp (>= 0.12.0),
     RcppArmadillo (>= 15.2.3.1)
 Suggests:
+    bridgesampling (>= 1.1.0),
     cmdstanr (>= 0.9.0),
+    coda,
     knitr,
     rmarkdown,
     rstan (>= 2.26.0),

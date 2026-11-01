@@ -9,6 +9,26 @@ compute_factor_scores_cpp <- function(lambda, psi, nu, data, J, M, has_missing, 
     .Call(`_BayesianEFA_compute_factor_scores_cpp`, lambda, psi, nu, data, J, M, has_missing, obs_patterns)
 }
 
+befa_density_cpp <- function(model, data) {
+    .Call(`_BayesianEFA_befa_density_cpp`, model, data)
+}
+
+befa_log_density_cpp <- function(density, u) {
+    .Call(`_BayesianEFA_befa_log_density_cpp`, density, u)
+}
+
+bridge_map_cpp <- function(map) {
+    .Call(`_BayesianEFA_bridge_map_cpp`, map)
+}
+
+bridge_coords_to_T_cpp <- function(map, phi) {
+    .Call(`_BayesianEFA_bridge_coords_to_T_cpp`, map, phi)
+}
+
+bridge_log_posterior_cpp <- function(density, map, x) {
+    .Call(`_BayesianEFA_bridge_log_posterior_cpp`, density, map, x)
+}
+
 null_loglik_cpp <- function(Y, nu_draws, sigma_draws) {
     .Call(`_BayesianEFA_null_loglik_cpp`, Y, nu_draws, sigma_draws)
 }

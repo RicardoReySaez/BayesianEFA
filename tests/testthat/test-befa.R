@@ -110,9 +110,12 @@ for (i in seq_len(nrow(grid))) {
     hit <- abs(stats::cor(L, .true_pattern))
     expect_gt(min(apply(hit, 2, max)), 0.9)
     expect_true(all(colMeans(L) > 0))
+    # F1 explains the most variance.
+    expect_gte(sum(L[, 1]^2), sum(L[, 2]^2))
     std <- extract_posterior_draws(fit, c("Psi_std", "h2"), metric = "std")
     expect_true(all(std > 0 & std < 1))
-    expect_named(fit$rsp, c("Lambda_star", "objective", "sign_vectors", "perm_vectors"))
+    expect_named(fit$rsp, c("Lambda_star", "objective", "sign_vectors",
+                            "perm_vectors", "factor_order"))
     expect_false(is.na(fit$diagnostics$max_rhat))
   })
 }
@@ -195,7 +198,7 @@ test_that("befa() adds the scores, omega and fit indices of a fit", {
   expect_true("eta[1,1]" %in% posterior::variables(
     extract_posterior_draws(fit, format = "array", metric = "std")))
   out <- utils::capture.output(print(summary(fit)))
-  expect_true(any(grepl("Table 3", out)))
+  expect_true(any(grepl("Table 4", out)))
 
   again <- .quick_befa(model = "cov", factor_scores = TRUE,
                        compute_fit_indices = FALSE, compute_reliability = FALSE)

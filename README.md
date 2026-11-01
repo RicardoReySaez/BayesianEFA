@@ -91,15 +91,15 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
 #> ———————————————————————————————————————————————————————————————————
-#> Item_1             0.59*  0.31*  0.48  0.52  1.00     3888     3205
-#> Item_2             0.46*         0.24  0.76  1.00     3846     2339
-#> Item_3             0.65*         0.45  0.55  1.00     4054     3045
-#> Item_4                    0.83*  0.72  0.28  1.00     3815     2080
-#> Item_5                    0.86*  0.75  0.25  1.00     3919     3085
-#> Item_6                    0.81*  0.69  0.31  1.00     4204     3187
-#> Item_7      0.68*                0.48  0.52  1.00     3400     2490
-#> Item_8      0.70*                0.53  0.47  1.00     3074     1880
-#> Item_9      0.49*  0.40*         0.44  0.56  1.00     3271     3014
+#> x5          0.86*                0.75  0.25  1.00     3919     3085
+#> x4          0.83*                0.72  0.28  1.00     3815     2080
+#> x6          0.81*                0.69  0.31  1.00     4204     3187
+#> x8                 0.70*         0.53  0.47  1.00     3074     1880
+#> x7                 0.68*         0.48  0.52  1.00     3400     2490
+#> x9                 0.49*  0.40*  0.44  0.56  1.00     3271     3014
+#> x3                        0.65*  0.45  0.55  1.00     4054     3045
+#> x1          0.31*         0.59*  0.48  0.52  1.00     3888     3205
+#> x2                        0.46*  0.24  0.76  1.00     3846     2339
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Note: varimax rotation applied; MCMC with stanli. Diagnostics show
 #> worst-case values across factors (max Rhat, min ESS). The 3 latent
@@ -108,38 +108,54 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> hidden. 
 #> 
 #> Table 2. Bayesian Fit Measures 
-#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-#> Index         Estimate     SD    CI_Low   CI_High
-#> —————————————————————————————————————————————————
-#> Chi2             47.50   6.98     35.80     63.10
-#> Chi2_ppp          0.11                           
-#> Chi2_Null       918.85   0.00    918.85    918.85
-#> BRMSEA            0.06   0.02      0.00      0.09
-#> BGamma            0.99   0.00      0.98      1.00
-#> Adj_BGamma        0.97   0.02      0.93      1.00
-#> BMc               0.98   0.01      0.96      1.00
-#> SRMR              0.05   0.01      0.03      0.06
-#> BCFI              0.99   0.01      0.97      1.00
-#> BTLI              0.99   0.02      0.93      1.00
-#> ELPD          -3421.23  42.63  -3504.79  -3337.66
-#> LOOIC          6842.45  85.27   6675.33   7009.57
-#> p_loo            25.44   1.80     21.91     28.97
-#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-#> Note: Intervals are 95% credible intervals (normal ones,
-#> from the standard error, for ELPD, LOOIC and p_loo). PPP:
-#> Posterior Predictive p-value (Ideal > .05). p_loo/LOOIC
-#> derived from PSIS-LOO. 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Index         Estimate    SD  CI_Low  CI_High
+#> —————————————————————————————————————————————
+#> Chi2             47.50  6.98   35.80    63.10
+#> Chi2_ppp          0.11                       
+#> Chi2_Null       918.85  0.00  918.85   918.85
+#> BRMSEA            0.06  0.02    0.00     0.09
+#> BGamma            0.99  0.00    0.98     1.00
+#> Adj_BGamma        0.97  0.02    0.93     1.00
+#> BMc               0.98  0.01    0.96     1.00
+#> SRMR              0.05  0.01    0.03     0.06
+#> BCFI              0.99  0.01    0.97     1.00
+#> BTLI              0.99  0.02    0.93     1.00
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Intervals are 95% credible intervals.
+#> PPP: Posterior Predictive p-value (Ideal >
+#> .05). 
 #> 
-#> Table 3. Factor Reliability (Coefficient Omega) 
+#> Table 3. Information Criteria 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Criterion    Estimate     SE    CI_Low   CI_High
+#> ————————————————————————————————————————————————
+#> ELPD         -3421.23  42.63  -3504.79  -3337.66
+#> LOOIC         6842.45  85.27   6675.33   7009.57
+#> p_loo           25.44   1.80     21.91     28.97
+#> WAIC          6842.37  85.26   6675.27   7009.48
+#> p_WAIC          25.40   1.80     21.88     28.92
+#> DIC           6840.38  83.92   6675.90   7004.85
+#> p_D             23.92   0.82     22.31     25.52
+#> DIC_i         6840.83  79.61   6684.79   6996.87
+#> p_V             24.37   6.03     12.56     36.18
+#> BPIC          6864.29  84.26   6699.14   7029.45
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: SEs across persons (jackknife for DIC_i
+#> and p_V); 95% normal intervals. 
+#> 
+#> Table 4. Factor Reliability (Omega) 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Factor    Estimate    SD  CI_Low  CI_High
 #> —————————————————————————————————————————
-#> F1            0.54  0.04    0.45     0.62
-#> F2            0.60  0.04    0.51     0.67
-#> F3            0.73  0.02    0.69     0.76
+#> F1            0.73  0.02    0.69     0.76
+#> F2            0.54  0.04    0.45     0.62
+#> F3            0.60  0.04    0.51     0.67
+#> Total         0.84  0.01    0.82     0.86
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-#> Full Scale Omega Total: 0.84 [0.82, 0.86]. Omega
-#> coefficients use the standardized solution.
+#> Note: Total is the omega of the full
+#> scale. Omega coefficients use the
+#> standardized solution.
 ```
 
 For a complete guide on how to perform a Bayesian EFA from scratch,

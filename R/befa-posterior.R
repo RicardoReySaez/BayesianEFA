@@ -1,7 +1,7 @@
 # befa-posterior.R
 # Turn the Stan draws into aligned parameters in the metric of the model
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 01-11-2026
 
 # Internal functions
 
@@ -26,10 +26,30 @@
     lambda <- unname(aligned$Lambda_hat_mcmc)
     attr(lambda, "nchains") <- NULL
     rsp <- aligned[c("Lambda_star", "objective", "sign_vectors", "perm_vectors")]
+    # The alignment leaves the factors in an arbitrary order. They are put in
+    # the order of the variance they explain, as psych does, so F1 is the
+    # strongest factor in every output.
+    rsp$factor_order <- .factor_order(lambda, J, M)
+    lambda <- lambda[, .factor_columns(rsp$factor_order, J), drop = FALSE]
+    rsp$Lambda_star <- rsp$Lambda_star[, rsp$factor_order, drop = FALSE]
   }
 
   draws <- .model_metric(lambda, std, spec, J, M)
   list(draws = .as_chains(draws, n_iter, n_chains), rsp = rsp)
+}
+
+# This function returns the order of the factors by the variance of the
+# standardized items they explain: the sum of the squared posterior means of
+# their loadings, largest first.
+.factor_order <- function(lambda, J, M) {
+  loadings <- matrix(colMeans(lambda), J, M)
+  order(colSums(loadings^2), decreasing = TRUE)
+}
+
+# This function returns the columns of a column-major matrix of loadings
+# draws (J per factor) that put its factors in the given order.
+.factor_columns <- function(order, J) {
+  unlist(lapply(order, function(m) (m - 1L) * J + seq_len(J)), use.names = FALSE)
 }
 
 # This function returns, from the draws of the Stan parameters, the

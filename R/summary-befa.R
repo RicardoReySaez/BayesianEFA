@@ -1,7 +1,7 @@
 # summary-befa.R
 # Summary and printed tables of a fitted model
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 01-11-2026
 
 # Public functions
 
@@ -17,15 +17,22 @@
 #'   intervals (default `c(0.025, 0.975)`).
 #' @param cutoff Loadings whose absolute posterior mean is below `cutoff` are
 #'   hidden when printing.
-#' @param sort Logical. Sort the items by the factor of their largest loading.
+#' @param sort Logical. If `TRUE` (default), the items are grouped by the
+#'   factor of their largest loading, from the largest loading to the
+#'   smallest within each factor, as `psych::fa.sort()` does. The factors
+#'   themselves are always ordered by the variance they explain.
 #' @param signif_stars Logical. Mark the loadings whose credible interval
 #'   excludes zero with an asterisk.
+#' @param name_width Width of the column of item names when printing (default
+#'   8, so the table keeps its width). Longer names are shortened in the
+#'   middle, which keeps their start and end.
 #' @param ... Ignored.
 #'
 #' @return A `summary.befa` object with:
-#' * `$estimates`: One row per item with the standardized loadings, `h2`,
-#'   `u2`, the largest R-hat and the smallest bulk and tail ESS of its
-#'   loadings.
+#' * `$estimates`: One row per item with its full name (from the columns of
+#'   `data` or of the summary statistics; `Item_1`, ... when they have none),
+#'   the standardized loadings, `h2`, `u2`, the largest R-hat and the
+#'   smallest bulk and tail ESS of its loadings.
 #' * `$sig_matrix`: Which loadings have a credible interval that excludes 0.
 #' * `$variance`: The share of the variance of the standardized items that
 #'   each factor, and all of them, account for.
@@ -42,8 +49,10 @@
 #' @method summary befa
 #' @export
 summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
-                         sort = FALSE, signif_stars = FALSE, ...) {
+                         sort = TRUE, signif_stars = FALSE, name_width = 8L,
+                         ...) {
   .check_befa_object(object)
+  .check_count(name_width, "name_width", lower = 4)
   J <- object$stan_data$J
   M <- object$n_factors
   factor_names <- paste0("F", seq_len(M))
@@ -53,8 +62,10 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
     posterior::subset_draws(draws, variable = "Lambda_std"), J, M, probs)
   h2 <- colMeans(.stacked_draws(draws, "h2"))
 
+  item_names <- object$data$item_names
+  if (is.null(item_names)) item_names <- .item_labels(NULL, J)
   estimates <- data.frame(
-    Variable = paste0("Item_", seq_len(J)), as.data.frame(info$lambda),
+    Variable = item_names, as.data.frame(info$lambda),
     h2 = unname(h2), u2 = 1 - unname(h2),
     Rhat = apply(info$rhat, 1, max, na.rm = TRUE),
     EssBulk = apply(info$ess_bulk, 1, min, na.rm = TRUE),
@@ -73,17 +84,21 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
                   N = object$data$N, rotation = object$rotation,
                   method = object$method, backend = object$backend),
     print_options = list(cutoff = cutoff, sort = sort,
-                         signif_stars = signif_stars),
+                         signif_stars = signif_stars,
+                         name_width = as.integer(name_width)),
     tables = list(table1_loadings = estimates)
   )
   if (!is.null(object$fit_indices)) {
     res$tables$table2_fit_measures <- as.data.frame(
       build_fit_summary_table(object$fit_indices, probs))
+    res$tables$table3_information <- as.data.frame(
+      build_information_table(object$fit_indices, probs))
   }
   if (!is.null(object$reliability)) {
     rel <- build_reliability_table(object$reliability, probs)
-    res$tables$table3_reliability <- rel$subscales
-    attr(res$tables$table3_reliability, "omega_total") <- rel$total
+    tab <- rbind(rel$subscales, rel$total)
+    rownames(tab) <- c(rownames(rel$subscales), "Total")
+    res$tables$table4_reliability <- tab
   }
   structure(res, class = "summary.befa")
 }
@@ -91,11 +106,12 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
 #' Print BEFA Summary
 #'
 #' Prints the tables of [summary.befa()]: the standardized loadings, the
-#' Bayesian fit measures and the omega coefficients.
+#' Bayesian fit measures, the information criteria and the omega
+#' coefficients.
 #'
 #' @param x A `summary.befa` object.
 #' @param digits Number of decimal places.
-#' @param cutoff,sort,signif_stars Override the options given to
+#' @param cutoff,sort,signif_stars,name_width Override the options given to
 #'   [summary.befa()].
 #' @param ... Ignored.
 #'
@@ -103,20 +119,24 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
 #' @method print summary.befa
 #' @export
 print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
-                               signif_stars = NULL, ...) {
+                               signif_stars = NULL, name_width = NULL, ...) {
   if (is.null(cutoff)) cutoff <- x$print_options$cutoff
   if (is.null(sort)) sort <- x$print_options$sort
   if (is.null(signif_stars)) signif_stars <- x$print_options$signif_stars
+  if (is.null(name_width)) name_width <- x$print_options$name_width
+  if (is.null(name_width)) name_width <- 8L
   n_table <- 1L
 
   # Loadings
   df <- x$tables$table1_loadings
+  df$Variable <- .short_names(df$Variable, name_width)
   f_cols <- colnames(df)[1L + seq_len(x$header$n_factors)]
   df <- .format_loading_table(df, x$sig_matrix, f_cols, cutoff, sort,
                               signif_stars, digits)$df
   cat("\n")
   width <- .print_styled_table(
     df, title = sprintf("Table %d. Standardized Factor Loadings", n_table))
+  loadings_width <- width
   n_table <- n_table + 1L
   notes <- c(
     sprintf("%s rotation applied; %s with %s.", x$header$rotation,
@@ -132,43 +152,30 @@ print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
   )
   .print_note(notes, width)
 
-  # Fit measures
+  # Fit measures and information criteria
   if (!is.null(x$tables$table2_fit_measures)) {
-    tab <- x$tables$table2_fit_measures
-    out <- as.data.frame(lapply(tab, .format_numeric, digits = digits))
-    out <- cbind(Index = rownames(tab), out)
-    out[out$Index == "Chi2_ppp", c("SD", "CI_Low", "CI_High")] <- ""
-    cat("\n")
-    width <- .print_styled_table(
-      out, title = sprintf("Table %d. Bayesian Fit Measures", n_table))
-    n_table <- n_table + 1L
-    .print_note(c(sprintf("Intervals are %g%% credible intervals (normal ones,",
-                          (x$probs[2L] - x$probs[1L]) * 100),
-                  "from the standard error, for ELPD, LOOIC and p_loo).",
-                  "PPP: Posterior Predictive p-value (Ideal > .05).",
-                  "p_loo/LOOIC derived from PSIS-LOO."), width)
+    n_table <- .print_fit_tables(x$tables$table2_fit_measures,
+                                 x$tables$table3_information, x$probs,
+                                 digits, first = n_table)
   }
 
   # Reliability
-  if (!is.null(x$tables$table3_reliability)) {
-    tab <- x$tables$table3_reliability
-    total <- attr(tab, "omega_total")
+  if (!is.null(x$tables$table4_reliability)) {
+    tab <- x$tables$table4_reliability
     out <- as.data.frame(lapply(tab, .format_numeric, digits = digits))
     out <- cbind(Factor = rownames(tab), out)
     cat("\n")
     width <- .print_styled_table(
-      out, title = sprintf("Table %d. Factor Reliability (Coefficient Omega)", n_table))
-    .print_note(sprintf(paste("Full Scale Omega Total: %s [%s, %s]. Omega",
-                              "coefficients use the standardized solution."),
-                        .format_numeric(total$Estimate, digits),
-                        .format_numeric(total$CI_Low, digits),
-                        .format_numeric(total$CI_High, digits)),
-                width, prefix = "")
+      out, title = sprintf("Table %d. Factor Reliability (Omega)", n_table))
+    .print_note(c("Total is the omega of the full scale. Omega coefficients",
+                  "use the standardized solution."), width)
   }
 
   if (length(x$diagnostics$issues)) {
-    cat("\nWarning: the posterior may be unreliable:",
-        paste(x$diagnostics$issues, collapse = "; "), "\n")
+    cat("\n")
+    .print_note(c("the posterior may be unreliable:",
+                  paste(x$diagnostics$issues, collapse = "; ")),
+                loadings_width, prefix = "Warning: ")
   }
   invisible(x)
 }
@@ -176,8 +183,8 @@ print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
 # Internal functions
 
 # This function returns the fit indices of a befa_fitmeasures object as a
-# matrix with their posterior mean, SD and credible interval, Chi2_ppp after
-# Chi2, and the PSIS-LOO estimates (with normal intervals) at the end.
+# matrix with their posterior mean, SD and credible interval, with Chi2_ppp
+# after Chi2.
 build_fit_summary_table <- function(fit_obj, probs = c(0.025, 0.975)) {
   s <- posterior::summarise_draws(
     fit_obj$fit_draws, Estimate = mean, SD = stats::sd,
@@ -189,17 +196,42 @@ build_fit_summary_table <- function(fit_obj, probs = c(0.025, 0.975)) {
   tab <- rbind(tab[1L, , drop = FALSE],
                Chi2_ppp = c(fit_obj$details$chi2_ppp, NA, NA, NA),
                tab[-1L, , drop = FALSE])
-
-  est <- fit_obj$loo_object$estimates
-  loo_row <- function(name) {
-    e <- est[name, "Estimate"]
-    se <- est[name, "SE"]
-    c(e, se, e + stats::qnorm(probs) * se)
-  }
-  tab <- rbind(tab, ELPD = loo_row("elpd_loo"), LOOIC = loo_row("looic"),
-               p_loo = loo_row("p_loo"))
   colnames(tab) <- c("Estimate", "SD", "CI_Low", "CI_High")
   tab
+}
+
+# This function returns the information criteria of a befa_fitmeasures
+# object with their standard error across persons and the normal interval
+# that the probabilities in `probs` give.
+build_information_table <- function(fit_obj, probs = c(0.025, 0.975)) {
+  ic <- fit_obj$information
+  tab <- cbind(ic, ic[, "Estimate"] + outer(ic[, "SE"], stats::qnorm(probs)))
+  colnames(tab) <- c("Estimate", "SE", "CI_Low", "CI_High")
+  tab
+}
+
+# This function prints the fit indices and the information criteria as two
+# numbered tables, starting at table `first`, and returns the number of the
+# next table.
+.print_fit_tables <- function(fit_tab, info_tab, probs, digits, first) {
+  level <- (probs[2L] - probs[1L]) * 100
+  out <- as.data.frame(lapply(as.data.frame(fit_tab), .format_numeric, digits = digits))
+  out <- cbind(Index = rownames(fit_tab), out)
+  out[out$Index == "Chi2_ppp", c("SD", "CI_Low", "CI_High")] <- ""
+  cat("\n")
+  width <- .print_styled_table(
+    out, title = sprintf("Table %d. Bayesian Fit Measures", first))
+  .print_note(c(sprintf("Intervals are %g%% credible intervals.", level),
+                "PPP: Posterior Predictive p-value (Ideal > .05)."), width)
+
+  out <- as.data.frame(lapply(as.data.frame(info_tab), .format_numeric, digits = digits))
+  out <- cbind(Criterion = rownames(info_tab), out)
+  cat("\n")
+  width <- .print_styled_table(
+    out, title = sprintf("Table %d. Information Criteria", first + 1L))
+  .print_note(c("SEs across persons (jackknife for DIC_i and p_V);",
+                sprintf("%g%% normal intervals.", level)), width)
+  first + 2L
 }
 
 # This function splits the omega coefficients of a befa_reliability object
@@ -296,9 +328,27 @@ build_reliability_table <- function(rel_obj, probs = c(0.025, 0.975)) {
   invisible(total_width)
 }
 
-# This function prints the note under a table, wrapped to its width (at
-# least 60 characters, so narrow tables keep readable notes).
+# This function prints the note under a table, wrapped to its width.
 .print_note <- function(notes, width, prefix = "Note: ") {
   text <- paste0(prefix, paste(notes, collapse = " "))
-  cat(paste(strwrap(text, width = max(width, 60L)), collapse = "\n"), "\n")
+  cat(paste(strwrap(text, width = width), collapse = "\n"), "\n")
+}
+
+# This function shortens the names longer than `width` characters by
+# cutting their middle, which keeps their start and their end, where item
+# numbers usually are. Names that would become equal end with their item
+# number instead.
+.short_names <- function(x, width = 8L) {
+  long <- nchar(x) > width
+  if (!any(long)) return(x)
+  head <- ceiling((width - 1L) / 2)
+  tail <- width - 1L - head
+  out <- x
+  out[long] <- paste0(substr(x[long], 1L, head), "\u2026",
+                      substring(x[long], nchar(x[long]) - tail + 1L))
+  clash <- long & (duplicated(out) | duplicated(out, fromLast = TRUE))
+  index <- as.character(which(clash))
+  out[clash] <- paste0(substr(x[clash], 1L, width - 1L - nchar(index)), "\u2026",
+                       index)
+  out
 }
