@@ -11,8 +11,9 @@
 #' posterior package, in the metric of the model or standardized.
 #'
 #' @param befa_fit A `befa` object returned by [befa()].
-#' @param pars Character vector of parameter names, such as `"Lambda"` (all
-#'   loadings) or `"h2[3]"`. `NULL` (default) returns every parameter.
+#' @param pars Character vector of parameter names, such as `"Lambda_std"`
+#'   (all standardized loadings) or `"h2[3]"`. `NULL` (default) returns every
+#'   parameter.
 #' @param format Output format: `"matrix"` (default), `"array"`, `"df"`,
 #'   `"list"` or `"rvars"`.
 #' @param metric `"model"` (default) returns the parameters as the model

@@ -7,8 +7,9 @@
 befa_compile_models(backend = "auto", quiet = FALSE)
 }
 \arguments{
-\item{backend}{Stan backend: \code{"auto"} (the first one installed), or one of
-\code{"cmdstanr"}, \code{"stanr"} and \code{"rstan"}.}
+\item{backend}{Stan backend: \code{"auto"} (the one \code{\link[=befa]{befa()}} would use, which
+needs no compilation when it is stanli), or one of \code{"cmdstanr"},
+\code{"stanr"} and \code{"rstan"}.}
 
 \item{quiet}{Logical. If \code{TRUE}, no messages are shown.}
 }

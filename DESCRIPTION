@@ -4,18 +4,20 @@ Version: 0.1.0.9000
 Authors@R: 
     person("Ricardo", "Rey-Sáez", , "ricardoreysaez95@gmail.com", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0001-6739-2035"))
-Description: Estimate Bayesian Exploratory Factor Analysis (EFA) models 
-    using 'Stan' for full Bayesian inference. The package allows users 
-    to fit unrestricted factor models without specifying any constraints 
-    on the factor loading matrix. Instead, rotational indeterminacy is 
-    resolved via an efficient Rotation-Sign-Permutation (RSP) alignment 
-    algorithm, which recovers interpretable posterior distributions 
-    during post-processing. Features include support for correlation, 
-    covariance, and unstandardized factor models, flexible prior 
-    specifications, and Full Information Maximum Likelihood (FIML) for 
-    missing data. It also provides tools to calculate Bayesian fit 
-    indices, Omega reliability estimates, and Bayesian factor scores 
-    with full uncertainty quantification.
+Description: Estimate Bayesian Exploratory Factor Analysis (EFA) models
+    using 'Stan' for full Bayesian inference. The package allows users
+    to fit unrestricted factor models without specifying any constraints
+    on the factor loading matrix. Instead, rotational indeterminacy is
+    resolved via an efficient Rotation-Sign-Permutation (RSP) alignment
+    algorithm, which recovers interpretable posterior distributions
+    during post-processing. The 'Stan' program of each model is
+    generated when it is needed and run with 'stanli', 'cmdstanr',
+    'stanr' or 'rstan', by MCMC, ADVI or Pathfinder. Features include
+    support for correlation, covariance, and unstandardized factor
+    models, flexible prior specifications, and Full Information Maximum
+    Likelihood (FIML) for missing data. It also provides tools to
+    calculate Bayesian fit indices, Omega reliability estimates, and
+    Bayesian factor scores with full uncertainty quantification.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

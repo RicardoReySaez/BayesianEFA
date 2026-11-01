@@ -27,7 +27,7 @@
 #'   the standardized items, `"cov"` their covariance matrix, and `"raw"` the
 #'   means and the covariance matrix.
 #' @param lambda_prior Prior on the loadings: `"unit_vector"` (default), the
-#'   unit-vector prior of Rey-Sáez et al. (2025), or `"normal"`, independent
+#'   unit-vector prior of Rey-Sáez et al. (2026), or `"normal"`, independent
 #'   normal priors in the metric of the items (not available for `"cor"`).
 #' @param missing Treatment of missing values: `"listwise"` (default) keeps
 #'   the complete rows, and `"FIML"` uses every observed value. FIML needs
@@ -135,15 +135,15 @@
 #'   `$backend`, `$rotation`, `$priors_used`, `$options` and `$call`.
 #'
 #' @references
-#' Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2025).
-#' *A Unified Framework for Psychometrics in Experimental Psychology: The
-#' Standardized Generalized Hierarchical Factor Model*. PsyArXiv.
-#' <https://doi.org/10.31234/osf.io/gv6k7_v1>
+#' Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2026).
+#' A unified framework for psychometrics in experimental psychology: The
+#' standardized generalized hierarchical factor model. *Psychological
+#' Methods*. Advance online publication. \doi{10.1037/met0000846}
 #'
-#' Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient
-#' Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in
-#' Bayesian Exploratory Factor Analysis*. PsyArXiv.
-#' <https://doi.org/10.31234/osf.io/6drsw_v1>
+#' Rey-Sáez, R., & Revuelta, J. (2026). An efficient rotation-sign-permutation
+#' algorithm to solve rotational indeterminacy in Bayesian exploratory factor
+#' analysis. *Bayesian Analysis*. Advance publication.
+#' \doi{10.1214/26-BA1611}
 #'
 #' @examples
 #' \dontrun{

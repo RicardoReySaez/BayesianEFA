@@ -58,11 +58,11 @@
 #' @references
 #' Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for
 #' Bayesian structural equation modeling: Comparison to maximum likelihood.
-#' *Psychological Methods, 25*(1), 46-70. <https://doi.org/10.1037/met0000224>
+#' *Psychological Methods, 25*(1), 46-70. \doi{10.1037/met0000224}
 #'
 #' Vehtari, A., Gelman, A., & Gabry, J. (2017). Practical Bayesian model
 #' evaluation using leave-one-out cross-validation and WAIC. *Statistics and
-#' Computing, 27*(5), 1413-1432. <https://doi.org/10.1007/s11222-016-9696-4>
+#' Computing, 27*(5), 1413-1432. \doi{10.1007/s11222-016-9696-4}
 #'
 #' @examples
 #' \dontrun{

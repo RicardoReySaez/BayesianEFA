@@ -7,24 +7,17 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.width = 7,
-  fig.height = 5
-)
-```
+<!-- This vignette is precomputed: edit alignment.Rmd.orig and run
+     vignettes/precompile.R from the package root. -->
+
+
 
 Bayesian EFA models suffer from rotational indeterminacy, causing MCMC chains to "jump" between equivalent modes. This leads to label and sign switching across iterations which, if left uncorrected, causes posterior means to cancel out and results to become uninterpretable. To resolve this, `BayesianEFA` provides the `rsp_align()` function. This implements the Efficient Rotation-Sign-Permutation (E-RSP) algorithm proposed by Rey-Sáez & Revuelta (2026), an exact alignment method that recovers the underlying factor structure in seconds, even for high-dimensional models.
 
 Let's begin by generating a dataset from a simple, two-dimensional latent structure. This will serve as our ground truth.
 
-```{r echo = FALSE, message = FALSE}
-# Load BayesianEFA
-library(BayesianEFA)
-```
-```{r}
+
+``` r
 # Load BayesianEFA
 library(BayesianEFA)
 
@@ -50,9 +43,10 @@ colnames(X) <- paste0("Item_", 1:6)
 
 ## The unrotated solution
 
-We will fit the Bayesian EFA model using `befa()`. To illustrate the pathology of rotational indeterminacy, we explicitly disable the internal alignment process by setting `rotate = "none"`.
+We will fit the Bayesian EFA model using `befa()`. To illustrate the pathology of rotational indeterminacy, we explicitly disable the internal alignment process by setting `rotate = "none"`; `refresh = 0` hides the progress bar.
 
-```{r}
+
+``` r
 # Fit the model without automatic post-processing
 fit_unaligned <- befa(
   data = X,
@@ -60,19 +54,18 @@ fit_unaligned <- befa(
   compute_fit_indices = FALSE,
   compute_reliability = FALSE,
   rotate = "none",
-  backend = "rstan",
   seed = 17,
   refresh = 0,
-  show_message = FALSE,
-  show_exceptions = FALSE,
-  chains = 4,
-  parallel_chains = 1
+  chains = 4
 )
+#> BayesianEFA: using the stanli backend.
+#> Warning: the posterior may be unreliable: R-hat reaches 1.013.
+#>   To fix it, increase `iter_sampling`.
 
 # Save posterior draws
 draws_unaligned <- extract_posterior_draws(
   fit_unaligned,
-  pars = "Lambda",
+  pars = "Lambda_std",
   format = "matrix"
 )
 ```
@@ -83,21 +76,40 @@ As we will see below, attempting to summarize the posterior distributions at thi
 * **Extreme uncertainty:** Posterior SDs and credible intervals become massive (e.g., spanning from -0.8 to +0.8), rendering the estimates uninformative.
 * **Poor convergence diagnostics:** The lack of identification causes unstable convergence, reflected in $\hat{R}$ values above 1.00 and low effective sample sizes, as indicated by the output warning.
 
-```{r}
-posterior_summaries(fit_unaligned, pars = "Lambda")
+
+``` r
+posterior_summaries(fit_unaligned, pars = "Lambda_std")
+#> # A tibble: 12 × 10
+#>    variable            mean  median    sd   mad     q5   q95  rhat ess_bulk ess_tail
+#>    <chr>              <dbl>   <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>    <dbl>    <dbl>
+#>  1 Lambda_std[1,1] -0.0415  -0.0829 0.485 0.704 -0.677 0.664  1.01     444.    1495.
+#>  2 Lambda_std[2,1] -0.0493  -0.115  0.579 0.839 -0.798 0.790  1.00     466.    1529.
+#>  3 Lambda_std[3,1] -0.0453  -0.0999 0.526 0.762 -0.727 0.720  1.00     452.    1443.
+#>  4 Lambda_std[4,1] -0.00406 -0.0171 0.473 0.682 -0.681 0.678  1.01     415.    1254.
+#>  5 Lambda_std[5,1] -0.00655 -0.0208 0.471 0.669 -0.680 0.673  1.01     419.    1221.
+#>  6 Lambda_std[6,1] -0.00335 -0.0160 0.474 0.674 -0.684 0.682  1.01     418.    1641.
+#>  7 Lambda_std[1,2]  0.0107   0.0178 0.468 0.665 -0.667 0.671  1.01     403.    1254.
+#>  8 Lambda_std[2,2]  0.00855  0.0188 0.552 0.792 -0.787 0.791  1.01     406.    1445.
+#>  9 Lambda_std[3,2]  0.00509  0.0154 0.499 0.723 -0.709 0.712  1.01     427.    1274.
+#> 10 Lambda_std[4,2] -0.0424  -0.0874 0.497 0.719 -0.692 0.679  1.00     466.    1401.
+#> 11 Lambda_std[5,2] -0.0422  -0.0913 0.497 0.722 -0.689 0.680  1.00     473.    1450.
+#> 12 Lambda_std[6,2] -0.0427  -0.0983 0.498 0.712 -0.692 0.684  1.00     467.    1546.
 ```
 
-A visual inspection of the posterior draws for a specific parameter (e.g., `Lambda[1,2]`) makes the severity of this unidentified parameter space immediately apparent:
+A visual inspection of the posterior draws for a specific parameter (e.g., `Lambda_std[1,1]`) makes the severity of this unidentified parameter space immediately apparent:
 
-```{r}
-hist(draws_unaligned[, "Lambda[1,2]"],
+
+``` r
+hist(draws_unaligned[, "Lambda_std[1,1]"],
   breaks = 50,
   col = "#2780e3",
   border = "white",
-  main = "Raw Posterior Distribution (Lambda[1,2])",
+  main = "Raw Posterior Distribution (Lambda_std[1,1])",
   xlab = "Sampled Value"
 )
 ```
+
+![plot of chunk hist-unaligned](figures/alignment-hist-unaligned-1.png)
 
 Instead of a clean, unimodal distribution centered around the true value of $0.7$ (their true simulated value), we have a bimodal shape caused by the sampler traversing different orthogonal rotations.
 
@@ -139,60 +151,94 @@ $$
 
 We can easily visualize this difference by looking at the column names of our extracted draws. For an $6 \times 2$ loading matrix:
 
-```{r}
+
+``` r
 # 1. Draws in column-major order (Stan's default)
 # Notice how it fills Factor 1 completely before moving to Factor 2
 colnames(draws_unaligned)
+#>  [1] "Lambda_std[1,1]" "Lambda_std[2,1]" "Lambda_std[3,1]" "Lambda_std[4,1]" "Lambda_std[5,1]"
+#>  [6] "Lambda_std[6,1]" "Lambda_std[1,2]" "Lambda_std[2,2]" "Lambda_std[3,2]" "Lambda_std[4,2]"
+#> [11] "Lambda_std[5,2]" "Lambda_std[6,2]"
 
 # 2. Draws in row-major order
 # We can simulate this order by transposing the index matrix
 rw_ord <- rep(1:6, each = 2) + rep(c(0, 6), times = 2)
 colnames(draws_unaligned)[rw_ord]
+#>  [1] "Lambda_std[1,1]" "Lambda_std[1,2]" "Lambda_std[2,1]" "Lambda_std[2,2]" "Lambda_std[3,1]"
+#>  [6] "Lambda_std[3,2]" "Lambda_std[4,1]" "Lambda_std[4,2]" "Lambda_std[5,1]" "Lambda_std[5,2]"
+#> [11] "Lambda_std[6,1]" "Lambda_std[6,2]"
 ```
 
 ### Resolving the Latent Structure
 
 Now that we have the correct format, we can apply the alignment algorithm. In this example (6 items, 2 factors, 4 chains), we use the `column_major` format to match our extraction tool:
 
-```{r}
+
+``` r
 # Apply the Efficient RSP algorithm
 aligned_res <- rsp_align(
   lambda_draws = draws_unaligned,
   n_items = 6,
   n_factors = 2,
   n_chains = 4,
-  format = "column_major"
+  format = "column_major",
+  add_names = FALSE  # keep the column names of the input
 )
 ```
 
 By aligning the posterior draws, rotational indeterminacy is fully resolved. The previously observed anomalies disappear, and the true factor structure emerges with high precision and clarity:
 
-* **Clear Factor Structure:** The previous non-significant loadings have been replaced by a perfect simple structure. Items 1-3 now load onto Factor 2, with $\lambda \approx .68$ across all items, while Items 4-6 load onto Factor 1, with loadings ranging from $0.66$ to $0.80$.
-* **High precision:** Posterior standard deviations have decreased significantly, from $\approx 0.50$ down to $0.04$, resulting in narrow, informative credible intervals that clearly exclude zero for all main loadings.
-* **Perfect convergence and mixing:** With the model now identified, MCMC diagnostics are perfect. All $\hat{R}$ values have stabilized at $1.00$, and effective sample sizes (ESS) have increased significantly (well over 2000), confirming efficient mixing and stable chains.
+* **Clear Factor Structure:** The previous non-significant loadings have been replaced by a simple structure. Items 1-3 now load onto Factor 1, with loadings from $0.67$ to $0.80$, while Items 4-6 load onto Factor 2, with $\lambda \approx 0.68$ for all of them.
+* **High precision:** Posterior standard deviations have decreased significantly, from $\approx 0.50$ down to $0.04$-$0.05$, resulting in narrow, informative credible intervals that clearly exclude zero for all main loadings.
+* **Convergence and mixing:** With the model now identified, all $\hat{R}$ values are at or below $1.01$, and the bulk effective sample sizes (ESS) exceed 2500, confirming efficient mixing and stable chains.
 
-```{r}
+
+``` r
 # Now, aligned posterior summaries are interpretable
 aligned_res$summary
+#> # A tibble: 12 × 10
+#>    variable            mean   median     sd    mad      q5     q95  rhat ess_bulk ess_tail
+#>    <chr>              <dbl>    <dbl>  <dbl>  <dbl>   <dbl>   <dbl> <dbl>    <dbl>    <dbl>
+#>  1 Lambda_std[1,1]  0.665    0.667   0.0411 0.0397  0.595   0.730  1.00     2803.    2531.
+#>  2 Lambda_std[2,1]  0.799    0.800   0.0402 0.0394  0.730   0.862  1.00     2583.    2058.
+#>  3 Lambda_std[3,1]  0.724    0.723   0.0402 0.0409  0.657   0.788  1.00     2811.    2602.
+#>  4 Lambda_std[4,1] -0.0493  -0.0488  0.0464 0.0461 -0.126   0.0269 1.00     4427.    3642.
+#>  5 Lambda_std[5,1] -0.00380 -0.00317 0.0467 0.0464 -0.0835  0.0708 1.000    4211.    3428.
+#>  6 Lambda_std[6,1] -0.0341  -0.0336  0.0464 0.0468 -0.111   0.0406 1.000    4355.    3206.
+#>  7 Lambda_std[1,2] -0.0973  -0.0976  0.0494 0.0494 -0.179  -0.0164 1.00     4366.    3487.
+#>  8 Lambda_std[2,2] -0.0140  -0.0141  0.0406 0.0403 -0.0811  0.0538 1.00     4156.    3174.
+#>  9 Lambda_std[3,2]  0.00786  0.00866 0.0460 0.0453 -0.0698  0.0830 1.00     4471.    3377.
+#> 10 Lambda_std[4,2]  0.683    0.682   0.0460 0.0450  0.606   0.757  1.00     2824.    2145.
+#> 11 Lambda_std[5,2]  0.682    0.683   0.0471 0.0465  0.604   0.759  1.01     2815.    2277.
+#> 12 Lambda_std[6,2]  0.685    0.686   0.0483 0.0470  0.602   0.762  1.00     3110.    2427.
 ```
 
-Re-visualizing the posterior distribution for `Lambda[1,2]` after alignment provides clear visual proof that the parameter is now identified. The formerly erratic, multimodal draws have successfully resolved into a clean, unimodal distribution, confirming that rotational indeterminacy has been completely eliminated.
+Re-visualizing the posterior distribution for `Lambda_std[1,1]` after alignment provides clear visual proof that the parameter is now identified. The formerly erratic, multimodal draws have successfully resolved into a clean, unimodal distribution, confirming that rotational indeterminacy has been completely eliminated.
 
-```{r}
+
+``` r
 # Retrieve the clean, aligned posterior matrix
 draws_aligned <- aligned_res$Lambda_hat_mcmc
 
 # The output maintains the exact dimensions and format of the input
-hist(draws_aligned[, "Lambda[1,2]"],
+hist(draws_aligned[, "Lambda_std[1,1]"],
   breaks = 50,
   col = "#2780e3",
   border = "white",
-  main = "Aligned Posterior Distribution (Lambda[1,2])",
+  main = "Aligned Posterior Distribution (Lambda_std[1,1])",
   xlab = "Sampled Value"
 )
 ```
 
+![plot of chunk hist-aligned](figures/alignment-hist-aligned-1.png)
+
+In practice, there is no need to call `rsp_align()` yourself: `befa()` rotates
+every draw with Varimax and aligns them with E-RSP by default
+(`rotate = "varimax"`), and returns the aligned draws. Calling it directly is
+useful for draws from other software, such as a factor model written by hand
+in Stan.
+
 ## References
 
 - Papastamoulis, P., & Ntzoufras, I. (2022). On the identifiability of Bayesian factor analytic models. *Statistics and Computing, 32*(2), 23. <https://doi.org/10.1007/s11222-022-10084-4>
-- Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in Bayesian Exploratory Factor Analysis*. PsyArXiv. <https://doi.org/10.31234/osf.io/6drsw_v1>
+- Rey-Sáez, R., & Revuelta, J. (2026). An efficient rotation-sign-permutation algorithm to solve rotational indeterminacy in Bayesian exploratory factor analysis. *Bayesian Analysis*. Advance publication. <https://doi.org/10.1214/26-BA1611>

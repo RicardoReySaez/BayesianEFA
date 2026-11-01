@@ -52,19 +52,27 @@ articles:
       - alignment
 
 reference:
-  - title: "All Functions"
-    desc: >
-      Complete list of functions and datasets available in the BayesianEFA package.
+  - title: "Fitting a model"
     contents:
       - befa
       - summary.befa
-      - rsp_align
-      - befa_factor_scores
+      - print.summary.befa
+  - title: "Posterior draws"
+    contents:
       - extract_posterior_draws
       - posterior_summaries
+      - rsp_align
+  - title: "Fit, reliability and factor scores"
+    contents:
       - befa_fit_measures
-      - befa_reliability
-      - print.summary.befa
       - print.befa_fitmeasures
+      - befa_reliability
+      - befa_factor_scores
+  - title: "Compiled Stan models"
+    contents:
+      - befa_compile_models
+      - befa_clear_cache
+  - title: "Data and package"
+    contents:
       - HS_data
       - BayesianEFA-package

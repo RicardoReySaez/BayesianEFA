@@ -59,7 +59,7 @@
 #' **The Efficient RSP Algorithm (E-RSP)**
 #'
 #' This function implements the Efficient Rotation-Sign-Permutation (E-RSP)
-#' algorithm (Rey-Sáez et al., 2026), an optimized version of the exact RSP
+#' algorithm (Rey-Sáez & Revuelta, 2026), an optimized version of the exact RSP
 #' method originally proposed by Papastamoulis and Ntzoufras (2022).
 #' While the original approach becomes computationally prohibitive as the
 #' number of latent factors increases, E-RSP reduces the
@@ -121,12 +121,12 @@
 #' @references
 #' Papastamoulis, P., & Ntzoufras, I. (2022). On the identifiability of Bayesian
 #' factor analytic models. *Statistics and Computing, 32*(2), 23.
-#' <https://doi.org/10.1007/s11222-022-10084-4>
+#' \doi{10.1007/s11222-022-10084-4}
 #'
-#' Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient
-#' Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in
-#' Bayesian Exploratory Factor Analysis*. PsyArXiv.
-#' <https://doi.org/10.31234/osf.io/6drsw_v1>
+#' Rey-Sáez, R., & Revuelta, J. (2026). An efficient rotation-sign-permutation
+#' algorithm to solve rotational indeterminacy in Bayesian exploratory factor
+#' analysis. *Bayesian Analysis*. Advance publication.
+#' \doi{10.1214/26-BA1611}
 #'
 #' @examples
 #' \dontrun{
@@ -138,29 +138,26 @@
 #'   factor_scores = FALSE,
 #'   compute_fit_indices = FALSE,
 #'   compute_reliability = FALSE,
-#'   backend = "rstan",
 #'   seed = 17,
-#'   chains = 4,
-#'   parallel_chains = 4
+#'   chains = 4
 #' )
 #'
 #' # Extract unrotated posterior draws
-#' lambda_unrotated <- extract_posterior_draws(befa_fit, pars = "Lambda")
+#' lambda_unrotated <- extract_posterior_draws(befa_fit, pars = "Lambda_std")
 #'
 #' # See multimodality due to rotational indeterminacy
 #' hist(lambda_unrotated[, 1],
 #'   breaks = 100, col = "steelblue2",
-#'   main = "Rotation indeterminacy", xlab = "Lambda[1,1]"
+#'   main = "Rotation indeterminacy", xlab = "Lambda_std[1,1]"
 #' )
 #'
 #' # See that columns are ordered following a column-major order
 #' # see Details on rsp_align function
 #' colnames(lambda_unrotated)
 #'
-#' #  [1] "Lambda[1,1]" "Lambda[2,1]" "Lambda[3,1]" "Lambda[4,1]" "Lambda[5,1]" "Lambda[6,1]" "Lambda[7,1]"
-#' #  [8] "Lambda[8,1]" "Lambda[9,1]" "Lambda[1,2]" "Lambda[2,2]" "Lambda[3,2]" "Lambda[4,2]" "Lambda[5,2]"
-#' # [15] "Lambda[6,2]" "Lambda[7,2]" "Lambda[8,2]" "Lambda[9,2]" "Lambda[1,3]" "Lambda[2,3]" "Lambda[3,3]"
-#' # [22] "Lambda[4,3]" "Lambda[5,3]" "Lambda[6,3]" "Lambda[7,3]" "Lambda[8,3]" "Lambda[9,3]"
+#' #  [1] "Lambda_std[1,1]" "Lambda_std[2,1]" "Lambda_std[3,1]" "Lambda_std[4,1]"
+#' #  ...
+#' # [25] "Lambda_std[7,3]" "Lambda_std[8,3]" "Lambda_std[9,3]"
 #'
 #' # Now, let's align posterior draws
 #' lambda_aligned <- rsp_align(
@@ -174,7 +171,7 @@
 #' # Now, rotational indeterminacy has been solved!
 #' hist(lambda_aligned$Lambda_hat_mcmc[, 1],
 #'   breaks = 100, col = "steelblue2",
-#'   main = "Aligned posterior distribution", xlab = "Lambda[1,1]"
+#'   main = "Aligned posterior distribution", xlab = "Lambda_std[1,1]"
 #' )
 #' }
 #'

@@ -386,7 +386,7 @@
 # cannot draw them keeps cli's plain bar (NULL).
 .bar_style <- function() {
   if (!cli::is_utf8_output()) return(NULL)
-  done <- cli::make_ansi_style("#6CB4EE")("■")
+  done <- cli::make_ansi_style("#6CB4EE")("\u25a0")
   list(complete = done, current = done,
-       incomplete = cli::make_ansi_style("#9AA0A6")("─"))
+       incomplete = cli::make_ansi_style("#9AA0A6")("\u2500"))
 }

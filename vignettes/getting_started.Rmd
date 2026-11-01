@@ -7,97 +7,260 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  fig.width = 7,
-  fig.height = 5
-)
-```
+<!-- This vignette is precomputed: edit getting_started.Rmd.orig and run
+     vignettes/precompile.R from the package root. -->
+
+
 
 ## Introduction
 
-`BayesianEFA` provides a robust and intuitive framework for Bayesian Exploratory Factor Analysis using `Stan`.
+`BayesianEFA` fits Bayesian Exploratory Factor Analysis models with Stan.
 
-- **Unconstraint Estimation**: Fit unrestricted loading matrices without fixing parameters or using arbitrary identification constraints.
-- **Resolved Rotational Indeterminacy**: Recover interpretable posteriors through the Efficient Rotation-Sign-Permutation (E-RSP) alignment algorithm.
-- **Bayesian SEM Fit Measures**: Includes the Bayesian SEM fit indices proposed by Garnier-Villarreal & Jorgensen (2020) for model evaluation.
-- **Full Posterior Inference**: Obtain complete distributions for all quantities, including factor loadings, factor scores, fit measures, and reliability indices.
-- **FIML for Missing Data**: Handles incomplete datasets via Full Information Maximum Likelihood (FIML). 
-- **Inherent Robustness**: Naturally resolves common frequentist issues, such as Heywood cases and non-positive definite matrices, ensuring stable estimation.
+- **Unconstrained estimation**: the loading matrix is left free, with no fixed
+  parameters or arbitrary identification constraints.
+- **Rotational indeterminacy solved**: the draws are aligned with Varimax and
+  the Efficient Rotation-Sign-Permutation (E-RSP) algorithm, so the posterior
+  of every loading is interpretable.
+- **Bayesian fit measures**: the Bayesian SEM fit indices of
+  Garnier-Villarreal & Jorgensen (2020) and PSIS-LOO.
+- **Full posterior inference**: complete distributions for the loadings, the
+  factor scores, the fit measures and the reliability coefficients.
+- **FIML for missing data**: incomplete data sets use every observed value.
+- **No Heywood cases**: the unit-vector prior keeps every communality below 1.
 
-While the package supports both `rstan` and `cmdstanr`, `rstan` is used as the default backend. However, we strongly recommend using `cmdstanr` for users who prefer the latest Stan features and faster estimation, `cmdstanr` can be installed by following the [official guide](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
+## Stan backends
 
-> Note: The `BayesianEFA` model compiles only once when first using `cmdstanr.` It is permanently saved in your system's cache and will persist across R sessions and computer reboots. If you ever need to force a recompile (e.g., after updating `cmdstanr`), you must manually clear the cache by running: `unlink(tools::R_user_dir("BayesianEFA", which = "cache"), recursive = TRUE)`.
+`BayesianEFA` writes the Stan program of each model itself and runs it with
+one of four interfaces to Stan, all optional:
 
-## Basic example using BayesianEFA
+- **stanli** interprets Stan programs, so it needs no C++ compiler and starts
+  at once. It is the default when it is installed:
 
-The following workflow fits a 3-factor model using the `befa()` function, handling estimation, rotation, and post-processing in a single step:
+  ```r
+  install.packages("stanli", repos = c("https://seantalts.r-universe.dev",
+                                       getOption("repos")))
+  stanli::stanli_install()
+  ```
 
-```{r fit_model, message=FALSE, warning=FALSE, results='hide'}
+- **cmdstanr**, **stanr** and **rstan** compile each program the first time it
+  is needed (half a minute to a minute) and keep it in a cache, so later
+  sessions start at once. `befa_compile_models()` compiles every program in
+  advance, and `befa_clear_cache()` removes them.
+
+With `backend = "auto"` (the default), `befa()` uses the first one installed
+among stanli, cmdstanr, stanr and rstan; `backend = "cmdstanr"`, for instance,
+chooses one.
+
+## Fitting a model
+
+The following call fits a three-factor model to the Holzinger and Swineford
+(1939) data, aligns the draws, and computes the fit indices, the omega
+coefficients and, on request, the factor scores:
+
+
+``` r
 library(BayesianEFA)
+#> 
+#> ────────────────────────────────────────────────────────────
+#>  BayesianEFA (v0.1.0.9000): Bayesian Exploratory Factor Analysis
+#> ────────────────────────────────────────────────────────────
 
-# Fit Bayesian EFA model
 befa_fit <- befa(
-  data = HS_data,                  # Data
-  n_factors = 3,                   # Nº of latent factors
-  model = "cor",                   # Model the correlation matrix
-  lambda_prior = "unit_vector",    # Unit-vector prior (Rey-Sáez et al., 2025)
-  rotate = "varimax",              # Automatic Varimax + E-RSP Alignment
-  backend = "rstan",               # Estimation backend, also "cmdstanr"
-  factor_scores = TRUE,            # Compute Bayesian factor scores
-  compute_fit_indices = TRUE,      # Compute Bayesian SEM fit indices
-  compute_reliability = TRUE,      # Compute reliability indices
-  iter_sampling = 1000,            # Sampling iterations
-  iter_warmup = 1000,              # Warmup iterations
-  chains = 4,                      # 4 MCMC chains
-  parallel_chains = 1,             # no parallel chains
-  seed = 17                        # seed for reproducible results
+  data = HS_data,        # one row per person, one column per item
+  n_factors = 3,         # number of latent factors
+  factor_scores = TRUE,  # also draw the factor scores
+  seed = 17              # for reproducible results
 )
+#> BayesianEFA: using the stanli backend.
+#> ── Bayesian exploratory factor analysis ────────────────────────────────────────────────── stanli ──
+#> ℹ 4 chains of 1000 draws after 1000 warmup iterations, 4 at a time.
+#> ✔ Sampled 4 chains in 2.5s.
+#> ✔ No divergent transitions.
+#> ✔ No transition reached the maximum tree depth (15).
+#> ✔ Largest R-hat 1.002, below 1.01.
+#> ✔ Smallest effective sample size 1866, above 400.
+#> ℹ Drawing the factor scores.
+#> ℹ Computing the fit indices and the null model.
 ```
 
-The `befa_fit` object contains a standard `stanfit` object (from `rstan`). This ensures full compatibility with the Stan ecosystem, allowing you to use your favorite diagnostic tools and plots -- regardless of whether you used `cmdstanr` or `rstan` as the backend.
+By default, `befa()` fits the correlation matrix (`model = "cor"`) with the
+unit-vector prior on the loadings, and runs four chains of 1000 warmup and
+1000 kept iterations of NUTS. After sampling it checks the convergence of the
+parameters it returns: the aligned loadings, the uniquenesses and the
+communalities.
 
-## Basic model summaries
+## Model summary
 
-The `summary()` method provides reportable tables inspired by the `psych` package, ensuring a familiar experience for EFA researchers. We can use two arguments for the output: 
+`summary()` prints tables inspired by the `psych` package. `cutoff` hides the
+loadings below a threshold, and `signif_stars` marks those whose 95% credible
+interval excludes zero:
 
--   `cutoff`: Hides loadings below a specific threshold (e.g., 0.3) for a cleaner pattern matrix.
--   `signif_stars`: Adds an asterisk (`*`) to loadings whose 95% Credible Interval excludes zero.
 
-```{r summary}
+``` r
 summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
+#> 
+#> Table 1. Standardized Factor Loadings 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
+#> ———————————————————————————————————————————————————————————————————
+#> Item_1             0.59*  0.31*  0.48  0.52  1.00     3888     3205
+#> Item_2             0.46*         0.24  0.76  1.00     3846     2339
+#> Item_3             0.65*         0.45  0.55  1.00     4054     3045
+#> Item_4                    0.83*  0.72  0.28  1.00     3815     2080
+#> Item_5                    0.86*  0.75  0.25  1.00     3919     3085
+#> Item_6                    0.81*  0.69  0.31  1.00     4204     3187
+#> Item_7      0.68*                0.48  0.52  1.00     3400     2490
+#> Item_8      0.70*                0.53  0.47  1.00     3074     1880
+#> Item_9      0.49*  0.40*         0.44  0.56  1.00     3271     3014
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: varimax rotation applied; MCMC with stanli. Diagnostics show
+#> worst-case values across factors (max Rhat, min ESS). The 3 latent
+#> factors accounted for 52.2% of total variance. (*) 95% Credible
+#> Interval excludes 0. Loadings with absolute values < 0.30 are
+#> hidden. 
+#> 
+#> Table 2. Bayesian Fit Measures 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Index         Estimate     SD    CI_Low   CI_High
+#> —————————————————————————————————————————————————
+#> Chi2             47.50   6.98     35.80     63.10
+#> Chi2_ppp          0.11                           
+#> Chi2_Null       918.85   0.00    918.85    918.85
+#> BRMSEA            0.06   0.02      0.00      0.09
+#> BGamma            0.99   0.00      0.98      1.00
+#> Adj_BGamma        0.97   0.02      0.93      1.00
+#> BMc               0.98   0.01      0.96      1.00
+#> SRMR              0.05   0.01      0.03      0.06
+#> BCFI              0.99   0.01      0.97      1.00
+#> BTLI              0.99   0.02      0.93      1.00
+#> ELPD          -3421.23  42.63  -3504.79  -3337.66
+#> LOOIC          6842.45  85.27   6675.33   7009.57
+#> p_loo            25.44   1.80     21.91     28.97
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Intervals are 95% credible intervals (normal ones,
+#> from the standard error, for ELPD, LOOIC and p_loo). PPP:
+#> Posterior Predictive p-value (Ideal > .05). p_loo/LOOIC
+#> derived from PSIS-LOO. 
+#> 
+#> Table 3. Factor Reliability (Coefficient Omega) 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Factor    Estimate    SD  CI_Low  CI_High
+#> —————————————————————————————————————————
+#> F1            0.54  0.04    0.45     0.62
+#> F2            0.60  0.04    0.51     0.67
+#> F3            0.73  0.02    0.69     0.76
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Full Scale Omega Total: 0.84 [0.82, 0.86]. Omega
+#> coefficients use the standardized solution.
 ```
 
-## Extract and summarise posterior draws
+## Posterior draws
 
-For deeper inspection, `BayesianEFA` provides tools to extract raw MCMC draws or compute detailed diagnostics:
+The fit holds the draws of the final parameters in the metric of the model:
+`Lambda_std`, `Psi_std` and `h2` for the correlation model.
+`extract_posterior_draws()` returns them in any format of the `posterior`
+package, and `posterior_summaries()` summarises them with their convergence
+diagnostics:
 
-- `extract_posterior_draws()`: Returns raw MCMC samples for any parameter. This is ideal for custom visualizations or density plots.
-- `posterior_summaries()`: A convenient wrapper that computes descriptive statistics and essential convergence diagnostics (e.g., $\hat{R}$ and Effective Sample Size).
 
-```{r}
-# 1. Extract raw draws for factor loadings
-draws <- extract_posterior_draws(befa_fit, pars = "Lambda", format = "matrix")
+``` r
+draws <- extract_posterior_draws(befa_fit, pars = "Lambda_std")
 
-# Visualize the posterior distribution of a specific loading
-hist(draws[, "Lambda[1,1]"],
+hist(draws[, "Lambda_std[4,3]"],
   breaks = 50,
   col = "#2780e3",
   border = "white",
-  main = "Posterior of Lambda[1,1]",
+  main = "Posterior of Lambda_std[4,3]",
   xlab = "Value"
 )
-
-# 2. Get automated summaries and diagnostics
-posterior_summaries(befa_fit, pars = "h2")
 ```
+
+![plot of chunk draws](figures/getting-started-draws-1.png)
+
+``` r
+
+posterior_summaries(befa_fit, pars = "h2")
+#> # A tibble: 9 × 10
+#>   variable  mean median     sd    mad    q5   q95  rhat ess_bulk ess_tail
+#>   <chr>    <dbl>  <dbl>  <dbl>  <dbl> <dbl> <dbl> <dbl>    <dbl>    <dbl>
+#> 1 h2[1]    0.477  0.476 0.0633 0.0636 0.376 0.582  1.00    4127.    2864.
+#> 2 h2[2]    0.242  0.238 0.0599 0.0590 0.147 0.344  1.00    4389.    2336.
+#> 3 h2[3]    0.446  0.444 0.0776 0.0758 0.323 0.578  1.00    4036.    3047.
+#> 4 h2[4]    0.715  0.716 0.0357 0.0358 0.657 0.773  1.00    3931.    2216.
+#> 5 h2[5]    0.751  0.752 0.0383 0.0375 0.686 0.813  1.00    3961.    3030.
+#> 6 h2[6]    0.688  0.689 0.0351 0.0348 0.630 0.744  1.00    4418.    2905.
+#> 7 h2[7]    0.484  0.477 0.105  0.100  0.329 0.664  1.00    3378.    2490.
+#> 8 h2[8]    0.530  0.523 0.0923 0.0848 0.392 0.688  1.00    3207.    1866.
+#> 9 h2[9]    0.441  0.440 0.0568 0.0564 0.347 0.533  1.00    3566.    3030.
+```
+
+## Fit measures, reliability and factor scores
+
+The fit indices and the omega coefficients are part of the fit, and their
+functions return them with every draw:
+
+
+``` r
+befa_fit_measures(befa_fit)
+#> 
+#> Bayesian Fit Measures 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Index          Estimate      SD     CI_Low    CI_High
+#> —————————————————————————————————————————————————————
+#> Chi2             47.502   6.982     35.795     63.104
+#> Chi2_ppp          0.106                              
+#> Chi2_Null       918.852   0.000    918.852    918.852
+#> BRMSEA            0.057   0.020      0.000      0.092
+#> BGamma            0.992   0.005      0.980      1.000
+#> Adj_BGamma        0.971   0.017      0.933      1.000
+#> BMc               0.981   0.011      0.956      1.000
+#> SRMR              0.047   0.008      0.033      0.064
+#> BCFI              0.987   0.008      0.969      1.000
+#> BTLI              0.987   0.019      0.933      1.000
+#> ELPD          -3421.225  42.634  -3504.786  -3337.664
+#> LOOIC          6842.450  85.268   6675.328   7009.572
+#> p_loo            25.443   1.801     21.913     28.972
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Intervals are 95% credible intervals. For ELPD
+#> and LOOIC, SD is the standard error. p_loo and LOOIC
+#> come from PSIS-LOO (loo package).
+
+befa_reliability(befa_fit)$subscales
+#>     Estimate         SD     Lower     Upper
+#> F1 0.5443113 0.04484460 0.4476671 0.6177477
+#> F2 0.5974227 0.03873280 0.5147345 0.6674942
+#> F3 0.7270235 0.02102332 0.6910624 0.7584391
+
+scores <- befa_factor_scores(befa_fit)
+head(matrix(scores$summary$mean, ncol = 3))
+#>             [,1]       [,2]        [,3]
+#> [1,]  0.01576747 -0.7519879  0.02845675
+#> [2,]  0.78843183  0.6061557 -1.13956953
+#> [3,] -1.06060161 -0.1524256 -1.81209594
+#> [4,] -0.74300131  0.6995275 -0.01473825
+#> [5,]  0.35076001 -0.5156001 -0.09999491
+#> [6,]  1.13032928  0.4662543 -1.47059760
+```
+
+## Other models
+
+- `model = "cov"` fits the covariance matrix and `model = "raw"` also the item
+  means. Their draws are in the units of the items;
+  `extract_posterior_draws(fit, metric = "std")` returns the standardized
+  solution.
+- `lambda_prior = "normal"` places normal priors on the loadings of the
+  covariance and raw models.
+- `missing = "FIML"` uses every observed value of incomplete data.
+- Summary statistics replace the data:
+  `befa(sample_nobs = 301, sample_cor = cor(HS_data), n_factors = 3)`.
+- `method = "pathfinder"` and `method = "advi"` approximate the posterior in
+  seconds. `befa()` reports the Pareto k of the approximation, and warns when
+  it is above 0.7.
 
 ## References
 
-- Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian structural equation modeling: Comparison to maximum likelihood. *Psychological methods, 25*(1), 46-70. <https://doi.org/10.1037/met0000224>
-- Holzinger, K. J., and F. A. Swineford. 1939. *A Study of Factor Analysis: The Stability of a Bi-Factor Solution.* Supplementary Educational Monograph 48. Chicago: University of Chicago Press.
+- Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian structural equation modeling: Comparison to maximum likelihood. *Psychological Methods, 25*(1), 46-70. <https://doi.org/10.1037/met0000224>
+- Holzinger, K. J., & Swineford, F. A. (1939). *A Study of Factor Analysis: The Stability of a Bi-Factor Solution.* Supplementary Educational Monograph 48. Chicago: University of Chicago Press.
 - McDonald, R. P. (1999). *Test Theory: A Unified Treatment*. Lawrence Erlbaum Associates.
-- Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2025). *A Unified Framework for Psychometrics in Experimental Psychology: The Standardized Generalized Hierarchical Factor Model*. PsyArXiv. <https://doi.org/10.31234/osf.io/gv6k7_v1>
-- Rey-Sáez, R. & Revuelta, J. (2026). *An Efficient Rotation-Sign-Permutation Algorithm to Solve Rotational Indeterminacy in Bayesian Exploratory Factor Analysis*. PsyArXiv. <https://doi.org/10.31234/osf.io/6drsw_v1>
+- Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2026). A unified framework for psychometrics in experimental psychology: The standardized generalized hierarchical factor model. *Psychological Methods*. Advance online publication. <https://doi.org/10.1037/met0000846>
+- Rey-Sáez, R., & Revuelta, J. (2026). An efficient rotation-sign-permutation algorithm to solve rotational indeterminacy in Bayesian exploratory factor analysis. *Bayesian Analysis*. Advance publication. <https://doi.org/10.1214/26-BA1611>

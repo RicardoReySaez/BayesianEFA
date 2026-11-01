@@ -12,3 +12,5 @@
 ^\.vscode$
 ^\.Rhistory$
 ^codecov\.yml$
+^vignettes/.*\.Rmd\.orig$
+^vignettes/precompile\.R$

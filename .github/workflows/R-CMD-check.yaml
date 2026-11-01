@@ -49,10 +49,10 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
 
-      # The vignettes fit models, which wait for the new Stan backends of the
-      # v0.2.0 rewrite, so the check neither builds nor runs them for now.
+      # The vignettes are precomputed (vignettes/precompile.R), so building
+      # them runs no Stan.
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
-          build_args: 'c("--no-manual", "--no-build-vignettes")'
-          args: 'c("--no-manual", "--as-cran", "--ignore-vignettes")'
+          build_args: 'c("--no-manual")'
+          args: 'c("--no-manual", "--as-cran")'

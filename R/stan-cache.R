@@ -14,8 +14,9 @@
 #' instance right after installing the package. The stanli backend interprets
 #' the programs and never compiles them.
 #'
-#' @param backend Stan backend: `"auto"` (the first one installed), or one of
-#'   `"cmdstanr"`, `"stanr"` and `"rstan"`.
+#' @param backend Stan backend: `"auto"` (the one [befa()] would use, which
+#'   needs no compilation when it is stanli), or one of `"cmdstanr"`,
+#'   `"stanr"` and `"rstan"`.
 #' @param quiet Logical. If `TRUE`, no messages are shown.
 #'
 #' @return Invisibly, the folders of the compiled models.

@@ -278,8 +278,8 @@ build_reliability_table <- function(rel_obj, probs = c(0.025, 0.975)) {
     max(nchar(cn[i]), max(nchar(df[[i]])))
   }, 1L) + 2L
   total_width <- sum(widths)
-  thick_line <- paste0(rep("‗", total_width), collapse = "")
-  thin_line <- paste0(rep("—", total_width), collapse = "")
+  thick_line <- paste0(rep("\u2017", total_width), collapse = "")
+  thin_line <- paste0(rep("\u2014", total_width), collapse = "")
   cell <- function(text, j) {
     format(text, width = widths[j], justify = if (j == 1L) "left" else "right")
   }

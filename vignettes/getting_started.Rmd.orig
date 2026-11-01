@@ -1,0 +1,154 @@
+---
+title: "Getting Started with BayesianEFA"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with BayesianEFA}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<!-- This vignette is precomputed: edit getting_started.Rmd.orig and run
+     vignettes/precompile.R from the package root. -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5,
+  error = FALSE,
+  fig.path = "figures/getting-started-"
+)
+options(width = 100)
+```
+
+## Introduction
+
+`BayesianEFA` fits Bayesian Exploratory Factor Analysis models with Stan.
+
+- **Unconstrained estimation**: the loading matrix is left free, with no fixed
+  parameters or arbitrary identification constraints.
+- **Rotational indeterminacy solved**: the draws are aligned with Varimax and
+  the Efficient Rotation-Sign-Permutation (E-RSP) algorithm, so the posterior
+  of every loading is interpretable.
+- **Bayesian fit measures**: the Bayesian SEM fit indices of
+  Garnier-Villarreal & Jorgensen (2020) and PSIS-LOO.
+- **Full posterior inference**: complete distributions for the loadings, the
+  factor scores, the fit measures and the reliability coefficients.
+- **FIML for missing data**: incomplete data sets use every observed value.
+- **No Heywood cases**: the unit-vector prior keeps every communality below 1.
+
+## Stan backends
+
+`BayesianEFA` writes the Stan program of each model itself and runs it with
+one of four interfaces to Stan, all optional:
+
+- **stanli** interprets Stan programs, so it needs no C++ compiler and starts
+  at once. It is the default when it is installed:
+
+  ```r
+  install.packages("stanli", repos = c("https://seantalts.r-universe.dev",
+                                       getOption("repos")))
+  stanli::stanli_install()
+  ```
+
+- **cmdstanr**, **stanr** and **rstan** compile each program the first time it
+  is needed (half a minute to a minute) and keep it in a cache, so later
+  sessions start at once. `befa_compile_models()` compiles every program in
+  advance, and `befa_clear_cache()` removes them.
+
+With `backend = "auto"` (the default), `befa()` uses the first one installed
+among stanli, cmdstanr, stanr and rstan; `backend = "cmdstanr"`, for instance,
+chooses one.
+
+## Fitting a model
+
+The following call fits a three-factor model to the Holzinger and Swineford
+(1939) data, aligns the draws, and computes the fit indices, the omega
+coefficients and, on request, the factor scores:
+
+```{r fit}
+library(BayesianEFA)
+
+befa_fit <- befa(
+  data = HS_data,        # one row per person, one column per item
+  n_factors = 3,         # number of latent factors
+  factor_scores = TRUE,  # also draw the factor scores
+  seed = 17              # for reproducible results
+)
+```
+
+By default, `befa()` fits the correlation matrix (`model = "cor"`) with the
+unit-vector prior on the loadings, and runs four chains of 1000 warmup and
+1000 kept iterations of NUTS. After sampling it checks the convergence of the
+parameters it returns: the aligned loadings, the uniquenesses and the
+communalities.
+
+## Model summary
+
+`summary()` prints tables inspired by the `psych` package. `cutoff` hides the
+loadings below a threshold, and `signif_stars` marks those whose 95% credible
+interval excludes zero:
+
+```{r summary}
+summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
+```
+
+## Posterior draws
+
+The fit holds the draws of the final parameters in the metric of the model:
+`Lambda_std`, `Psi_std` and `h2` for the correlation model.
+`extract_posterior_draws()` returns them in any format of the `posterior`
+package, and `posterior_summaries()` summarises them with their convergence
+diagnostics:
+
+```{r draws}
+draws <- extract_posterior_draws(befa_fit, pars = "Lambda_std")
+
+hist(draws[, "Lambda_std[4,3]"],
+  breaks = 50,
+  col = "#2780e3",
+  border = "white",
+  main = "Posterior of Lambda_std[4,3]",
+  xlab = "Value"
+)
+
+posterior_summaries(befa_fit, pars = "h2")
+```
+
+## Fit measures, reliability and factor scores
+
+The fit indices and the omega coefficients are part of the fit, and their
+functions return them with every draw:
+
+```{r downstream}
+befa_fit_measures(befa_fit)
+
+befa_reliability(befa_fit)$subscales
+
+scores <- befa_factor_scores(befa_fit)
+head(matrix(scores$summary$mean, ncol = 3))
+```
+
+## Other models
+
+- `model = "cov"` fits the covariance matrix and `model = "raw"` also the item
+  means. Their draws are in the units of the items;
+  `extract_posterior_draws(fit, metric = "std")` returns the standardized
+  solution.
+- `lambda_prior = "normal"` places normal priors on the loadings of the
+  covariance and raw models.
+- `missing = "FIML"` uses every observed value of incomplete data.
+- Summary statistics replace the data:
+  `befa(sample_nobs = 301, sample_cor = cor(HS_data), n_factors = 3)`.
+- `method = "pathfinder"` and `method = "advi"` approximate the posterior in
+  seconds. `befa()` reports the Pareto k of the approximation, and warns when
+  it is above 0.7.
+
+## References
+
+- Garnier-Villarreal, M., & Jorgensen, T. D. (2020). Adapting fit indices for Bayesian structural equation modeling: Comparison to maximum likelihood. *Psychological Methods, 25*(1), 46-70. <https://doi.org/10.1037/met0000224>
+- Holzinger, K. J., & Swineford, F. A. (1939). *A Study of Factor Analysis: The Stability of a Bi-Factor Solution.* Supplementary Educational Monograph 48. Chicago: University of Chicago Press.
+- McDonald, R. P. (1999). *Test Theory: A Unified Treatment*. Lawrence Erlbaum Associates.
+- Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2026). A unified framework for psychometrics in experimental psychology: The standardized generalized hierarchical factor model. *Psychological Methods*. Advance online publication. <https://doi.org/10.1037/met0000846>
+- Rey-Sáez, R., & Revuelta, J. (2026). An efficient rotation-sign-permutation algorithm to solve rotational indeterminacy in Bayesian exploratory factor analysis. *Bayesian Analysis*. Advance publication. <https://doi.org/10.1214/26-BA1611>

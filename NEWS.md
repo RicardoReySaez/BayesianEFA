@@ -76,6 +76,14 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   gave more effective draws per second without divergent transitions.
 * Pathfinder with cmdstanr or stanr reports a finite Pareto k: the PSIS
   resampling now happens after k is computed on all the candidate draws.
+* The vignettes and the README use the new interface. The vignettes are
+  precomputed (`vignettes/*.Rmd.orig`, knitted by `vignettes/precompile.R`),
+  so building the package and R CMD check run no Stan. The README shows the
+  Codecov badge, and the pkgdown reference is grouped by topic.
+* The references cite the published papers: the standardized generalized
+  hierarchical factor model in *Psychological Methods*
+  (doi:10.1037/met0000846) and the E-RSP algorithm in *Bayesian Analysis*
+  (doi:10.1214/26-BA1611).
 
 # BayesianEFA 0.1.0
 
@@ -87,7 +95,7 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
 * Three model parameterizations: correlation (`"cor"`), covariance (`"cov"`),
   and full unstandardized (`"raw"`).
 * Unit-vector prior for factor loadings ensuring valid variance partitioning
-  and Heywood case prevention (Rey-Sáez et al., 2025).
+  and Heywood case prevention (Rey-Sáez et al., 2026).
 * RSP alignment algorithm with Varimax rotation for resolving rotational
   indeterminacy across MCMC draws.
 * Full Information Maximum Likelihood (FIML) for missing data handling.

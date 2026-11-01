@@ -1,39 +1,58 @@
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- README.md is generated from README.Rmd. Please edit that file and run
+     vignettes/precompile.R, which also knits the vignettes. -->
 
 # BayesianEFA: Bayesian Exploratory Factor Analysis <img src="man/figures/logo.png" align="right" height="120" />
 
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/RicardoReySaez/BayesianEFA/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/RicardoReySaez/BayesianEFA/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/RicardoReySaez/BayesianEFA/graph/badge.svg)](https://app.codecov.io/gh/RicardoReySaez/BayesianEFA)
 [![CRAN
 status](https://www.r-pkg.org/badges/version/BayesianEFA)](https://CRAN.R-project.org/package=BayesianEFA)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-The `BayesianEFA` package provides a straightforward way to estimate
-Bayesian Exploratory Factor Analysis (EFA) models via `Stan`.
+The `BayesianEFA` package estimates Bayesian Exploratory Factor Analysis
+(EFA) models with `Stan`. The loading matrix is left unrestricted, and
+its rotational indeterminacy is solved after sampling with the Efficient
+Rotation-Sign-Permutation (E-RSP) alignment. The package also provides
+Bayesian fit indices, omega reliability coefficients and factor scores,
+each with its full posterior distribution.
 
-While the package supports both `rstan` and `cmdstanr`, the use of
-`cmdstanr` is highly recommended as it is the only backend that ensures
-compatibility with the latest version of `Stan` and typically offers
-faster estimation times. Please install `cmdstanr` by following the
-[official guide](https://mc-stan.org/cmdstanr/articles/cmdstanr.html).
-
-## Installation in Windows and Linux
+## Installation
 
 You can install the development version of BayesianEFA from
 [GitHub](https://github.com/RicardoReySaez/BayesianEFA) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("RicardoReySaez/BayesianEFA", force = TRUE)
+devtools::install_github("RicardoReySaez/BayesianEFA")
 ```
 
-Please be a little patient during installation! It will take several
-minutes to compile the underlying Stan models. Grab a coffee and don’t
-worry if it seems to be taking a while, it’s completely normal.
+The package installs in seconds: its Stan programs are generated when
+they are needed, not compiled during installation. Its own C++ code
+needs the usual R toolchain (Rtools on Windows; see below for macOS).
+
+## Stan backends
+
+`BayesianEFA` runs Stan through one of four optional interfaces. We
+recommend **stanli**, which interprets Stan programs, needs no C++
+compiler and starts at once:
+
+``` r
+install.packages("stanli", repos = c("https://seantalts.r-universe.dev",
+                                     getOption("repos")))
+stanli::stanli_install()
+```
+
+[cmdstanr](https://mc-stan.org/cmdstanr/), stanr and rstan work too.
+They compile each model the first time it is needed and keep it in a
+cache for later sessions; `befa_compile_models()` compiles them all in
+advance. With `backend = "auto"` (the default), `befa()` uses the first
+one installed among stanli, cmdstanr, stanr and rstan.
 
 ## Installation in macOS
 
@@ -52,14 +71,8 @@ macrtools::macos_rtools_install()
 macrtools::openmp_install()
 
 # 3. Install BayesianEFA
-devtools::install_github("RicardoReySaez/BayesianEFA", force = TRUE)
+devtools::install_github("RicardoReySaez/BayesianEFA")
 ```
-
-> **Important:** GitHub Actions routinely test the package against the
-> latest macOS environments, so keeping your system updated is the best
-> way to avoid compilation errors. If errors persist, we highly
-> recommend pasting the compilation output into a Large Language Model
-> (e.g., ChatGPT, Gemini, Claude) for quick troubleshooting.
 
 ## Quick Start
 
@@ -68,66 +81,68 @@ Here is a basic example showing how to fit a Bayesian EFA model:
 ``` r
 library(BayesianEFA)
 
-# Fit a 3-factor Bayesian EFA model using the Holzinger & Swineford dataset
+# Fit a 3-factor Bayesian EFA model to the Holzinger & Swineford data
 befa_fit <- befa(data = HS_data, n_factors = 3, seed = 17)
 
-# Print a comprehensive summary of the model (inspired in psych package output)
+# Print a summary of the model (inspired by the output of the psych package)
 summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
-
-# Table 1. Factor Loadings (Pattern Matrix) 
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-# Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
-# ———————————————————————————————————————————————————————————————————
-# Item_1      0.59*  0.31*         0.47  0.53  1.00     3458     2849
-# Item_2      0.46*                0.23  0.77  1.00     4053     2741
-# Item_3      0.65*                0.44  0.56  1.00     4146     2274
-# Item_4             0.83*         0.71  0.29  1.00     4156     2607
-# Item_5             0.86*         0.75  0.25  1.00     4179     2983
-# Item_6             0.81*         0.68  0.32  1.00     4291     2817
-# Item_7                    0.68*  0.48  0.52  1.00     3343     2081
-# Item_8                    0.69*  0.52  0.48  1.00     3614     2593
-# Item_9      0.40*         0.49*  0.43  0.57  1.00     3014     2757
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-# Note: varimax rotation applied. Diagnostics show worst-case values
-# across factors (max Rhat, min ESS). The 3 latent factors accounted
-# for 52.2% of total variance. (*) 95% Credible Interval excludes 0.
-# Loadings with absolute values < 0.30 are hidden. 
-# 
-# Table 2. Bayesian Fit Measures 
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-# Index         Estimate     SD    CI_Low   CI_High
-# —————————————————————————————————————————————————
-# Chi2             47.75   7.24     35.81     63.71
-# Chi2_ppp          0.11                           
-# Chi2_Null       918.85   0.00    918.85    918.85
-# BRMSEA            0.06   0.02      0.00      0.09
-# BGamma            0.99   0.01      0.98      1.00
-# Adj_BGamma        0.97   0.02      0.93      1.00
-# BMc               0.98   0.01      0.96      1.00
-# SRMR              0.05   0.01      0.03      0.06
-# BCFI              0.99   0.01      0.97      1.00
-# BTLI              0.99   0.02      0.93      1.00
-# ELPD          -3416.93  42.49  -3500.21  -3333.64
-# LOOIC          6833.85  84.98   6667.29   7000.42
-# p_loo            25.58   1.82     22.01     29.14
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-# Note: Intervals are 95% Credible Intervals. PPP:
-# Posterior Predictive p-value (Ideal > .05).
-# p_loo/LOOIC derived from PSIS-LOO. 
-# 
-# Table 3. Factor Reliability (Coefficient Omega) 
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-# Factor    Estimate    SD  CI_Low  CI_High
-# —————————————————————————————————————————
-# F1            0.60  0.04    0.52     0.67
-# F2            0.73  0.02    0.69     0.76
-# F3            0.55  0.04    0.45     0.62
-# ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
-# Full Scale Omega Total: 0.84 [0.82,
-# 0.86]. Omega coefficients use the full
-# posterior distribution. 
+#> 
+#> Table 1. Standardized Factor Loadings 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Variable       F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
+#> ———————————————————————————————————————————————————————————————————
+#> Item_1             0.59*  0.31*  0.48  0.52  1.00     3888     3205
+#> Item_2             0.46*         0.24  0.76  1.00     3846     2339
+#> Item_3             0.65*         0.45  0.55  1.00     4054     3045
+#> Item_4                    0.83*  0.72  0.28  1.00     3815     2080
+#> Item_5                    0.86*  0.75  0.25  1.00     3919     3085
+#> Item_6                    0.81*  0.69  0.31  1.00     4204     3187
+#> Item_7      0.68*                0.48  0.52  1.00     3400     2490
+#> Item_8      0.70*                0.53  0.47  1.00     3074     1880
+#> Item_9      0.49*  0.40*         0.44  0.56  1.00     3271     3014
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: varimax rotation applied; MCMC with stanli. Diagnostics show
+#> worst-case values across factors (max Rhat, min ESS). The 3 latent
+#> factors accounted for 52.2% of total variance. (*) 95% Credible
+#> Interval excludes 0. Loadings with absolute values < 0.30 are
+#> hidden. 
+#> 
+#> Table 2. Bayesian Fit Measures 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Index         Estimate     SD    CI_Low   CI_High
+#> —————————————————————————————————————————————————
+#> Chi2             47.50   6.98     35.80     63.10
+#> Chi2_ppp          0.11                           
+#> Chi2_Null       918.85   0.00    918.85    918.85
+#> BRMSEA            0.06   0.02      0.00      0.09
+#> BGamma            0.99   0.00      0.98      1.00
+#> Adj_BGamma        0.97   0.02      0.93      1.00
+#> BMc               0.98   0.01      0.96      1.00
+#> SRMR              0.05   0.01      0.03      0.06
+#> BCFI              0.99   0.01      0.97      1.00
+#> BTLI              0.99   0.02      0.93      1.00
+#> ELPD          -3421.23  42.63  -3504.79  -3337.66
+#> LOOIC          6842.45  85.27   6675.33   7009.57
+#> p_loo            25.44   1.80     21.91     28.97
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Intervals are 95% credible intervals (normal ones,
+#> from the standard error, for ELPD, LOOIC and p_loo). PPP:
+#> Posterior Predictive p-value (Ideal > .05). p_loo/LOOIC
+#> derived from PSIS-LOO. 
+#> 
+#> Table 3. Factor Reliability (Coefficient Omega) 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Factor    Estimate    SD  CI_Low  CI_High
+#> —————————————————————————————————————————
+#> F1            0.54  0.04    0.45     0.62
+#> F2            0.60  0.04    0.51     0.67
+#> F3            0.73  0.02    0.69     0.76
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Full Scale Omega Total: 0.84 [0.82, 0.86]. Omega
+#> coefficients use the standardized solution.
 ```
 
 For a complete guide on how to perform a Bayesian EFA from scratch,
-please visit the [Getting Started](articles/getting_started.html)
-tutorial or explore the comprehensive package website!
+please visit the [Getting
+Started](https://ricardoreysaez.github.io/BayesianEFA/articles/getting_started.html)
+tutorial or explore the package website.

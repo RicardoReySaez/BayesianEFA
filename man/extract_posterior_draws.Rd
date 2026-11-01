@@ -14,8 +14,9 @@ extract_posterior_draws(
 \arguments{
 \item{befa_fit}{A \code{befa} object returned by \code{\link[=befa]{befa()}}.}
 
-\item{pars}{Character vector of parameter names, such as \code{"Lambda"} (all
-loadings) or \code{"h2[3]"}. \code{NULL} (default) returns every parameter.}
+\item{pars}{Character vector of parameter names, such as \code{"Lambda_std"}
+(all standardized loadings) or \code{"h2[3]"}. \code{NULL} (default) returns every
+parameter.}
 
 \item{format}{Output format: \code{"matrix"} (default), \code{"array"}, \code{"df"},
 \code{"list"} or \code{"rvars"}.}

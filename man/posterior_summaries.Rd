@@ -14,8 +14,9 @@ posterior_summaries(
 \arguments{
 \item{befa_fit}{A \code{befa} object returned by \code{\link[=befa]{befa()}}.}
 
-\item{pars}{Character vector of parameter names, such as \code{"Lambda"} (all
-loadings) or \code{"h2[3]"}. \code{NULL} (default) returns every parameter.}
+\item{pars}{Character vector of parameter names, such as \code{"Lambda_std"}
+(all standardized loadings) or \code{"h2[3]"}. \code{NULL} (default) returns every
+parameter.}
 
 \item{metric}{\code{"model"} (default) returns the parameters as the model
 estimates them; \code{"std"} returns the standardized loadings \code{Lambda_std},
