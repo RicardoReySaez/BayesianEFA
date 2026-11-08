@@ -1,7 +1,7 @@
 # helper-befa.R
 # A befa object built without Stan, for the functions that read its draws
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 08-11-2026
 
 # This function returns a befa object whose standardized loadings scatter
 # around the true loadings of .simulated_data(), in the metric of `model`:
@@ -10,17 +10,18 @@
 # The standardized draws do not depend on `model`, so fits of the same seed
 # share them.
 .fake_befa <- function(model = "cor", lambda_prior = "unit_vector",
-                       missing = "listwise", N = 60L, n_iter = 100L, seed = 7) {
+                       missing = "listwise", N = 60L, n_iter = 100L, seed = 7,
+                       M = 2L) {
   data <- .simulated_data(N = N, missing = missing == "FIML", seed = seed)
   prepared <- suppressWarnings(.prepare_befa_data(data, model, missing))
   J <- prepared$J
-  M <- 2L
   S <- 2L * n_iter
   spec <- .befa_spec(model, lambda_prior, M, .data_patterns(prepared))
   priors <- prepare_befa_priors(list(), model, lambda_prior, M)
 
   set.seed(seed)
-  true <- c(0.8, 0.7, 0.6, 0.1, 0.2, 0.1, 0.2, 0.1, 0.7, 0.8)
+  true <- c(0.8, 0.7, 0.6, 0.1, 0.2, 0.1, 0.2, 0.1, 0.7, 0.8,
+            0.05, -0.05, 0.05, -0.05, 0.05)[seq_len(J * M)]
   lambda <- matrix(true, S, J * M, byrow = TRUE) +
     matrix(stats::rnorm(S * J * M, 0, 0.03), S)
   std <- list(lambda = lambda, psi = 1 - .item_sums(lambda^2, J, M))

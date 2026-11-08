@@ -1,7 +1,7 @@
 # befa-posterior.R
 # Turn the Stan draws into aligned parameters in the metric of the model
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 08-11-2026
 
 # Internal functions
 
@@ -39,11 +39,10 @@
 }
 
 # This function returns the order of the factors by the variance of the
-# standardized items they explain: the sum of the squared posterior means of
-# their loadings, largest first.
+# standardized items they explain: the posterior mean of the sum of their
+# squared loadings, largest first.
 .factor_order <- function(lambda, J, M) {
-  loadings <- matrix(colMeans(lambda), J, M)
-  order(colSums(loadings^2), decreasing = TRUE)
+  order(colSums(matrix(colMeans(lambda^2), J, M)), decreasing = TRUE)
 }
 
 # This function returns the columns of a column-major matrix of loadings

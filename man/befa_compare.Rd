@@ -17,7 +17,9 @@ befa_compare(
 \arguments{
 \item{...}{Two or more \code{befa} objects fitted to the same data with the
 same data model, or one list of them. Their names label the models
-(\verb{Model 1}, \verb{Model 2}, ... when they have none).}
+(\verb{Model 1}, \verb{Model 2}, ... when they have none). A \code{befa_list} given
+alone returns the comparison it holds, if any; with other arguments, or
+without one, the comparison is computed.}
 
 \item{criteria}{Tables to compute: any of \code{"fit"}, \code{"loo"}, \code{"ic"} and
 \code{"evidence"} (default all four). Fits to summary statistics have no

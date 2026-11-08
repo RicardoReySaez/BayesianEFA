@@ -113,6 +113,19 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   error of each evidence is the closed form of Micaletto and Vehtari (2025)
   from bridgesampling 1.2.1, so no repetitions are needed; the probability
   intervals propagate it, and prior model probabilities can be given.
+* `befa()` accepts several values of `n_factors`, such as `n_factors = 1:3`:
+  it fits one model per value with the same settings and seed, and returns a
+  `befa_list` with the fits as `nf1`, `nf2`, ... The saturated and null models
+  are estimated once. `compare = TRUE` (the default) runs `befa_compare()` with
+  `compare_criteria = c("fit", "loo", "ic")`; add `"evidence"` for the posterior
+  model probabilities. A model that fails does not stop the others.
+  `summary()` shows an overview of the models, the comparison tables and the
+  loadings of the model with the highest ELPD (`show` chooses others).
+  `befa_compare()`, `befa_fit_measures()` and `befa_reliability()` accept the
+  list.
+* `summary()` of a fit adds a table of variance explained (sum of squared
+  loadings and proportions), computed over the draws, so its total equals the
+  sum of the communalities. Factors are ordered by the same quantity.
 * The references cite the published papers: the standardized generalized
   hierarchical factor model in *Psychological Methods*
   (doi:10.1037/met0000846) and the E-RSP algorithm in *Bayesian Analysis*

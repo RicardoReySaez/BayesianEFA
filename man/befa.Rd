@@ -24,6 +24,8 @@ befa(
   compute_fit_indices = TRUE,
   compute_reliability = TRUE,
   loo_args = NULL,
+  compare = TRUE,
+  compare_criteria = c("fit", "loo", "ic"),
   verbose = TRUE,
   ...
 )
@@ -33,7 +35,8 @@ befa(
 column per item. Leave it \code{NULL} to fit summary statistics instead.}
 
 \item{n_factors}{Number of latent factors, smaller than the number of
-items.}
+items. With several values, such as \code{1:3}, one model is fitted per value
+and a \code{befa_list} is returned (see Value).}
 
 \item{ordered}{Ordinal factor analysis. Not implemented yet; only \code{FALSE}
 is accepted.}
@@ -88,6 +91,15 @@ method.}
 \item{loo_args}{List with \code{r_eff} and \code{cores} for the PSIS-LOO of the fit
 indices.}
 
+\item{compare}{Logical. With several values of \code{n_factors}, compare the
+models with \code{\link[=befa_compare]{befa_compare()}} (default \code{TRUE}). Ignored with one value.}
+
+\item{compare_criteria}{Tables of the comparison: any of \code{"fit"}, \code{"loo"},
+\code{"ic"} and \code{"evidence"}. The default \code{c("fit", "loo", "ic")} reuses the
+quantities every fit already has; add \code{"evidence"} for the model evidence
+and the posterior model probabilities from bridge sampling. \code{"fit"} needs
+\code{compute_fit_indices = TRUE}.}
+
 \item{verbose}{Logical. Show the progress bar, the convergence checks and
 other messages.}
 
@@ -128,6 +140,15 @@ returned by \code{\link[=extract_posterior_draws]{extract_posterior_draws()}} in
 \item \verb{$n_factors}, \verb{$model_type}, \verb{$lambda_prior}, \verb{$missing}, \verb{$method},
 \verb{$backend}, \verb{$rotation}, \verb{$priors_used}, \verb{$options} and \verb{$call}.
 }
+
+With several values of \code{n_factors}, an object of class \code{befa_list}: a list
+with one \code{befa} object per model, named \code{nf1}, \code{nf2}, ... after its number
+of factors. Each fit is the one \code{befa()} returns for that number of factors
+and the same \code{seed}; the data, the saturated model and the null model of
+the fit indices are computed once. Its attributes are \code{"n_factors"} (those
+fitted), \code{"comparison"} (the result of \code{\link[=befa_compare]{befa_compare()}}, or \code{NULL}),
+\code{"null_model"}, \code{"call"} and \code{"failed"} (the error of each model that could
+not be fitted; the others are kept). See \code{\link[=summary.befa_list]{summary.befa_list()}}.
 }
 \description{
 Fits an exploratory factor model with Stan and returns posterior draws of
@@ -187,6 +208,11 @@ convergence checks use the aligned parameters only.
 fit <- befa(HS_data, n_factors = 3, seed = 17)
 extract_posterior_draws(fit, pars = "Lambda_std", format = "rvars")
 posterior_summaries(fit, pars = "h2")
+
+# One model per number of factors, compared
+fits <- befa(HS_data, n_factors = 1:3, seed = 17)
+summary(fits)
+fits$nf2
 }
 
 }

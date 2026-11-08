@@ -102,12 +102,23 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> x2                        0.46*  0.24  0.76  1.00     3846     2339
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Note: varimax rotation applied; MCMC with stanli. Diagnostics show
-#> worst-case values across factors (max Rhat, min ESS). The 3 latent
-#> factors accounted for 52.2% of total variance. (*) 95% Credible
-#> Interval excludes 0. Loadings with absolute values < 0.30 are
-#> hidden. 
+#> worst-case values across factors (max Rhat, min ESS). (*) 95%
+#> Credible Interval excludes 0. Loadings with absolute values < 0.30
+#> are hidden. 
 #> 
-#> Table 2. Bayesian Fit Measures 
+#> Table 2. Variance Explained 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Statistic                    F1    F2    F3  Total
+#> ——————————————————————————————————————————————————
+#> Sum of squared loadings    2.27  1.26  1.24   4.77
+#> Proportion of total        0.48  0.26  0.26   1.00
+#> Proportion of variance     0.25  0.14  0.14   0.53
+#> Cumulative variance        0.25  0.39  0.53       
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Posterior means. Proportion of total: share
+#> of the explained variance. 
+#> 
+#> Table 3. Bayesian Fit Measures 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Index         Estimate    SD  CI_Low  CI_High
 #> —————————————————————————————————————————————
@@ -126,7 +137,7 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> PPP: Posterior Predictive p-value (Ideal >
 #> .05). 
 #> 
-#> Table 3. Information Criteria 
+#> Table 4. Information Criteria 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Criterion    Estimate     SE    CI_Low   CI_High
 #> ————————————————————————————————————————————————
@@ -144,7 +155,7 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> Note: SEs across persons (jackknife for DIC_i
 #> and p_V); 95% normal intervals. 
 #> 
-#> Table 4. Factor Reliability (Omega) 
+#> Table 5. Factor Reliability (Omega) 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Factor    Estimate    SD  CI_Low  CI_High
 #> —————————————————————————————————————————

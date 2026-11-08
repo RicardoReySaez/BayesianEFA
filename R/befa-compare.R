@@ -1,7 +1,7 @@
 # befa-compare.R
 # Compare fitted models by fit, LOO, information criteria and model evidence
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 08-11-2026
 
 # Public functions
 
@@ -15,7 +15,9 @@
 #'
 #' @param ... Two or more `befa` objects fitted to the same data with the
 #'   same data model, or one list of them. Their names label the models
-#'   (`Model 1`, `Model 2`, ... when they have none).
+#'   (`Model 1`, `Model 2`, ... when they have none). A `befa_list` given
+#'   alone returns the comparison it holds, if any; with other arguments, or
+#'   without one, the comparison is computed.
 #' @param criteria Tables to compute: any of `"fit"`, `"loo"`, `"ic"` and
 #'   `"evidence"` (default all four). Fits to summary statistics have no
 #'   pointwise log-likelihood, so they allow only `"evidence"`.
@@ -102,6 +104,8 @@ befa_compare <- function(..., criteria = c("fit", "loo", "ic", "evidence"),
                          pseudobma_bb = TRUE, seed = NULL, bridge_args = list()) {
   models <- list(...)
   if (length(models) == 1L && is.list(models[[1L]]) && !inherits(models[[1L]], "befa")) {
+    stored <- attr(models[[1L]], "comparison")
+    if (nargs() == 1L && !is.null(stored)) return(stored)
     models <- models[[1L]]
   }
   if (length(models) < 2L || !all(vapply(models, inherits, TRUE, "befa"))) {
@@ -161,9 +165,18 @@ befa_compare <- function(..., criteria = c("fit", "loo", "ic", "evidence"),
 #' @method print befa_comparison
 #' @export
 print.befa_comparison <- function(x, digits = 2, ...) {
+  .print_comparison(x, digits)
+  invisible(x)
+}
+
+# Internal functions
+
+# This function prints the tables of a comparison, numbered from `first`,
+# and returns the number of the next table.
+.print_comparison <- function(x, digits, first = 1L) {
   fmt <- function(v, d = digits) .format_numeric(v, d)
   label <- function(tab) .short_names(rownames(tab), 10L)
-  n_table <- 1L
+  n_table <- first
   # This function prints one table with its note and moves to the next number.
   show <- function(out, title, note) {
     cat("\n")
@@ -225,10 +238,8 @@ print.befa_comparison <- function(x, digits = 2, ...) {
     cat("\n")
     .print_note(note, 60L)
   }
-  invisible(x)
+  n_table
 }
-
-# Internal functions
 
 # This function returns the names of the models: those given, and
 # Model k for the missing ones, made unique.

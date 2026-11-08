@@ -1,7 +1,7 @@
 # posterior-draws.R
 # Extract and summarise the posterior draws of a fitted model
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 08-11-2026
 
 # Public functions
 
@@ -79,6 +79,10 @@ posterior_summaries <- function(befa_fit, pars = NULL,
 
 # This function checks that an object is a fit returned by befa().
 .check_befa_object <- function(x) {
+  if (inherits(x, "befa_list")) {
+    .befa_stop("This object holds several fits; choose one of them, such as `x$",
+               names(x)[1L], "`.")
+  }
   if (!inherits(x, "befa")) {
     .befa_stop("`befa_fit` must be a fit returned by befa().")
   }

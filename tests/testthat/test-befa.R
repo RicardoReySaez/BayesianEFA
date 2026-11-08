@@ -227,7 +227,7 @@ test_that("the scores follow the seed and a failing fit index only warns", {
   expect_identical(second$eta, first$eta)
   expect_null(first$reliability)
 
-  local_mocked_bindings(befa_fit_measures = function(...) stop("singular"))
+  local_mocked_bindings(.fit_measures = function(...) stop("singular"))
   expect_warning(res <- .befa_downstream(object, FALSE, FALSE, TRUE, 1L, FALSE),
                  "could not be computed: singular")
   expect_null(res$fit_indices)

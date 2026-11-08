@@ -46,7 +46,7 @@ the standardized loadings, \code{h2}, \code{u2}, the largest R-hat and the
 smallest bulk and tail ESS of its loadings.
 \item \verb{$sig_matrix}: Which loadings have a credible interval that excludes 0.
 \item \verb{$variance}: The share of the variance of the standardized items that
-each factor, and all of them, account for.
+each factor, and all of them, account for (posterior means).
 \item \verb{$diagnostics}, \verb{$fit_indices}, \verb{$reliability}: Those of the fit.
 \item \verb{$header}, \verb{$probs}, \verb{$print_options} and \verb{$tables}: What
 \code{\link[=print.summary.befa]{print.summary.befa()}} shows.
@@ -54,9 +54,9 @@ each factor, and all of them, account for.
 }
 \description{
 Summarises the standardized solution of a fitted model: the posterior
-means of the aligned loadings, their communalities and uniquenesses, and
-the convergence of each item, followed by the fit indices and the omega
-coefficients when the fit holds them.
+means of the aligned loadings, their communalities and uniquenesses, the
+convergence of each item and the variance each factor explains, followed by
+the fit indices and the omega coefficients when the fit holds them.
 }
 \examples{
 \dontrun{

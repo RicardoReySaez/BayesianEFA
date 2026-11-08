@@ -1,16 +1,16 @@
 # summary-befa.R
 # Summary and printed tables of a fitted model
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 08-11-2026
 
 # Public functions
 
 #' Summarize BEFA Results
 #'
 #' Summarises the standardized solution of a fitted model: the posterior
-#' means of the aligned loadings, their communalities and uniquenesses, and
-#' the convergence of each item, followed by the fit indices and the omega
-#' coefficients when the fit holds them.
+#' means of the aligned loadings, their communalities and uniquenesses, the
+#' convergence of each item and the variance each factor explains, followed by
+#' the fit indices and the omega coefficients when the fit holds them.
 #'
 #' @param object A `befa` object returned by [befa()].
 #' @param probs Numeric vector of length 2 with the quantiles of the credible
@@ -35,7 +35,7 @@
 #'   smallest bulk and tail ESS of its loadings.
 #' * `$sig_matrix`: Which loadings have a credible interval that excludes 0.
 #' * `$variance`: The share of the variance of the standardized items that
-#'   each factor, and all of them, account for.
+#'   each factor, and all of them, account for (posterior means).
 #' * `$diagnostics`, `$fit_indices`, `$reliability`: Those of the fit.
 #' * `$header`, `$probs`, `$print_options` and `$tables`: What
 #'   [print.summary.befa()] shows.
@@ -73,11 +73,14 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
   )
   colnames(estimates) <- c("Variable", factor_names, "h2", "u2", "Rhat",
                            "EssBulk", "EssTail")
-  prop_var <- colSums(info$lambda^2) / J
+  variance <- .variance_table(.stacked_draws(draws, "Lambda_std"), J, M)
 
   res <- list(
     estimates = estimates, sig_matrix = info$sig_matrix, probs = probs,
-    variance = list(per_factor = prop_var, total_explained = sum(prop_var)),
+    variance = list(
+      per_factor = unname(variance["Proportion of variance", seq_len(M)]),
+      total_explained = unname(variance["Proportion of variance", "Total"])
+    ),
     diagnostics = object$diagnostics, fit_indices = object$fit_indices,
     reliability = object$reliability,
     header = list(model_type = object$model_type, n_factors = M,
@@ -86,19 +89,20 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
     print_options = list(cutoff = cutoff, sort = sort,
                          signif_stars = signif_stars,
                          name_width = as.integer(name_width)),
-    tables = list(table1_loadings = estimates)
+    tables = list(table1_loadings = estimates,
+                  table2_variance = as.data.frame(variance))
   )
   if (!is.null(object$fit_indices)) {
-    res$tables$table2_fit_measures <- as.data.frame(
+    res$tables$table3_fit_measures <- as.data.frame(
       build_fit_summary_table(object$fit_indices, probs))
-    res$tables$table3_information <- as.data.frame(
+    res$tables$table4_information <- as.data.frame(
       build_information_table(object$fit_indices, probs))
   }
   if (!is.null(object$reliability)) {
     rel <- build_reliability_table(object$reliability, probs)
     tab <- rbind(rel$subscales, rel$total)
     rownames(tab) <- c(rownames(rel$subscales), "Total")
-    res$tables$table4_reliability <- tab
+    res$tables$table5_reliability <- tab
   }
   structure(res, class = "summary.befa")
 }
@@ -106,8 +110,8 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
 #' Print BEFA Summary
 #'
 #' Prints the tables of [summary.befa()]: the standardized loadings, the
-#' Bayesian fit measures, the information criteria and the omega
-#' coefficients.
+#' variance the factors explain, the Bayesian fit measures, the information
+#' criteria and the omega coefficients.
 #'
 #' @param x A `summary.befa` object.
 #' @param digits Number of decimal places.
@@ -120,48 +124,20 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
 #' @export
 print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
                                signif_stars = NULL, name_width = NULL, ...) {
-  if (is.null(cutoff)) cutoff <- x$print_options$cutoff
-  if (is.null(sort)) sort <- x$print_options$sort
-  if (is.null(signif_stars)) signif_stars <- x$print_options$signif_stars
-  if (is.null(name_width)) name_width <- x$print_options$name_width
-  if (is.null(name_width)) name_width <- 8L
-  n_table <- 1L
-
-  # Loadings
-  df <- x$tables$table1_loadings
-  df$Variable <- .short_names(df$Variable, name_width)
-  f_cols <- colnames(df)[1L + seq_len(x$header$n_factors)]
-  df <- .format_loading_table(df, x$sig_matrix, f_cols, cutoff, sort,
-                              signif_stars, digits)$df
-  cat("\n")
-  width <- .print_styled_table(
-    df, title = sprintf("Table %d. Standardized Factor Loadings", n_table))
-  loadings_width <- width
-  n_table <- n_table + 1L
-  notes <- c(
-    sprintf("%s rotation applied; %s with %s.", x$header$rotation,
-            .method_name(x$header$method), x$header$backend),
-    "Diagnostics show worst-case values across factors (max Rhat, min ESS).",
-    sprintf("The %d latent factors accounted for %.1f%% of total variance.",
-            x$header$n_factors, x$variance$total_explained * 100),
-    if (signif_stars) {
-      sprintf("(*) %g%% Credible Interval excludes 0.",
-              (x$probs[2L] - x$probs[1L]) * 100)
-    },
-    if (cutoff > 0) sprintf("Loadings with absolute values < %.2f are hidden.", cutoff)
-  )
-  .print_note(notes, width)
+  options <- .loading_options(x, cutoff, sort, signif_stars, name_width)
+  loadings <- .print_loadings(x, digits, options, first = 1L)
+  n_table <- loadings$next_table
 
   # Fit measures and information criteria
-  if (!is.null(x$tables$table2_fit_measures)) {
-    n_table <- .print_fit_tables(x$tables$table2_fit_measures,
-                                 x$tables$table3_information, x$probs,
+  if (!is.null(x$tables$table3_fit_measures)) {
+    n_table <- .print_fit_tables(x$tables$table3_fit_measures,
+                                 x$tables$table4_information, x$probs,
                                  digits, first = n_table)
   }
 
   # Reliability
-  if (!is.null(x$tables$table4_reliability)) {
-    tab <- x$tables$table4_reliability
+  if (!is.null(x$tables$table5_reliability)) {
+    tab <- x$tables$table5_reliability
     out <- as.data.frame(lapply(tab, .format_numeric, digits = digits))
     out <- cbind(Factor = rownames(tab), out)
     cat("\n")
@@ -175,12 +151,74 @@ print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
     cat("\n")
     .print_note(c("the posterior may be unreliable:",
                   paste(x$diagnostics$issues, collapse = "; ")),
-                loadings_width, prefix = "Warning: ")
+                loadings$width, prefix = "Warning: ")
   }
   invisible(x)
 }
 
 # Internal functions
+
+# This function returns the printing options of a summary, with those given
+# to print() in place of those given to summary().
+.loading_options <- function(x, cutoff, sort, signif_stars, name_width) {
+  given <- list(cutoff = cutoff, sort = sort, signif_stars = signif_stars,
+                name_width = name_width)
+  out <- utils::modifyList(x$print_options, Filter(Negate(is.null), given))
+  if (is.null(out$name_width)) out$name_width <- 8L
+  out
+}
+
+# This function returns the variance of the standardized items that each
+# factor explains, from the draws of the loadings: the posterior mean of the
+# sum of their squared loadings, its share of the explained variance, and its
+# share of the total variance, also accumulated. Their total equals the sum
+# of the posterior means of the communalities.
+.variance_table <- function(lambda, J, M) {
+  ssl <- colSums(matrix(colMeans(lambda^2), J, M))
+  tab <- rbind("Sum of squared loadings" = c(ssl, sum(ssl)),
+               "Proportion of total" = c(ssl / sum(ssl), 1),
+               "Proportion of variance" = c(ssl, sum(ssl)) / J,
+               "Cumulative variance" = c(cumsum(ssl) / J, NA))
+  colnames(tab) <- c(paste0("F", seq_len(M)), "Total")
+  tab
+}
+
+# This function prints the tables of the loadings and the explained variance
+# of a summary, numbered from `first`, with `label` after their titles. It
+# returns the number of the next table and the width of the loadings.
+.print_loadings <- function(x, digits, options, first, label = "") {
+  df <- x$tables$table1_loadings
+  df$Variable <- .short_names(df$Variable, options$name_width)
+  f_cols <- colnames(df)[1L + seq_len(x$header$n_factors)]
+  df <- .format_loading_table(df, x$sig_matrix, f_cols, options$cutoff,
+                              options$sort, options$signif_stars, digits)$df
+  cat("\n")
+  width <- .print_styled_table(
+    df, title = sprintf("Table %d. Standardized Factor Loadings%s", first, label))
+  .print_note(c(
+    sprintf("%s rotation applied; %s with %s.", x$header$rotation,
+            .method_name(x$header$method), x$header$backend),
+    "Diagnostics show worst-case values across factors (max Rhat, min ESS).",
+    if (options$signif_stars) {
+      sprintf("(*) %g%% Credible Interval excludes 0.",
+              (x$probs[2L] - x$probs[1L]) * 100)
+    },
+    if (options$cutoff > 0) {
+      sprintf("Loadings with absolute values < %.2f are hidden.", options$cutoff)
+    }
+  ), width)
+
+  tab <- x$tables$table2_variance
+  out <- data.frame(Statistic = rownames(tab),
+                    lapply(tab, .format_numeric, digits = digits),
+                    check.names = FALSE)
+  cat("\n")
+  table_width <- .print_styled_table(
+    out, title = sprintf("Table %d. Variance Explained%s", first + 1L, label))
+  .print_note(c("Posterior means. Proportion of total: share of the explained",
+                "variance."), table_width)
+  list(next_table = first + 2L, width = width)
+}
 
 # This function returns the fit indices of a befa_fitmeasures object as a
 # matrix with their posterior mean, SD and credible interval, with Chi2_ppp

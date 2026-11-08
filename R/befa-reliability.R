@@ -1,7 +1,7 @@
 # befa-reliability.R
 # Omega reliability coefficients from the posterior draws
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 08-11-2026
 
 # Public functions
 
@@ -49,6 +49,9 @@
 #'
 #' @export
 befa_reliability <- function(object, probs = c(0.025, 0.975)) {
+  if (inherits(object, "befa_list")) {
+    return(lapply(object, befa_reliability, probs = probs))
+  }
   .check_befa_object(object)
   if (!is.null(object$reliability)) return(object$reliability)
   if (!is.numeric(probs) || length(probs) != 2L || any(probs <= 0 | probs >= 1)) {

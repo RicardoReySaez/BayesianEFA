@@ -1,7 +1,7 @@
 # befa-fit-measures.R
 # Bayesian fit indices (DevM framework) and information criteria
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 08-11-2026
 
 # Public functions
 
@@ -111,6 +111,9 @@
 #'
 #' @export
 befa_fit_measures <- function(object, loo_args = NULL) {
+  if (inherits(object, "befa_list")) {
+    return(lapply(object, befa_fit_measures, loo_args = loo_args))
+  }
   .check_befa_object(object)
   if (!is.null(object$fit_indices)) return(object$fit_indices)
   if (object$data$summary) {
@@ -118,13 +121,52 @@ befa_fit_measures <- function(object, loo_args = NULL) {
                "summary statistics, so they are not computed.")
     return(NULL)
   }
-  loo_config <- validate_loo_args(if (is.null(loo_args)) object$options$loo_args else loo_args)
+  .fit_measures(object, validate_loo_args(
+    if (is.null(loo_args)) object$options$loo_args else loo_args))
+}
 
-  metrics <- .posterior_metrics(object)
+#' Print Bayesian Fit Measures
+#'
+#' Displays the fit indices and the information criteria of a
+#' `befa_fitmeasures` object as two tables.
+#'
+#' @param x A `befa_fitmeasures` object from [befa_fit_measures()].
+#' @param digits Number of decimal places.
+#' @param ... Ignored.
+#'
+#' @return `x`, invisibly.
+#' @method print befa_fitmeasures
+#' @export
+print.befa_fitmeasures <- function(x, digits = 3, ...) {
+  .print_fit_tables(build_fit_summary_table(x), build_information_table(x),
+                    c(0.025, 0.975), digits, first = 1L)
+  invisible(x)
+}
+
+# Internal functions
+
+# This function returns a value held in the environment `shared`, computing
+# and keeping it the first time. Fits with several numbers of factors share
+# in this way what does not depend on the number of factors; without
+# `shared`, the value is simply computed.
+.shared_value <- function(shared, name, value) {
+  if (is.null(shared)) return(value)
+  if (is.null(shared[[name]])) shared[[name]] <- value
+  shared[[name]]
+}
+
+# This function computes the fit indices and information criteria of a fit
+# to raw data. `shared` holds the saturated and null models when several fits
+# use the same data, so each of them is estimated only once.
+.fit_measures <- function(object, loo_config, shared = NULL) {
+  saturated <- .shared_value(shared, "saturated",
+                             .saturated_moments(object$data$Y, object$model_type))
+  metrics <- .posterior_metrics(object, saturated)
   loo_res <- .loo_fit(metrics$log_lik, object$method, loo_config)
   p_loo <- loo_res$estimates["p_loo", "Estimate"]
   information <- .information_criteria(object, metrics$log_lik, loo_res)
-  null <- .null_metrics(object, metrics$ll_saturated, loo_config)
+  null <- .shared_value(shared, "null",
+                        .null_metrics(object, saturated$ll, loo_config))
 
   N <- nrow(object$data$Y)
   J <- object$stan_data$J
@@ -162,26 +204,6 @@ befa_fit_measures <- function(object, loo_args = NULL) {
                    chi2_ppp = mean(metrics$chisq_rep >= metrics$chisq))
   ), class = "befa_fitmeasures")
 }
-
-#' Print Bayesian Fit Measures
-#'
-#' Displays the fit indices and the information criteria of a
-#' `befa_fitmeasures` object as two tables.
-#'
-#' @param x A `befa_fitmeasures` object from [befa_fit_measures()].
-#' @param digits Number of decimal places.
-#' @param ... Ignored.
-#'
-#' @return `x`, invisibly.
-#' @method print befa_fitmeasures
-#' @export
-print.befa_fitmeasures <- function(x, digits = 3, ...) {
-  .print_fit_tables(build_fit_summary_table(x), build_information_table(x),
-                    c(0.025, 0.975), digits, first = 1L)
-  invisible(x)
-}
-
-# Internal functions
 
 # This function returns the number of sample moments the data model fits.
 .sample_moments <- function(model_type, J) {
@@ -260,39 +282,51 @@ print.befa_fitmeasures <- function(x, digits = 3, ...) {
   out
 }
 
+# This function returns the moments of the saturated model and its
+# log-likelihood: the EM moments with missing values, the ML ones otherwise.
+# They depend on the data and the data model, not on the number of factors.
+.saturated_moments <- function(Y, model_type) {
+  N <- nrow(Y)
+  J <- ncol(Y)
+  comp_idx <- which(stats::complete.cases(Y))
+  miss_idx <- which(!stats::complete.cases(Y))
+  if (length(miss_idx)) {
+    h1 <- estimate_h1_moments_em(Y)
+    mean <- if (model_type == "raw") h1$Mu else rep(0, J)
+    cov <- if (model_type == "cor") stats::cov2cor(h1$Sigma) else h1$Sigma
+    fiml <- list(comp_idx = comp_idx, miss_idx = miss_idx,
+                 Y_comp = Y[comp_idx, , drop = FALSE],
+                 Y_miss = Y[miss_idx, , drop = FALSE])
+    ll <- sum(compute_fiml_loglik(fiml, mu = mean, Sigma = cov))
+  } else {
+    mean <- if (model_type == "raw") colMeans(Y) else rep(0, J)
+    cov <- if (model_type == "cor") stats::cor(Y) else stats::cov(Y) * (N - 1) / N
+    ll <- sum(mvnfast::dmvn(Y, mu = mean, sigma = cov, log = TRUE))
+  }
+  list(mean = mean, cov = cov, ll = ll)
+}
+
 # This function returns, for every draw, the pointwise log-likelihood of the
 # rows the model was fitted to (FIML with missing values), the chi-square
 # deviance against the saturated model, its replicated counterpart for the
 # posterior predictive p-value, and the SRMR. The data are those of the fit,
 # already standardized (correlation model) or centered (covariance model).
-.posterior_metrics <- function(object) {
+.posterior_metrics <- function(object,
+                               saturated = .saturated_moments(object$data$Y,
+                                                              object$model_type)) {
   Y <- object$data$Y
   N <- nrow(Y)
   J <- ncol(Y)
-  model_type <- object$model_type
   comp_idx <- which(stats::complete.cases(Y))
   miss_idx <- which(!stats::complete.cases(Y))
-
-  # Saturated model: the EM moments with missing values, the ML ones otherwise
-  if (length(miss_idx)) {
-    h1 <- estimate_h1_moments_em(Y)
-    M_sat <- if (model_type == "raw") h1$Mu else rep(0, J)
-    S_sat <- if (model_type == "cor") stats::cov2cor(h1$Sigma) else h1$Sigma
-    fiml <- list(comp_idx = comp_idx, miss_idx = miss_idx,
-                 Y_comp = Y[comp_idx, , drop = FALSE],
-                 Y_miss = Y[miss_idx, , drop = FALSE])
-    ll_saturated <- sum(compute_fiml_loglik(fiml, mu = M_sat, Sigma = S_sat))
-  } else {
-    M_sat <- if (model_type == "raw") colMeans(Y) else rep(0, J)
-    S_sat <- if (model_type == "cor") stats::cor(Y) else stats::cov(Y) * (N - 1) / N
-    ll_saturated <- sum(mvnfast::dmvn(Y, mu = M_sat, sigma = S_sat, log = TRUE))
-  }
+  ll_saturated <- saturated$ll
 
   p <- .fitted_parameters(object)
   out <- compute_posterior_metrics_cpp(
     lambda = p$lambda, psi = p$psi, nu = p$nu, M = p$M, n_iter = p$n_iter,
-    data = Y, M_sat = M_sat, S_sat = S_sat, ll_saturated = ll_saturated,
-    model_type = match(model_type, c("raw", "cov", "cor")),
+    data = Y, M_sat = saturated$mean, S_sat = saturated$cov,
+    ll_saturated = ll_saturated,
+    model_type = match(object$model_type, c("raw", "cov", "cor")),
     has_missing = length(miss_idx) > 0L,
     Y_comp = if (length(comp_idx)) Y[comp_idx, , drop = FALSE] else matrix(0, 0, J),
     Y_miss = if (length(miss_idx)) Y[miss_idx, , drop = FALSE] else matrix(0, 0, J),

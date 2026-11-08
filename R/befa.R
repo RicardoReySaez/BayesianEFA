@@ -1,7 +1,7 @@
 # befa.R
 # Fit a Bayesian exploratory factor analysis
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 08-11-2026
 
 # Public functions
 
@@ -16,7 +16,8 @@
 #' @param data Numeric matrix or data frame with one row per person and one
 #'   column per item. Leave it `NULL` to fit summary statistics instead.
 #' @param n_factors Number of latent factors, smaller than the number of
-#'   items.
+#'   items. With several values, such as `1:3`, one model is fitted per value
+#'   and a `befa_list` is returned (see Value).
 #' @param ordered Ordinal factor analysis. Not implemented yet; only `FALSE`
 #'   is accepted.
 #' @param sample_nobs,sample_mean,sample_cov,sample_cor Summary statistics
@@ -56,6 +57,13 @@
 #'   [befa_reliability()]).
 #' @param loo_args List with `r_eff` and `cores` for the PSIS-LOO of the fit
 #'   indices.
+#' @param compare Logical. With several values of `n_factors`, compare the
+#'   models with [befa_compare()] (default `TRUE`). Ignored with one value.
+#' @param compare_criteria Tables of the comparison: any of `"fit"`, `"loo"`,
+#'   `"ic"` and `"evidence"`. The default `c("fit", "loo", "ic")` reuses the
+#'   quantities every fit already has; add `"evidence"` for the model evidence
+#'   and the posterior model probabilities from bridge sampling. `"fit"` needs
+#'   `compute_fit_indices = TRUE`.
 #' @param verbose Logical. Show the progress bar, the convergence checks and
 #'   other messages.
 #' @param ... Options of the estimation method. MCMC takes `chains` (default
@@ -138,6 +146,15 @@
 #' * `$n_factors`, `$model_type`, `$lambda_prior`, `$missing`, `$method`,
 #'   `$backend`, `$rotation`, `$priors_used`, `$options` and `$call`.
 #'
+#' With several values of `n_factors`, an object of class `befa_list`: a list
+#' with one `befa` object per model, named `nf1`, `nf2`, ... after its number
+#' of factors. Each fit is the one `befa()` returns for that number of factors
+#' and the same `seed`; the data, the saturated model and the null model of
+#' the fit indices are computed once. Its attributes are `"n_factors"` (those
+#' fitted), `"comparison"` (the result of [befa_compare()], or `NULL`),
+#' `"null_model"`, `"call"` and `"failed"` (the error of each model that could
+#' not be fitted; the others are kept). See [summary.befa_list()].
+#'
 #' @references
 #' Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2026).
 #' A unified framework for psychometrics in experimental psychology: The
@@ -154,6 +171,11 @@
 #' fit <- befa(HS_data, n_factors = 3, seed = 17)
 #' extract_posterior_draws(fit, pars = "Lambda_std", format = "rvars")
 #' posterior_summaries(fit, pars = "h2")
+#'
+#' # One model per number of factors, compared
+#' fits <- befa(HS_data, n_factors = 1:3, seed = 17)
+#' summary(fits)
+#' fits$nf2
 #' }
 #'
 #' @export
@@ -165,7 +187,8 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
                  method = c("mcmc", "advi", "pathfinder"), backend = "auto",
                  rotate = c("varimax", "none"), rsp_args = NULL, prior = list(),
                  factor_scores = FALSE, compute_fit_indices = TRUE,
-                 compute_reliability = TRUE, loo_args = NULL, verbose = TRUE,
+                 compute_reliability = TRUE, loo_args = NULL, compare = TRUE,
+                 compare_criteria = c("fit", "loo", "ic"), verbose = TRUE,
                  ...) {
   call <- match.call()
   model <- match.arg(model)
@@ -176,47 +199,112 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
   .check_befa_args(data, n_factors, ordered, sample_nobs, sample_cov,
                    sample_cor, missing, factor_scores, compute_fit_indices,
                    compute_reliability, verbose)
+  .check_compare(compare, compare_criteria)
 
-  # Data, structure and Stan inputs
+  # Data, structure and Stan inputs of each number of factors
   prepared <- .prepare_befa_data(data, model, missing, sample_nobs, sample_cov,
                                  sample_cor, sample_mean)
-  if (n_factors >= prepared$J) {
-    .befa_stop("`n_factors` must be smaller than the number of items (",
-               prepared$J, ").")
-  }
-  spec <- .befa_spec(model, lambda_prior, n_factors, .data_patterns(prepared),
-                     .choose_engine())
-  priors <- prepare_befa_priors(prior, model, lambda_prior, n_factors)
-  stan_data <- .stan_data(spec, prepared, n_factors, priors)
+  n_factors <- .factor_numbers(n_factors, prepared$J)
+  priors <- .befa_priors(prior, model, lambda_prior, n_factors)
+  inputs <- lapply(seq_along(n_factors), function(k) {
+    spec <- .befa_spec(model, lambda_prior, n_factors[k],
+                       .data_patterns(prepared), .choose_engine())
+    list(n_factors = n_factors[k], spec = spec, priors = priors[[k]],
+         stan_data = .stan_data(spec, prepared, n_factors[k], priors[[k]]))
+  })
   settings <- .sampler_settings(method, list(...))
+  if (length(n_factors) > 1L && !is.null(settings$init)) {
+    .befa_stop("`init` depends on the number of factors, so it cannot be ",
+               "used with several values of `n_factors`.")
+  }
   rsp_config <- validate_rsp_args(rsp_args)
   loo_config <- validate_loo_args(loo_args)
   backend <- .resolve_backend(backend, method, verbose = verbose)
-  inits <- .befa_inits(settings, spec, prepared, n_factors, priors)
+
+  run <- list(
+    prepared = prepared, settings = settings, backend = backend,
+    model = model, lambda_prior = lambda_prior, missing = missing,
+    method = method, rotate = rotate, rsp_config = rsp_config,
+    loo_config = loo_config, ordered = ordered, factor_scores = factor_scores,
+    compute_reliability = compute_reliability,
+    compute_fit_indices = compute_fit_indices, verbose = verbose, call = call
+  )
+  if (length(n_factors) == 1L) return(.befa_fit_one(inputs[[1L]], run))
+  .befa_fit_list(inputs, run, if (compare) unique(compare_criteria))
+}
+
+# Internal functions
+
+# This function fits the model of one number of factors: its estimation, the
+# alignment of its draws, the convergence checks and the quantities computed
+# from the final draws. `inputs` holds what depends on the number of factors,
+# `run` what all the models share, and the environment `shared` the saturated
+# and null models when several numbers of factors are fitted.
+.befa_fit_one <- function(inputs, run, shared = NULL) {
+  M <- inputs$n_factors
+  spec <- inputs$spec
+  priors <- inputs$priors
+  prepared <- run$prepared
+  settings <- run$settings
+  inits <- .befa_inits(settings, spec, prepared, M, priors)
 
   # Estimation, alignment and convergence checks
   code <- .stan_code(spec)
-  fit <- .run_stan(code, stan_data, inits, backend, settings, quiet = !verbose)
-  post <- .befa_posterior(fit, spec, prepared$J, n_factors, rotate, rsp_config)
+  fit <- .run_stan(code, inputs$stan_data, inits, run$backend, settings,
+                   quiet = !run$verbose, title = run$title)
+  post <- .befa_posterior(fit, spec, prepared$J, M, run$rotate, run$rsp_config)
   diagnostics <- .befa_diagnostics(post$draws, fit, settings)
-  if (verbose && settings$refresh > 0) .befa_report(diagnostics, settings)
+  if (run$verbose && settings$refresh > 0) .befa_report(diagnostics, settings)
   .befa_warn_issues(diagnostics)
 
   object <- structure(list(
     draws = post$draws, diagnostics = diagnostics, fit = fit, rsp = post$rsp,
-    spec = spec, stan_code = code, stan_data = stan_data, data = prepared,
-    n_factors = as.integer(n_factors), model_type = model,
-    lambda_prior = lambda_prior, missing = missing, method = method,
-    backend = backend, rotation = rotate, priors_used = priors,
-    options = list(factor_scores = factor_scores, ordered = ordered,
-                   rsp_args = rsp_config, loo_args = loo_config),
-    call = call
+    spec = spec, stan_code = code, stan_data = inputs$stan_data,
+    data = prepared, n_factors = M, model_type = run$model,
+    lambda_prior = run$lambda_prior, missing = run$missing,
+    method = run$method, backend = run$backend, rotation = run$rotate,
+    priors_used = priors,
+    options = list(factor_scores = run$factor_scores, ordered = run$ordered,
+                   rsp_args = run$rsp_config, loo_args = run$loo_config),
+    call = run$call
   ), class = "befa")
-  .befa_downstream(object, factor_scores, compute_reliability,
-                   compute_fit_indices, settings$seed, verbose)
+  .befa_downstream(object, run$factor_scores, run$compute_reliability,
+                   run$compute_fit_indices, settings$seed, run$verbose, shared)
 }
 
-# Internal functions
+# This function returns the numbers of factors to fit, unique and sorted, and
+# checks them against the number of items. With several values, it warns of
+# those above the Ledermann bound, which have more free parameters than sample
+# moments.
+.factor_numbers <- function(n_factors, J) {
+  out <- sort(unique(as.integer(n_factors)))
+  if (max(out) >= J) {
+    .befa_stop("`n_factors` must be smaller than the number of items (", J, ").")
+  }
+  over <- out[(J - out)^2 < J + out]
+  if (length(out) > 1L && length(over)) {
+    .befa_warn("With ", paste(over, collapse = ", "), " factors and ", J,
+               " items, the model has more free parameters than sample ",
+               "moments (Ledermann bound): only the prior identifies part of ",
+               "its loadings.")
+  }
+  out
+}
+
+# This function returns the resolved priors of each number of factors. One
+# factor and several factors have different hyperparameters, so with several
+# numbers of factors each model takes those that apply to it, and only the
+# names that apply to none of them are reported, once.
+.befa_priors <- function(prior, model, lambda_prior, n_factors) {
+  valid <- lapply(n_factors, function(M) {
+    names(get_default_priors(model, lambda_prior, M))
+  })
+  unknown <- prior[setdiff(names(prior), unlist(valid))]
+  lapply(seq_along(n_factors), function(k) {
+    prior_k <- c(prior[intersect(names(prior), valid[[k]])], if (k == 1L) unknown)
+    prepare_befa_priors(prior_k, model, lambda_prior, n_factors[k])
+  })
+}
 
 # This function adds to a fit the quantities computed from its final draws:
 # the factor scores (drawn from `seed`, so a fit is reproducible), the omega
@@ -224,27 +312,29 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
 # raw data; with summary statistics they are skipped with a warning. A fit
 # index that fails leaves the fit intact and is reported as a warning.
 .befa_downstream <- function(object, factor_scores, compute_reliability,
-                             compute_fit_indices, seed, verbose) {
+                             compute_fit_indices, seed, verbose, shared = NULL) {
   summary_data <- object$data$summary
   if (factor_scores && summary_data) {
-    .befa_warn("Factor scores need the raw `data`; they are skipped with ",
-               "summary statistics.")
+    .warn_no_raw_data("Factor scores")
   } else if (factor_scores) {
     if (verbose) cli::cli_alert_info("Drawing the factor scores.")
     object$eta <- withr::with_seed(seed, .factor_score_draws(object))
   }
   if (compute_reliability) object$reliability <- befa_reliability(object)
   if (compute_fit_indices && summary_data) {
-    .befa_warn("Fit indices need the raw `data`; they are skipped with ",
-               "summary statistics.")
+    .warn_no_raw_data("Fit indices")
   } else if (compute_fit_indices) {
     if (verbose) {
-      cli::cli_alert_info("Computing the fit indices and the null model.")
+      cli::cli_alert_info(paste0("Computing the fit indices",
+                                 if (is.null(shared[["null"]])) " and the null model",
+                                 "."))
     }
-    object$fit_indices <- tryCatch(befa_fit_measures(object), error = function(e) {
-      .befa_warn("The fit indices could not be computed: ", conditionMessage(e))
-      NULL
-    })
+    object$fit_indices <- tryCatch(
+      .fit_measures(object, object$options$loo_args, shared),
+      error = function(e) {
+        .befa_warn("The fit indices could not be computed: ", conditionMessage(e))
+        NULL
+      })
   }
   object
 }

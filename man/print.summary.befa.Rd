@@ -29,6 +29,6 @@
 }
 \description{
 Prints the tables of \code{\link[=summary.befa]{summary.befa()}}: the standardized loadings, the
-Bayesian fit measures, the information criteria and the omega
-coefficients.
+variance the factors explain, the Bayesian fit measures, the information
+criteria and the omega coefficients.
 }

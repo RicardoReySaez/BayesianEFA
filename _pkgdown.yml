@@ -57,6 +57,9 @@ reference:
       - befa
       - summary.befa
       - print.summary.befa
+      - print.befa_list
+      - summary.befa_list
+      - print.summary.befa_list
   - title: "Posterior draws"
     contents:
       - extract_posterior_draws

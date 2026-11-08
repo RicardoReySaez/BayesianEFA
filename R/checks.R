@@ -1,7 +1,7 @@
 # checks.R
 # Checks of the arguments that the internal functions receive
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 08-11-2026
 
 # This function checks that a value is one whole number of at least `lower`
 # (a positive one by default).
@@ -32,6 +32,18 @@
   x
 }
 
+# This function checks the arguments that ask befa() to compare its models.
+.check_compare <- function(compare, criteria) {
+  .check_flag(compare, "compare")
+  choices <- c("fit", "loo", "ic", "evidence")
+  if (!is.character(criteria) || !length(criteria) ||
+      length(setdiff(criteria, choices))) {
+    .befa_stop("`compare_criteria` must hold some of ",
+               paste0("\"", choices, "\"", collapse = ", "), ".")
+  }
+  invisible(TRUE)
+}
+
 # This function checks the arguments of befa() that the later steps do not
 # check themselves: the logical flags, one source of data (raw data or
 # summary statistics), FIML only with raw data, and numeric data.
@@ -48,7 +60,10 @@
                "yet; use `ordered = FALSE`.")
   }
   if (is.null(n_factors)) .befa_stop("`n_factors` is required.")
-  .check_count(n_factors, "n_factors")
+  if (!is.numeric(n_factors) || !length(n_factors) || anyNA(n_factors) ||
+      any(n_factors < 1) || any(n_factors != round(n_factors))) {
+    .befa_stop("`n_factors` must hold positive whole numbers.")
+  }
 
   has_data <- !is.null(data)
   has_summary <- !is.null(sample_nobs) || !is.null(sample_cov) ||

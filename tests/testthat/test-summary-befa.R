@@ -24,15 +24,25 @@ test_that("the summary holds the standardized solution of the fit", {
   L <- matrix(colMeans(.stacked_draws(object$draws, "Lambda_std")), 5, 2)
   expect_equal(as.matrix(s$estimates[, c("F1", "F2")]), L, ignore_attr = TRUE)
   expect_equal(s$estimates$h2 + s$estimates$u2, rep(1, 5))
-  expect_equal(s$variance$per_factor, colSums(L^2) / 5)
+  draws <- .stacked_draws(object$draws, "Lambda_std")
+  expect_equal(s$variance$per_factor, colSums(matrix(colMeans(draws^2), 5, 2)) / 5)
   expect_equal(s$variance$total_explained, sum(s$variance$per_factor))
+  # The total of the variance table is the sum of the communalities.
+  expect_equal(s$variance$total_explained, sum(s$estimates$h2) / 5)
+  variance <- s$tables$table2_variance
+  expect_identical(colnames(variance), c("F1", "F2", "Total"))
+  expect_equal(variance["Proportion of total", "F1"] +
+                 variance["Proportion of total", "F2"], 1)
+  expect_equal(variance["Cumulative variance", "F2"], s$variance$total_explained)
+  expect_true(is.na(variance["Cumulative variance", "Total"]))
   expect_true(all(s$sig_matrix[cbind(1:5, c(1, 1, 1, 2, 2))]))
   expect_identical(s$header$N, 60L)
-  expect_identical(names(s$tables), c("table1_loadings", "table2_fit_measures",
-                                      "table3_information", "table4_reliability"))
-  expect_identical(rownames(s$tables$table3_information)[c(1, 8)], c("ELPD", "DIC_i"))
-  expect_identical(rownames(s$tables$table4_reliability), c("F1", "F2", "Total"))
-  total <- unlist(s$tables$table4_reliability["Total", ])
+  expect_identical(names(s$tables),
+                   c("table1_loadings", "table2_variance", "table3_fit_measures",
+                     "table4_information", "table5_reliability"))
+  expect_identical(rownames(s$tables$table4_information)[c(1, 8)], c("ELPD", "DIC_i"))
+  expect_identical(rownames(s$tables$table5_reliability), c("F1", "F2", "Total"))
+  total <- unlist(s$tables$table5_reliability["Total", ])
   expect_equal(unname(total[1:2]), c(object$reliability$total$Estimate,
                                      object$reliability$total$SD))
   expect_identical(s$estimates$Variable, paste0("Item_", 1:5))
@@ -49,10 +59,12 @@ test_that("the summary prints its tables with their options", {
   object <- .fake_full_befa()
   out <- .printed(summary(object))
   for (text in c("Table 1. Standardized Factor Loadings",
-                 "Table 2. Bayesian Fit Measures",
-                 "Table 3. Information Criteria",
+                 "Table 2. Variance Explained",
+                 "Sum of squared loadings",
+                 "Table 3. Bayesian Fit Measures",
+                 "Table 4. Information Criteria",
                  "SEs across persons (jackknife for DIC_i and p_V)",
-                 "Table 4. Factor Reliability (Omega)",
+                 "Table 5. Factor Reliability (Omega)",
                  "Total is the omega of the full scale",
                  "varimax rotation applied; MCMC with stanli",
                  "the posterior may be unreliable")) {
@@ -74,10 +86,10 @@ test_that("a fit without fit indices or reliability prints its loadings only", {
   object <- .fake_befa()
   object$diagnostics$issues <- character(0)
   s <- summary(object)
-  expect_identical(names(s$tables), "table1_loadings")
+  expect_identical(names(s$tables), c("table1_loadings", "table2_variance"))
   out <- .printed(s)
-  expect_match(out, "Table 1.", fixed = TRUE)
-  expect_no_match(out, "Table 2.", fixed = TRUE)
+  expect_match(out, "Table 2.", fixed = TRUE)
+  expect_no_match(out, "Table 3.", fixed = TRUE)
   expect_no_match(out, "unreliable", fixed = TRUE)
 })
 

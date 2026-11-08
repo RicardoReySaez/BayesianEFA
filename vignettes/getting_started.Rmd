@@ -74,7 +74,7 @@ befa_fit <- befa(
 #> BayesianEFA: using the stanli backend.
 #> ── Bayesian exploratory factor analysis ────────────────────────────────────────────────── stanli ──
 #> ℹ 4 chains of 1000 draws after 1000 warmup iterations, 4 at a time.
-#> ✔ Sampled 4 chains in 3.0s.
+#> ✔ Sampled 4 chains in 2.4s.
 #> ✔ No divergent transitions.
 #> ✔ No transition reached the maximum tree depth (15).
 #> ✔ Largest R-hat 1.002, below 1.01.
@@ -96,7 +96,8 @@ ordered by the variance they explain, and the items, listed by their names,
 are grouped by the factor of their largest loading (`sort = FALSE` keeps their
 original order; long names are shortened to keep the width of the table).
 `cutoff` hides the loadings below a threshold, and `signif_stars` marks those
-whose 95% credible interval excludes zero:
+whose 95% credible interval excludes zero. The second table gives the variance
+each factor explains:
 
 
 ``` r
@@ -117,17 +118,28 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> x2                        0.46*  0.24  0.76  1.00     3846     2339
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Note: varimax rotation applied; MCMC with stanli. Diagnostics show
-#> worst-case values across factors (max Rhat, min ESS). The 3 latent
-#> factors accounted for 52.2% of total variance. (*) 95% Credible
-#> Interval excludes 0. Loadings with absolute values < 0.30 are
-#> hidden. 
+#> worst-case values across factors (max Rhat, min ESS). (*) 95%
+#> Credible Interval excludes 0. Loadings with absolute values < 0.30
+#> are hidden. 
 #> 
-#> Table 2. Bayesian Fit Measures 
+#> Table 2. Variance Explained 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Statistic                    F1    F2    F3  Total
+#> ——————————————————————————————————————————————————
+#> Sum of squared loadings    2.27  1.26  1.24   4.77
+#> Proportion of total        0.48  0.26  0.26   1.00
+#> Proportion of variance     0.25  0.14  0.14   0.53
+#> Cumulative variance        0.25  0.39  0.53       
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Posterior means. Proportion of total: share
+#> of the explained variance. 
+#> 
+#> Table 3. Bayesian Fit Measures 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Index         Estimate    SD  CI_Low  CI_High
 #> —————————————————————————————————————————————
 #> Chi2             47.50  6.98   35.80    63.10
-#> Chi2_ppp          0.12                       
+#> Chi2_ppp          0.11                       
 #> Chi2_Null       918.85  0.00  918.85   918.85
 #> BRMSEA            0.06  0.02    0.00     0.09
 #> BGamma            0.99  0.00    0.98     1.00
@@ -141,7 +153,7 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> PPP: Posterior Predictive p-value (Ideal >
 #> .05). 
 #> 
-#> Table 3. Information Criteria 
+#> Table 4. Information Criteria 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Criterion    Estimate     SE    CI_Low   CI_High
 #> ————————————————————————————————————————————————
@@ -159,7 +171,7 @@ summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
 #> Note: SEs across persons (jackknife for DIC_i
 #> and p_V); 95% normal intervals. 
 #> 
-#> Table 4. Factor Reliability (Omega) 
+#> Table 5. Factor Reliability (Omega) 
 #> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
 #> Factor    Estimate    SD  CI_Low  CI_High
 #> —————————————————————————————————————————
@@ -227,7 +239,7 @@ befa_fit_measures(befa_fit)
 #> Index         Estimate     SD   CI_Low  CI_High
 #> ———————————————————————————————————————————————
 #> Chi2            47.502  6.982   35.795   63.104
-#> Chi2_ppp         0.117                         
+#> Chi2_ppp         0.113                         
 #> Chi2_Null      918.852  0.000  918.852  918.852
 #> BRMSEA           0.057  0.020    0.000    0.092
 #> BGamma           0.992  0.005    0.980    1.000
@@ -275,6 +287,107 @@ head(matrix(scores$summary$mean, ncol = 3))
 #> [5,] -0.0960409448  0.35262588 -0.5220094
 #> [6,] -1.4726219082  1.13490598  0.4671168
 ```
+
+## How many factors?
+
+Several values of `n_factors` fit one model per value, with the same settings
+and seed. The saturated and null models are estimated once, and the models are
+compared with `befa_compare()`:
+
+
+``` r
+fits <- befa(HS_data, n_factors = 1:3, seed = 17, verbose = FALSE)
+summary(fits)
+#> 
+#> Bayesian EFA with 1, 2, 3 factors
+#> Data model: cor; prior: unit_vector; N = 301; rotation: varimax; MCMC with
+#> stanli. 
+#> 
+#> Table 1. Overview of the Models 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Model     Rhat   ESS  Div  BRMSEA   BCFI      ELPD     WAIC
+#> ———————————————————————————————————————————————————————————
+#> nf1      1.004  2753    0   0.194  0.677  -3550.64  7101.23
+#> nf2      1.004  1586    0   0.158  0.874  -3468.91  6937.76
+#> nf3      1.002  1866    0   0.057  0.987  -3421.23  6842.37
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Rhat and ESS: worst values across the parameters.
+#> Div: divergent transitions. BRMSEA and BCFI: posterior
+#> means. 
+#> 
+#> Table 2. Bayesian Fit Measures 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Model    Chi2_ppp  BRMSEA  BGamma  Adj_BGamma    BMc   SRMR   BCFI   BTLI
+#> —————————————————————————————————————————————————————————————————————————
+#> nf3         0.110   0.057   0.992       0.971  0.981  0.047  0.987  0.987
+#> nf2         0.000   0.158   0.924       0.816  0.831  0.086  0.874  0.725
+#> nf1         0.000   0.194   0.826       0.751  0.623  0.147  0.677  0.560
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Posterior means, ordered by BRMSEA. Chi2_ppp: posterior predictive
+#> p-value (ideal > .05). 
+#> 
+#> Table 3. LOO Comparison 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Model        ELPD     SE  elpd_diff  se_diff  p_worse  w_stack  w_pbma
+#> ——————————————————————————————————————————————————————————————————————
+#> nf3      -3421.23  42.63       0.00                      0.953   1.000
+#> nf2      -3468.91  43.37     -47.69    11.02    1.000    0.000   0.000
+#> nf1      -3550.64  46.61    -129.42    18.78    1.000    0.047   0.000
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Ordered by ELPD, with differences from the best model; p_worse
+#> is the probability of predicting worse than it. Weights: stacking and
+#> pseudo-BMA+. 
+#> 
+#> Table 4. Information Criteria 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Model       WAIC  w_WAIC      DIC  w_DIC    DIC_i  w_DIC_i     BPIC  w_BPIC
+#> ———————————————————————————————————————————————————————————————————————————
+#> nf3      6842.37   1.000  6840.38  1.000  6840.83    1.000  6864.29   1.000
+#> nf2      6937.76   0.000  6933.06  0.000  6933.05    0.000  6949.77   0.000
+#> nf1      7101.23   0.000  7099.02  0.000  7099.43    0.000  7107.85   0.000
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Ordered by WAIC; lower values are better. w: Akaike weights. 
+#> 
+#> Note: Only nf3 is shown, the model with the highest ELPD.
+#> `show` chooses others: summary(x, show = "all"). 
+#> 
+#> Table 5. Standardized Factor Loadings (nf3) 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Variable      F1     F2     F3    h2    u2  Rhat  EssBulk  EssTail
+#> ——————————————————————————————————————————————————————————————————
+#> x5          0.86   0.07   0.03  0.75  0.25  1.00     3919     3085
+#> x4          0.83   0.07   0.11  0.72  0.28  1.00     3815     2080
+#> x6          0.81   0.06   0.16  0.69  0.31  1.00     4204     3187
+#> x8          0.07   0.70   0.17  0.53  0.47  1.00     3074     1880
+#> x7          0.10   0.68  -0.05  0.48  0.52  1.00     3400     2490
+#> x9          0.17   0.49   0.40  0.44  0.56  1.00     3271     3014
+#> x3          0.08   0.11   0.65  0.45  0.55  1.00     4054     3045
+#> x1          0.31   0.12   0.59  0.48  0.52  1.00     3888     3205
+#> x2          0.13  -0.04   0.46  0.24  0.76  1.00     3846     2339
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: varimax rotation applied; MCMC with stanli. Diagnostics
+#> show worst-case values across factors (max Rhat, min ESS). 
+#> 
+#> Table 6. Variance Explained (nf3) 
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Statistic                    F1    F2    F3  Total
+#> ——————————————————————————————————————————————————
+#> Sum of squared loadings    2.27  1.26  1.24   4.77
+#> Proportion of total        0.48  0.26  0.26   1.00
+#> Proportion of variance     0.25  0.14  0.14   0.53
+#> Cumulative variance        0.25  0.39  0.53       
+#> ‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗‗ 
+#> Note: Posterior means. Proportion of total: share
+#> of the explained variance.
+```
+
+The overview has one row per model, followed by the comparison tables and, so
+that the output stays short, the loadings of the model with the highest ELPD.
+Showing a model is not selecting it: the note says which simpler models predict
+about as well, and `summary(fits, show = 2)` or `summary(fits, show = "all")`
+shows others. Each fit is a usual `befa` object (`fits$nf2`). To also compare
+the model evidence, add
+`compare_criteria = c("fit", "loo", "ic", "evidence")` to the call.
 
 ## Other models
 

@@ -11,10 +11,11 @@
 # at most `parallel_chains` at a time, with its own starting values and seed;
 # ADVI and Pathfinder run in one process. `inits` holds one list of starting
 # values per chain (or per Pathfinder path).
-.run_stan <- function(code, data, inits, backend, settings, quiet = FALSE) {
-  files <- .compiled_model(code, backend, quiet = quiet)
+.run_stan <- function(code, data, inits, backend, settings, quiet = FALSE,
+                      title = NULL) {
   show <- !quiet && settings$refresh > 0
-  if (show) .stan_header(backend, settings)
+  if (show) .stan_header(backend, settings, title)
+  files <- .compiled_model(code, backend, quiet = quiet)
 
   job <- function(init, chain) {
     list(func = .stan_job,
@@ -98,9 +99,11 @@
   posterior::subset_draws(draws, variable = vars[keep])
 }
 
-# This function announces the fit: the backend and how the chains run.
-.stan_header <- function(backend, settings) {
-  cli::cli_rule(left = "Bayesian exploratory factor analysis", right = backend)
+# This function announces the fit: its title (by default, the name of the
+# analysis), the backend and how the chains run.
+.stan_header <- function(backend, settings, title = NULL) {
+  if (is.null(title)) title <- "Bayesian exploratory factor analysis"
+  cli::cli_rule(left = title, right = backend)
   s <- settings
   text <- switch(s$method,
     mcmc = paste0(s$chains, " chain", if (s$chains > 1L) "s", " of ",

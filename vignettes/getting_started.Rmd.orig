@@ -91,7 +91,8 @@ ordered by the variance they explain, and the items, listed by their names,
 are grouped by the factor of their largest loading (`sort = FALSE` keeps their
 original order; long names are shortened to keep the width of the table).
 `cutoff` hides the loadings below a threshold, and `signif_stars` marks those
-whose 95% credible interval excludes zero:
+whose 95% credible interval excludes zero. The second table gives the variance
+each factor explains:
 
 ```{r summary}
 summary(befa_fit, cutoff = 0.3, signif_stars = TRUE)
@@ -132,6 +133,25 @@ befa_reliability(befa_fit)$subscales
 scores <- befa_factor_scores(befa_fit)
 head(matrix(scores$summary$mean, ncol = 3))
 ```
+
+## How many factors?
+
+Several values of `n_factors` fit one model per value, with the same settings
+and seed. The saturated and null models are estimated once, and the models are
+compared with `befa_compare()`:
+
+```{r several}
+fits <- befa(HS_data, n_factors = 1:3, seed = 17, verbose = FALSE)
+summary(fits)
+```
+
+The overview has one row per model, followed by the comparison tables and, so
+that the output stays short, the loadings of the model with the highest ELPD.
+Showing a model is not selecting it: the note says which simpler models predict
+about as well, and `summary(fits, show = 2)` or `summary(fits, show = "all")`
+shows others. Each fit is a usual `befa` object (`fits$nf2`). To also compare
+the model evidence, add
+`compare_criteria = c("fit", "loo", "ic", "evidence")` to the call.
 
 ## Other models
 
