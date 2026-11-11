@@ -59,7 +59,7 @@ fit_unaligned <- befa(
   chains = 4
 )
 #> BayesianEFA: using the stanli backend.
-#> Warning: the posterior may be unreliable: R-hat reaches 1.013.
+#> Warning: the posterior may be unreliable: R-hat reaches 1.011; the effective sample size falls to 360.
 #>   To fix it, increase `iter_sampling`.
 
 # Save posterior draws
@@ -80,20 +80,20 @@ As we will see below, attempting to summarize the posterior distributions at thi
 ``` r
 posterior_summaries(fit_unaligned, pars = "Lambda_std")
 #> # A tibble: 12 × 10
-#>    variable            mean  median    sd   mad     q5   q95  rhat ess_bulk ess_tail
-#>    <chr>              <dbl>   <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>    <dbl>    <dbl>
-#>  1 Lambda_std[1,1] -0.0415  -0.0829 0.485 0.704 -0.677 0.664  1.01     444.    1495.
-#>  2 Lambda_std[2,1] -0.0493  -0.115  0.579 0.839 -0.798 0.790  1.00     466.    1529.
-#>  3 Lambda_std[3,1] -0.0453  -0.0999 0.526 0.762 -0.727 0.720  1.00     452.    1443.
-#>  4 Lambda_std[4,1] -0.00406 -0.0171 0.473 0.682 -0.681 0.678  1.01     415.    1254.
-#>  5 Lambda_std[5,1] -0.00655 -0.0208 0.471 0.669 -0.680 0.673  1.01     419.    1221.
-#>  6 Lambda_std[6,1] -0.00335 -0.0160 0.474 0.674 -0.684 0.682  1.01     418.    1641.
-#>  7 Lambda_std[1,2]  0.0107   0.0178 0.468 0.665 -0.667 0.671  1.01     403.    1254.
-#>  8 Lambda_std[2,2]  0.00855  0.0188 0.552 0.792 -0.787 0.791  1.01     406.    1445.
-#>  9 Lambda_std[3,2]  0.00509  0.0154 0.499 0.723 -0.709 0.712  1.01     427.    1274.
-#> 10 Lambda_std[4,2] -0.0424  -0.0874 0.497 0.719 -0.692 0.679  1.00     466.    1401.
-#> 11 Lambda_std[5,2] -0.0422  -0.0913 0.497 0.722 -0.689 0.680  1.00     473.    1450.
-#> 12 Lambda_std[6,2] -0.0427  -0.0983 0.498 0.712 -0.692 0.684  1.00     467.    1546.
+#>    variable            mean   median    sd   mad     q5   q95  rhat ess_bulk ess_tail
+#>    <chr>              <dbl>    <dbl> <dbl> <dbl>  <dbl> <dbl> <dbl>    <dbl>    <dbl>
+#>  1 Lambda_std[1,1] -0.0440  -0.0947  0.482 0.689 -0.679 0.667  1.01     380.    1377.
+#>  2 Lambda_std[2,1] -0.0536  -0.108   0.570 0.828 -0.803 0.788  1.01     360.    1038.
+#>  3 Lambda_std[3,1] -0.0483  -0.0996  0.519 0.754 -0.730 0.715  1.01     395.    1615.
+#>  4 Lambda_std[4,1]  0.00636  0.0219  0.481 0.695 -0.680 0.682  1.01     450.    1075.
+#>  5 Lambda_std[5,1]  0.00346  0.00671 0.480 0.691 -0.682 0.686  1.01     465.    1315.
+#>  6 Lambda_std[6,1]  0.00515  0.0165  0.484 0.697 -0.685 0.684  1.01     466.    1456.
+#>  7 Lambda_std[1,2]  0.00365  0.00893 0.474 0.689 -0.667 0.674  1.01     454.    1333.
+#>  8 Lambda_std[2,2] -0.00368  0.00750 0.559 0.806 -0.794 0.788  1.01     450.    1438.
+#>  9 Lambda_std[3,2] -0.00426 -0.00376 0.508 0.738 -0.727 0.713  1.01     461.    1380.
+#> 10 Lambda_std[4,2] -0.0447  -0.0941  0.490 0.705 -0.692 0.669  1.01     376.    1481.
+#> 11 Lambda_std[5,2] -0.0462  -0.0901  0.488 0.706 -0.689 0.672  1.01     395.    1400.
+#> 12 Lambda_std[6,2] -0.0460  -0.102   0.492 0.701 -0.694 0.677  1.01     367.    1582.
 ```
 
 A visual inspection of the posterior draws for a specific parameter (e.g., `Lambda_std[1,1]`) makes the severity of this unidentified parameter space immediately apparent:
@@ -199,18 +199,18 @@ aligned_res$summary
 #> # A tibble: 12 × 10
 #>    variable            mean   median     sd    mad      q5     q95  rhat ess_bulk ess_tail
 #>    <chr>              <dbl>    <dbl>  <dbl>  <dbl>   <dbl>   <dbl> <dbl>    <dbl>    <dbl>
-#>  1 Lambda_std[1,1]  0.665    0.667   0.0411 0.0397  0.595   0.730  1.00     2803.    2531.
-#>  2 Lambda_std[2,1]  0.799    0.800   0.0402 0.0394  0.730   0.862  1.00     2583.    2058.
-#>  3 Lambda_std[3,1]  0.724    0.723   0.0402 0.0409  0.657   0.788  1.00     2811.    2602.
-#>  4 Lambda_std[4,1] -0.0493  -0.0488  0.0464 0.0461 -0.126   0.0269 1.00     4427.    3642.
-#>  5 Lambda_std[5,1] -0.00380 -0.00317 0.0467 0.0464 -0.0835  0.0708 1.000    4211.    3428.
-#>  6 Lambda_std[6,1] -0.0341  -0.0336  0.0464 0.0468 -0.111   0.0406 1.000    4355.    3206.
-#>  7 Lambda_std[1,2] -0.0973  -0.0976  0.0494 0.0494 -0.179  -0.0164 1.00     4366.    3487.
-#>  8 Lambda_std[2,2] -0.0140  -0.0141  0.0406 0.0403 -0.0811  0.0538 1.00     4156.    3174.
-#>  9 Lambda_std[3,2]  0.00786  0.00866 0.0460 0.0453 -0.0698  0.0830 1.00     4471.    3377.
-#> 10 Lambda_std[4,2]  0.683    0.682   0.0460 0.0450  0.606   0.757  1.00     2824.    2145.
-#> 11 Lambda_std[5,2]  0.682    0.683   0.0471 0.0465  0.604   0.759  1.01     2815.    2277.
-#> 12 Lambda_std[6,2]  0.685    0.686   0.0483 0.0470  0.602   0.762  1.00     3110.    2427.
+#>  1 Lambda_std[1,1]  0.667    0.668   0.0412 0.0408  0.597   0.731  1.00     3240.    2721.
+#>  2 Lambda_std[2,1]  0.798    0.798   0.0396 0.0398  0.732   0.861  1.00     2589.    2223.
+#>  3 Lambda_std[3,1]  0.725    0.726   0.0400 0.0403  0.657   0.787  1.00     2502.    2196.
+#>  4 Lambda_std[4,1] -0.0499  -0.0506  0.0465 0.0464 -0.124   0.0258 1.000    4431.    3474.
+#>  5 Lambda_std[5,1] -0.00304 -0.00358 0.0464 0.0464 -0.0797  0.0739 1.00     4091.    3408.
+#>  6 Lambda_std[6,1] -0.0332  -0.0322  0.0464 0.0452 -0.111   0.0434 1.00     4621.    3176.
+#>  7 Lambda_std[1,2] -0.0966  -0.0966  0.0488 0.0486 -0.178  -0.0164 1.00     4322.    3564.
+#>  8 Lambda_std[2,2] -0.0136  -0.0128  0.0405 0.0399 -0.0804  0.0518 1.00     4399.    3472.
+#>  9 Lambda_std[3,2]  0.00849  0.00860 0.0447 0.0442 -0.0654  0.0819 1.00     4342.    3600.
+#> 10 Lambda_std[4,2]  0.683    0.684   0.0469 0.0462  0.602   0.757  1.00     2652.    2192.
+#> 11 Lambda_std[5,2]  0.683    0.684   0.0472 0.0457  0.603   0.760  1.00     2919.    2737.
+#> 12 Lambda_std[6,2]  0.687    0.688   0.0471 0.0472  0.608   0.763  1.00     2909.    2280.
 ```
 
 Re-visualizing the posterior distribution for `Lambda_std[1,1]` after alignment provides clear visual proof that the parameter is now identified. The formerly erratic, multimodal draws have successfully resolved into a clean, unimodal distribution, confirming that rotational indeterminacy has been completely eliminated.
