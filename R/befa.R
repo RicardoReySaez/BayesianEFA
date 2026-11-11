@@ -102,8 +102,19 @@
 #' * Unit-vector prior: each row of the standardized loadings is
 #'   \eqn{\sqrt{h^2_j}\,\mathbf{z}_j / \lVert \mathbf{z}_j \rVert}, with a
 #'   direction uniform on the sphere and a communality
-#'   \eqn{h^2_j \sim \text{Beta}(a, b)} (`h2`, default `c(1, 1)`, which makes
-#'   the joint prior on the loadings uniform). The norm of \eqn{\mathbf{z}_j}
+#'   \eqn{h^2_j \sim \text{Beta}(a, b)} (`h2`). By default, \eqn{a} and
+#'   \eqn{b} depend on the numbers of items \eqn{J} and of factors \eqn{M}:
+#'   with \eqn{\mu_1 = \sqrt{M / (J + 1)}} and \eqn{\mu_2 = \sqrt{M (M + 2) /
+#'   ((J + 1)(J + 3))}}, the mean and second moment of \eqn{h^2_j},
+#'   \eqn{a = \mu_1 s} and \eqn{b = (1 - \mu_1) s}, with \eqn{s = (\mu_1 -
+#'   \mu_2) / (\mu_2 - \mu_1^2)}. Then every correlation the model implies
+#'   has the second and fourth moments of a correlation under the LKJ(1)
+#'   prior, uniform on the \eqn{J \times J} correlation matrices, whatever
+#'   the number of factors, so a model with more factors does not expect
+#'   weaker correlations a priori (with uniform communalities, their SD is
+#'   \eqn{1 / (2\sqrt{M})}), which would favour it in the comparison of
+#'   models. `h2 = c(1, 1)` gives uniform communalities. The norm of
+#'   \eqn{\mathbf{z}_j}
 #'   has density proportional to \eqn{\lVert \mathbf{z}_j \rVert^{\xi}
 #'   e^{-\lVert \mathbf{z}_j \rVert^2/2}} (`xi`, default 100), which keeps it
 #'   away from zero; it does not affect the loadings. With one factor, each
@@ -166,6 +177,11 @@
 #' not be fitted; the others are kept). See [summary.befa_list()].
 #'
 #' @references
+#' Lewandowski, D., Kurowicka, D., & Joe, H. (2009). Generating random
+#' correlation matrices based on vines and extended onion method. *Journal of
+#' Multivariate Analysis, 100*(9), 1989-2001.
+#' \doi{10.1016/j.jmva.2009.04.008}
+#'
 #' Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2026).
 #' A unified framework for psychometrics in experimental psychology: The
 #' standardized generalized hierarchical factor model. *Psychological
@@ -232,7 +248,7 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
   prepared <- .prepare_befa_data(data, model, missing, sample_nobs, sample_cov,
                                  sample_cor, sample_mean)
   n_factors <- .factor_numbers(n_factors, prepared$J)
-  priors <- .befa_priors(prior, model, lambda_prior, n_factors)
+  priors <- .befa_priors(prior, model, lambda_prior, n_factors, prepared$J)
   inputs <- lapply(seq_along(n_factors), function(k) {
     spec <- .befa_spec(model, lambda_prior, n_factors[k],
                        .data_patterns(prepared), .choose_engine())
@@ -332,15 +348,16 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
 # This function returns the resolved priors of each number of factors. One
 # factor and several factors have different hyperparameters, so with several
 # numbers of factors each model takes those that apply to it, and only the
-# names that apply to none of them are reported, once.
-.befa_priors <- function(prior, model, lambda_prior, n_factors) {
+# names that apply to none of them are reported, once. The default prior on
+# the communalities depends on the number of items `J` and of factors.
+.befa_priors <- function(prior, model, lambda_prior, n_factors, J) {
   valid <- lapply(n_factors, function(M) {
-    names(get_default_priors(model, lambda_prior, M))
+    names(get_default_priors(model, lambda_prior, M, J))
   })
   unknown <- prior[setdiff(names(prior), unlist(valid))]
   lapply(seq_along(n_factors), function(k) {
     prior_k <- c(prior[intersect(names(prior), valid[[k]])], if (k == 1L) unknown)
-    prepare_befa_priors(prior_k, model, lambda_prior, n_factors[k])
+    prepare_befa_priors(prior_k, model, lambda_prior, n_factors[k], J)
   })
 }
 

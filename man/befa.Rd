@@ -187,8 +187,19 @@ also estimates the means.
 \item Unit-vector prior: each row of the standardized loadings is
 \eqn{\sqrt{h^2_j}\,\mathbf{z}_j / \lVert \mathbf{z}_j \rVert}, with a
 direction uniform on the sphere and a communality
-\eqn{h^2_j \sim \text{Beta}(a, b)} (\code{h2}, default \code{c(1, 1)}, which makes
-the joint prior on the loadings uniform). The norm of \eqn{\mathbf{z}_j}
+\eqn{h^2_j \sim \text{Beta}(a, b)} (\code{h2}). By default, \eqn{a} and
+\eqn{b} depend on the numbers of items \eqn{J} and of factors \eqn{M}:
+with \eqn{\mu_1 = \sqrt{M / (J + 1)}} and \eqn{\mu_2 = \sqrt{M (M + 2) /
+  ((J + 1)(J + 3))}}, the mean and second moment of \eqn{h^2_j},
+\eqn{a = \mu_1 s} and \eqn{b = (1 - \mu_1) s}, with \eqn{s = (\mu_1 -
+  \mu_2) / (\mu_2 - \mu_1^2)}. Then every correlation the model implies
+has the second and fourth moments of a correlation under the LKJ(1)
+prior, uniform on the \eqn{J \times J} correlation matrices, whatever
+the number of factors, so a model with more factors does not expect
+weaker correlations a priori (with uniform communalities, their SD is
+\eqn{1 / (2\sqrt{M})}), which would favour it in the comparison of
+models. \code{h2 = c(1, 1)} gives uniform communalities. The norm of
+\eqn{\mathbf{z}_j}
 has density proportional to \eqn{\lVert \mathbf{z}_j \rVert^{\xi}
   e^{-\lVert \mathbf{z}_j \rVert^2/2}} (\code{xi}, default 100), which keeps it
 away from zero; it does not affect the loadings. With one factor, each
@@ -233,6 +244,11 @@ summary(prior_fit)
 
 }
 \references{
+Lewandowski, D., Kurowicka, D., & Joe, H. (2009). Generating random
+correlation matrices based on vines and extended onion method. \emph{Journal of
+Multivariate Analysis, 100}(9), 1989-2001.
+\doi{10.1016/j.jmva.2009.04.008}
+
 Rey-Sáez, R., Franco-Martínez, A., Revuelta, J., & Vadillo, M. A. (2026).
 A unified framework for psychometrics in experimental psychology: The
 standardized generalized hierarchical factor model. \emph{Psychological

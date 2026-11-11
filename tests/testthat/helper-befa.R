@@ -17,7 +17,7 @@
   J <- prepared$J
   S <- 2L * n_iter
   spec <- .befa_spec(model, lambda_prior, M, .data_patterns(prepared))
-  priors <- prepare_befa_priors(list(), model, lambda_prior, M)
+  priors <- prepare_befa_priors(list(), model, lambda_prior, M, J)
 
   set.seed(seed)
   true <- c(0.8, 0.7, 0.6, 0.1, 0.2, 0.1, 0.2, 0.1, 0.7, 0.8,

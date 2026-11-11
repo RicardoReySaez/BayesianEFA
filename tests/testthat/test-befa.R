@@ -258,11 +258,13 @@ test_that("befa() draws from the prior alone with prior_only = TRUE", {
   expect_identical(fit$stan_data$prior_only, 1L)
   expect_null(fit$fit_indices)
   expect_s3_class(fit$reliability, "befa_reliability")
-  # The default Beta(1, 1) prior makes each communality uniform on (0, 1),
-  # with mean 0.5 and SD 0.29, while their posterior from 300 rows has an SD
-  # near 0.05. With 300 draws of 5 items, the mean is well within 0.1 of 0.5.
+  # With 5 items and 2 factors the default prior is h2 ~ Beta(1.30, 0.95),
+  # with mean sqrt(2 / 6) = 0.58 and SD 0.27, while the posterior from 300
+  # rows has an SD near 0.05. With 300 draws of 5 items, the mean of the
+  # draws is well within 0.07 of that of the prior.
+  expect_identical(fit$priors_used$h2, .h2_prior_lkj(5L, 2L))
   h2 <- as.vector(.stacked_draws(fit$draws, "h2"))
-  expect_lt(abs(mean(h2) - 0.5), 0.1)
+  expect_lt(abs(mean(h2) - sqrt(2 / 6)), 0.07)
   expect_gt(stats::sd(h2), 0.2)
 
   fits <- .quick_befa(n_factors = 1:2, prior_only = TRUE)
@@ -291,8 +293,9 @@ test_that("what needs the likelihood refuses a fit from the prior alone", {
 test_that("befa() reproduces v0.1.0 on the Holzinger-Swineford data", {
   .skip_without_stanli()
   withr::local_options(BayesianEFA.cache_dir = withr::local_tempdir())
+  # v0.1.0 used uniform communalities, which are no longer the default.
   fit <- befa(HS_data, n_factors = 3, backend = "stanli", seed = 17,
-              verbose = FALSE)
+              prior = list(h2 = c(1, 1)), verbose = FALSE)
   # Posterior means printed in the v0.1.0 documentation of befa().
   v010_h2 <- c(0.476, 0.240, 0.447, 0.715, 0.751, 0.687, 0.486, 0.527, 0.442)
   v010_L <- matrix(c(0.594, 0.459, 0.648, 0.110, 0.029, 0.156, -0.053, 0.171, 0.401,

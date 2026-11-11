@@ -76,7 +76,7 @@ M <- 2
 for (missing in c(0, 0.1)) {
   Y <- .bench_data(J, M, N = 500, missing = missing, seed = 3) * 1.5
   prepared <- .prepare_befa_data(Y, "cov", if (missing) "FIML" else "listwise")
-  prior <- prepare_befa_priors(list(), "cov", "normal", M)
+  prior <- prepare_befa_priors(list(), "cov", "normal", M, J)
   item_sd <- .item_sd(prepared)
   set.seed(4)
   Lambda <- matrix(stats::runif(J * M, 0.2, 0.7), J, M) * item_sd

@@ -36,7 +36,7 @@ suppressMessages(pkgload::load_all(".", quiet = TRUE))
   prepared <- .prepare_befa_data(Y, model, missing)
   spec <- .befa_spec(model, "unit_vector", M, .data_patterns(prepared),
                      engine = engine)
-  prior <- prepare_befa_priors(list(), model, "unit_vector", M)
+  prior <- prepare_befa_priors(list(), model, "unit_vector", M, prepared$J)
   list(spec = spec, code = .stan_code(spec),
        data = .stan_data(spec, prepared, M, prior),
        init = .start_values(spec, prepared, M, prior, 1L, 1L)[[1L]],

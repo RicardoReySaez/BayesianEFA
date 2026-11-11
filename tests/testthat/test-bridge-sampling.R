@@ -43,7 +43,8 @@
   prep <- .prepare_befa_data(.simulated_data(N = 40, J = 5)[, seq_len(J)],
                              spec$model_type)
   prior <- prepare_befa_priors(list(), spec$model_type,
-                               if (spec$loadings == "normal") "normal" else "unit_vector", M)
+                               if (spec$loadings == "normal") "normal" else "unit_vector",
+                               M, J)
   sd <- .stan_data(spec, prep, M, prior)
   draws <- .prior_draws(spec, sd)
   setup <- .bridge_setup(spec, sd, draws$pars, n_chains = 2L, G = draws$G,
@@ -108,14 +109,16 @@ test_that("bridge sampling recovers the evidence 1 of the prior", {
 test_that("priors that rotations change are refused", {
   spec <- .befa_spec("cov", "normal", 2L)
   prep <- .prepared_for(spec)
-  sd <- .stan_data(spec, prep, 2L, prepare_befa_priors(list(lambda = c(0.5, 1)),
-                                                        "cov", "normal", 2L))
+  prior <- prepare_befa_priors(list(lambda = c(0.5, 1)), "cov", "normal", 2L,
+                               5L)
+  sd <- .stan_data(spec, prep, 2L, prior)
   draws <- list(pars = list(Lambda = matrix(1, 4, 10), psi = matrix(1, 4, 5)),
                 G = diag(5))
   expect_error(.bridge_setup(spec, sd, draws$pars, 2L, draws$G), "location 0")
   spec <- .befa_spec("cor", "unit_vector", 1L)
-  sd <- .stan_data(spec, .prepared_for(spec), 1L,
-                   prepare_befa_priors(list(lambda = c(2, 1)), "cor", "unit_vector", 1L))
+  prior <- prepare_befa_priors(list(lambda = c(2, 1)), "cor", "unit_vector",
+                               1L, 5L)
+  sd <- .stan_data(spec, .prepared_for(spec), 1L, prior)
   expect_error(.bridge_setup(spec, sd, list(lambda_std = matrix(0.5, 4, 5)), 2L, diag(5)),
                "equal shapes")
 })

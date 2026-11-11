@@ -5,11 +5,13 @@
 #' @param model Character. The data measurement model ("cor", "cov", or "raw").
 #' @param lambda_prior Character. The factor loading prior ("unit_vector", "normal").
 #' @param n_factors Integer. Number of factors.
+#' @param n_items Integer. Number of items, which sets the default prior on
+#'   the communalities with two or more factors (see .h2_prior_lkj()).
 #'
 #' @return A named list with default values.
 #' @keywords internal
 #' @noRd
-get_default_priors <- function(model, lambda_prior, n_factors) {
+get_default_priors <- function(model, lambda_prior, n_factors, n_items) {
   defaults <- list()
 
   # Check if unidimensional model is forced
@@ -19,7 +21,7 @@ get_default_priors <- function(model, lambda_prior, n_factors) {
     defaults$lambda <- c(1, 1) # Beta prior for uni model
   } else if (lambda_prior == "unit_vector") {
     defaults$xi <- 100
-    defaults$h2 <- c(1, 1)
+    defaults$h2 <- .h2_prior_lkj(n_items, n_factors)
   } else if (lambda_prior == "normal") {
     defaults$lambda <- c(0, 10) # Normal prior for loadings
     defaults$psi <- c(0.5, 0.5)
@@ -37,6 +39,26 @@ get_default_priors <- function(model, lambda_prior, n_factors) {
   return(defaults)
 }
 
+# This function returns the shapes (a, b) of the default Beta prior on the
+# communalities with two or more factors. They give every correlation that
+# the model implies, r = sqrt(h_i h_k) u_i'u_k with uniform directions u, the
+# second and fourth moments of a correlation under the LKJ(1) prior on J x J
+# correlation matrices, whose marginal is (r + 1) / 2 ~ Beta(J / 2, J / 2):
+# E[r^2] = 1 / (J + 1) and E[r^4] = 3 / ((J + 1) (J + 3)). As u_i'u_k has
+# E[(u'u)^2] = 1 / M and E[(u'u)^4] = 3 / (M (M + 2)), the moments of h are
+#   E[h] = sqrt(M / (J + 1)), E[h^2] = sqrt(M (M + 2) / ((J + 1) (J + 3))),
+# and a Beta with them exists whenever M < J + 1, which n_factors < J
+# guarantees. Every number of factors then expects equally strong
+# correlations a priori, so the evidence of a model does not grow with M
+# only because its prior expects weak correlations, as it does with uniform
+# communalities, whose implied correlations have SD 1 / (2 sqrt(M)).
+.h2_prior_lkj <- function(J, M) {
+  mu1 <- sqrt(M / (J + 1))
+  mu2 <- sqrt(M * (M + 2) / ((J + 1) * (J + 3)))
+  size <- (mu1 - mu2) / (mu2 - mu1^2)
+  c(mu1 * size, (1 - mu1) * size)
+}
+
 #' Prepare and Validate Priors (Internal)
 #'
 #' Orchestrates the prior setup: Gets defaults, merges user input, validates final values.
@@ -45,16 +67,18 @@ get_default_priors <- function(model, lambda_prior, n_factors) {
 #' @param model Character. "cor", "cov", or "raw".
 #' @param lambda_prior Character.
 #' @param n_factors Integer.
+#' @param n_items Integer. Number of items.
 #'
 #' @return A validated named list ready for Stan.
 #' @keywords internal
 #' @noRd
-prepare_befa_priors <- function(prior_user, model, lambda_prior, n_factors) {
+prepare_befa_priors <- function(prior_user, model, lambda_prior, n_factors,
+                                n_items) {
   # 1. Check if unidimensional model is forced
   is_uni <- is_uni_model(n_factors, lambda_prior)
 
   # 2. Generate default priors
-  defaults <- get_default_priors(model, lambda_prior, n_factors)
+  defaults <- get_default_priors(model, lambda_prior, n_factors, n_items)
 
   # 3. Check for valid priors and merge
   valid_names <- names(defaults)

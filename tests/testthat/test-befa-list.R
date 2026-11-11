@@ -71,7 +71,8 @@ test_that("the comparison arguments and the starting values are checked", {
 
 test_that("each number of factors takes the priors that apply to it", {
   given <- list(xi = 50, lambda = c(2, 2))
-  expect_no_warning(priors <- .befa_priors(given, "cor", "unit_vector", 1:2))
+  expect_no_warning(priors <- .befa_priors(given, "cor", "unit_vector", 1:2,
+                                           5L))
   expect_identical(priors[[1L]]$lambda, c(2, 2))
   expect_null(priors[[1L]]$xi)
   expect_identical(priors[[2L]]$xi, 50)
@@ -79,7 +80,8 @@ test_that("each number of factors takes the priors that apply to it", {
 
   # A name that applies to no model is reported once.
   n <- 0L
-  withCallingHandlers(.befa_priors(list(foo = 1), "cor", "unit_vector", 1:3),
+  withCallingHandlers(.befa_priors(list(foo = 1), "cor", "unit_vector", 1:3,
+                                   5L),
                       warning = function(w) {
                         n <<- n + 1L
                         expect_match(conditionMessage(w), "foo")
@@ -87,9 +89,17 @@ test_that("each number of factors takes the priors that apply to it", {
                       })
   expect_identical(n, 1L)
   # One number of factors keeps the warning about the other kind of model.
-  expect_warning(.befa_priors(list(xi = 50), "cor", "unit_vector", 1L), "xi")
-  expect_identical(.befa_priors(list(), "cor", "unit_vector", 2L)[[1L]],
-                   prepare_befa_priors(list(), "cor", "unit_vector", 2L))
+  expect_warning(.befa_priors(list(xi = 50), "cor", "unit_vector", 1L, 5L),
+                 "xi")
+  expect_identical(.befa_priors(list(), "cor", "unit_vector", 2L, 5L)[[1L]],
+                   prepare_befa_priors(list(), "cor", "unit_vector", 2L, 5L))
+  # The default prior on the communalities follows each number of factors.
+  priors <- .befa_priors(list(), "cor", "unit_vector", 2:3, 9L)
+  expect_identical(priors[[1L]]$h2, .h2_prior_lkj(9L, 2L))
+  expect_identical(priors[[2L]]$h2, .h2_prior_lkj(9L, 3L))
+  # A prior given by the user applies to every number of factors.
+  priors <- .befa_priors(list(h2 = c(1, 1)), "cor", "unit_vector", 2:3, 9L)
+  expect_identical(priors[[2L]]$h2, c(1, 1))
 })
 
 test_that("the models share the saturated and null models", {

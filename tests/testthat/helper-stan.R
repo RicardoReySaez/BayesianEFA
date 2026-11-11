@@ -39,11 +39,12 @@
                      spec$model_type, if (multiple) "FIML" else "listwise")
 }
 
-# This function returns the default prior of a structure.
-.prior_for <- function(spec) {
+# This function returns the default prior of a structure for `J` items (those
+# of .simulated_data()).
+.prior_for <- function(spec, J = 5L) {
   lambda_prior <- if (spec$loadings == "normal") "normal" else "unit_vector"
   n_factors <- if (spec$loadings == "uni") 1L else 2L
-  prepare_befa_priors(list(), spec$model_type, lambda_prior, n_factors)
+  prepare_befa_priors(list(), spec$model_type, lambda_prior, n_factors, J)
 }
 
 # This function draws values of the parameters of a structure, on their

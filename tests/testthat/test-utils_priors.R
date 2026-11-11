@@ -10,10 +10,10 @@ test_that("get_default_priors returns lambda for uni-forced case (M=1, unit_vect
   expect_false("h2" %in% names(result)) # No h2 for uni
 })
 
-test_that("get_default_priors returns xi and h2 for unit_vector with M > 1", {
-  result <- get_default_priors("cor", "unit_vector", n_factors = 3)
+test_that("get_default_priors returns xi and the LKJ-matched h2 for unit_vector with M > 1", {
+  result <- get_default_priors("cor", "unit_vector", n_factors = 3, n_items = 5)
   expect_equal(result$xi, 100)
-  expect_equal(result$h2, c(1, 1))
+  expect_equal(result$h2, .h2_prior_lkj(5, 3))
   expect_false("lambda" %in% names(result))
 })
 
@@ -24,13 +24,13 @@ test_that("get_default_priors returns lambda and psi for normal prior", {
 })
 
 test_that("get_default_priors adds nu and sigma for raw model", {
-  result <- get_default_priors("raw", "unit_vector", n_factors = 2)
+  result <- get_default_priors("raw", "unit_vector", n_factors = 2, n_items = 5)
   expect_equal(result$nu, c(0, 40))
   expect_equal(result$sigma, c(3, 0, 2.5))
 })
 
 test_that("get_default_priors does NOT add nu/sigma for std model", {
-  result <- get_default_priors("cor", "unit_vector", n_factors = 2)
+  result <- get_default_priors("cor", "unit_vector", n_factors = 2, n_items = 5)
   expect_false("nu" %in% names(result))
   expect_false("sigma" %in% names(result))
 })
@@ -42,22 +42,22 @@ test_that("get_default_priors does NOT add nu/sigma for std model", {
 # ─────────────────────────────────────────────────────────────────────────────
 
 test_that("prepare_befa_priors returns defaults when prior_user is empty", {
-  result <- prepare_befa_priors(list(), "cor", "unit_vector", n_factors = 2)
+  result <- prepare_befa_priors(list(), "cor", "unit_vector", n_factors = 2, n_items = 5)
   expect_equal(result$xi, 100)
-  expect_equal(result$h2, c(1, 1))
+  expect_equal(result$h2, .h2_prior_lkj(5, 2))
 })
 
 test_that("prepare_befa_priors merges user priors with defaults", {
   user_prior <- list(xi = 50)
-  result <- prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2)
+  result <- prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2, n_items = 5)
   expect_equal(result$xi, 50) # User override
-  expect_equal(result$h2, c(1, 1)) # Default preserved
+  expect_equal(result$h2, .h2_prior_lkj(5, 2)) # Default preserved
 })
 
 test_that("prepare_befa_priors warns on unknown prior parameters", {
   user_prior <- list(unknown_param = 999, another_bad = "foo")
   expect_warning(
-    prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2),
+    prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2, n_items = 5),
     "not valid for this configuration"
   )
 })
@@ -65,7 +65,7 @@ test_that("prepare_befa_priors warns on unknown prior parameters", {
 test_that("prepare_befa_priors errors if nu is wrong length (raw model)", {
   user_prior <- list(nu = c(0, 1, 2)) # Should be length 2
   expect_error(
-    prepare_befa_priors(user_prior, "raw", "unit_vector", n_factors = 2),
+    prepare_befa_priors(user_prior, "raw", "unit_vector", n_factors = 2, n_items = 5),
     "vector of length 2"
   )
 })
@@ -74,7 +74,7 @@ test_that("prepare_befa_priors errors if nu SD is non-positive", {
   user_prior <- list(nu = c(0, 0)) # SD = 0
 
   expect_error(
-    prepare_befa_priors(user_prior, "raw", "unit_vector", n_factors = 2),
+    prepare_befa_priors(user_prior, "raw", "unit_vector", n_factors = 2, n_items = 5),
     "SD must be positive"
   )
 })
@@ -82,7 +82,7 @@ test_that("prepare_befa_priors errors if nu SD is non-positive", {
 test_that("prepare_befa_priors errors if sigma is wrong length", {
   user_prior <- list(sigma = c(3, 0)) # Should be length 3
   expect_error(
-    prepare_befa_priors(user_prior, "raw", "unit_vector", n_factors = 2),
+    prepare_befa_priors(user_prior, "raw", "unit_vector", n_factors = 2, n_items = 5),
     "vector of length 3"
   )
 })
@@ -106,7 +106,7 @@ test_that("prepare_befa_priors errors if lambda has non-positive Beta params (un
 test_that("prepare_befa_priors errors if xi is not a single numeric", {
   user_prior <- list(xi = c(100, 200))
   expect_error(
-    prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2),
+    prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2, n_items = 5),
     "single numeric"
   )
 })
@@ -114,7 +114,7 @@ test_that("prepare_befa_priors errors if xi is not a single numeric", {
 test_that("prepare_befa_priors errors if h2 is wrong length", {
   user_prior <- list(h2 = c(1)) # Should be length 2
   expect_error(
-    prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2),
+    prepare_befa_priors(user_prior, "cor", "unit_vector", n_factors = 2, n_items = 5),
     "vector of length 2"
   )
 })
@@ -203,3 +203,50 @@ test_that("append_priors_to_data preserves original stan_data fields", {
 })
 
 # ─────────────────────────────────────────────────────────────────────────────
+
+# The default prior on the communalities with several factors
+
+test_that("the LKJ-matched shapes are those derived for 24 items", {
+  # Shapes of the derivation for J = 24 and M = 2, ..., 8, which it rounds to
+  # two decimals (its first a, 1.71, is 1.7045).
+  a <- c(1.71, 2.35, 2.96, 3.54, 4.10, 4.64, 5.16)
+  b <- c(4.32, 4.44, 4.44, 4.38, 4.27, 4.13, 3.96)
+  shapes <- vapply(2:8, function(M) .h2_prior_lkj(24, M), numeric(2))
+  expect_lt(max(abs(shapes[1, ] - a)), 0.01)
+  expect_lt(max(abs(shapes[2, ] - b)), 0.01)
+})
+
+test_that("each implied correlation has the moments of a LKJ(1) correlation", {
+  for (J in c(3, 5, 9, 24, 60)) for (M in 2:min(8, J - 1)) {
+    ab <- .h2_prior_lkj(J, M)
+    expect_true(all(ab > 0))
+    size <- sum(ab)
+    mean_h <- ab[1] / size
+    mean_h2 <- ab[1] * (ab[1] + 1) / (size * (size + 1))
+    # E[r^2] = E[h]^2 / M and E[r^4] = 3 E[h^2]^2 / (M (M + 2)), against the
+    # moments of 2 Beta(J / 2, J / 2) - 1.
+    expect_equal(mean_h^2 / M, 1 / (J + 1), tolerance = 1e-12)
+    expect_equal(3 * mean_h2^2 / (M * (M + 2)), 3 / ((J + 1) * (J + 3)),
+                 tolerance = 1e-12)
+  }
+})
+
+test_that("simulated implied correlations match the LKJ(1) moments", {
+  set.seed(11)
+  J <- 9
+  M <- 3
+  n <- 2e5
+  ab <- .h2_prior_lkj(J, M)
+  h <- matrix(stats::rbeta(2 * n, ab[1], ab[2]), n)
+  u1 <- matrix(stats::rnorm(n * M), n)
+  u2 <- matrix(stats::rnorm(n * M), n)
+  cosine <- rowSums(u1 * u2) / sqrt(rowSums(u1^2) * rowSums(u2^2))
+  r <- sqrt(h[, 1] * h[, 2]) * cosine
+  # With 2e5 pairs, the Monte Carlo error is below 1% of either moment.
+  expect_equal(mean(r^2), 1 / (J + 1), tolerance = 0.03)
+  expect_equal(mean(r^4), 3 / ((J + 1) * (J + 3)), tolerance = 0.03)
+  # Uniform communalities expect weaker correlations, with SD 1 / (2 sqrt(M)).
+  r_uniform <- sqrt(stats::runif(n) * stats::runif(n)) * cosine
+  expect_equal(stats::sd(r_uniform), 1 / (2 * sqrt(M)), tolerance = 0.03)
+  expect_lt(stats::sd(r_uniform), stats::sd(r))
+})

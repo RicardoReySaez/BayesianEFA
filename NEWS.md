@@ -133,6 +133,15 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
   factor scores and the comparison are skipped, and `befa_fit_measures()`,
   `befa_factor_scores()`, `befa_bridge_sampler()` and `befa_compare()`
   refuse such fits. `summary()` says the draws come from the prior.
+* New default prior on the communalities with two or more factors under
+  the unit-vector prior: `h2 ~ Beta(a, b)`, with `a` and `b` in closed form
+  from the numbers of items and factors, so that every implied correlation
+  has the second and fourth moments of a correlation under the LKJ(1) prior
+  whatever the number of factors. With uniform communalities (the previous
+  default, still available as `prior = list(h2 = c(1, 1))`) the prior SD of
+  each correlation is `1 / (2 sqrt(M))`: models with more factors expected
+  weaker correlations, which inflated their evidence when the observed
+  correlations were weak. One factor keeps its prior.
 * The references cite the published papers: the standardized generalized
   hierarchical factor model in *Psychological Methods*
   (doi:10.1037/met0000846) and the E-RSP algorithm in *Bayesian Analysis*
