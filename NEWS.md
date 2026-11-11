@@ -126,6 +126,13 @@ The v0.2.0 rewrite is in progress on the `dev` branch.
 * `summary()` of a fit adds a table of variance explained (sum of squared
   loadings and proportions), computed over the draws, so its total equals the
   sum of the communalities. Factors are ordered by the same quantity.
+* New `befa(prior_only = TRUE)` draws from the prior alone, to see what the
+  priors imply for the aligned loadings, the communalities and omega. Each
+  generated program reads a `prior_only` switch that leaves the likelihood
+  out, so prior and posterior share one compiled model. The fit indices, the
+  factor scores and the comparison are skipped, and `befa_fit_measures()`,
+  `befa_factor_scores()`, `befa_bridge_sampler()` and `befa_compare()`
+  refuse such fits. `summary()` says the draws come from the prior.
 * The references cite the published papers: the standardized generalized
   hierarchical factor model in *Psychological Methods*
   (doi:10.1037/met0000846) and the E-RSP algorithm in *Bayesian Analysis*

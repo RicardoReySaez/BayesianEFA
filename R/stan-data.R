@@ -1,7 +1,7 @@
 # stan-data.R
 # Prepare the data of a BEFA model and translate them for the Stan code
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 11-11-2026
 
 # Internal functions
 
@@ -158,9 +158,10 @@
 
 # This function returns the data list that the Stan code of `spec` reads:
 # dimensions, the root of the scatter matrix of each pattern (around its
-# means in the raw model), the means of each pattern in the raw model, and
-# the prior hyperparameters.
-.stan_data <- function(spec, prepared, n_factors, prior) {
+# means in the raw model), the means of each pattern in the raw model, the
+# switch `prior_only` (1 leaves the likelihood out) and the prior
+# hyperparameters.
+.stan_data <- function(spec, prepared, n_factors, prior, prior_only = FALSE) {
   if (spec$patterns != .data_patterns(prepared)) {
     .befa_stop("The model structure expects ", spec$patterns, " patterns of ",
                "observed items, but the data have the other kind.")
@@ -198,6 +199,7 @@
     if (raw) out$ybar_flat <- unlist(lapply(pieces, `[[`, "y_bar"))
   }
 
+  out$prior_only <- as.integer(prior_only)
   item_sd <- if (spec$loadings == "normal") .item_sd(prepared)
   c(out, .stan_prior_data(spec, prior, item_sd))
 }

@@ -1,7 +1,7 @@
 # befa-fit-measures.R
 # Bayesian fit indices (DevM framework) and information criteria
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -116,6 +116,11 @@ befa_fit_measures <- function(object, loo_args = NULL) {
   }
   .check_befa_object(object)
   if (!is.null(object$fit_indices)) return(object$fit_indices)
+  if (.is_prior_only(object)) {
+    .befa_warn("Fit measures need the likelihood; this fit drew from the ",
+               "prior alone (`prior_only = TRUE`), so they are not computed.")
+    return(NULL)
+  }
   if (object$data$summary) {
     .befa_warn("Fit measures need the raw `data`; this model was fitted to ",
                "summary statistics, so they are not computed.")

@@ -1,7 +1,7 @@
 # befa-compare.R
 # Compare fitted models by fit, LOO, information criteria and model evidence
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -14,7 +14,8 @@
 #' weights, and the model evidence with posterior model probabilities.
 #'
 #' @param ... Two or more `befa` objects fitted to the same data with the
-#'   same data model, or one list of them. Their names label the models
+#'   same data model (not with `prior_only = TRUE`, which leaves the
+#'   likelihood out), or one list of them. Their names label the models
 #'   (`Model 1`, `Model 2`, ... when they have none). A `befa_list` given
 #'   alone returns the comparison it holds, if any; with other arguments, or
 #'   without one, the comparison is computed.
@@ -115,6 +116,12 @@ befa_compare <- function(..., criteria = c("fit", "loo", "ic", "evidence"),
   criteria <- unique(match.arg(criteria, several.ok = TRUE))
   .check_count(repetitions, "repetitions")
   .check_flag(pseudobma_bb, "pseudobma_bb")
+  from_prior <- names(models)[vapply(models, .is_prior_only, TRUE)]
+  if (length(from_prior)) {
+    .befa_stop("Comparing models needs the likelihood, but ",
+               paste(from_prior, collapse = ", "), " drew from the prior ",
+               "alone (`prior_only = TRUE`).")
+  }
   .check_same_data(models)
   prior <- .model_prior(model_prior, length(models))
 

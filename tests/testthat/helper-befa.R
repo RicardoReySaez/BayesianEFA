@@ -1,7 +1,7 @@
 # helper-befa.R
 # A befa object built without Stan, for the functions that read its draws
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # This function returns a befa object whose standardized loadings scatter
 # around the true loadings of .simulated_data(), in the metric of `model`:
@@ -49,7 +49,7 @@
     n_factors = M, model_type = model, lambda_prior = lambda_prior,
     missing = missing, method = "mcmc", backend = "stanli",
     rotation = "varimax", priors_used = priors,
-    options = list(factor_scores = FALSE, ordered = FALSE,
+    options = list(factor_scores = FALSE, ordered = FALSE, prior_only = FALSE,
                    rsp_args = validate_rsp_args(NULL),
                    loo_args = validate_loo_args(NULL)),
     call = quote(befa())

@@ -16,7 +16,8 @@ befa_compare(
 }
 \arguments{
 \item{...}{Two or more \code{befa} objects fitted to the same data with the
-same data model, or one list of them. Their names label the models
+same data model (not with \code{prior_only = TRUE}, which leaves the
+likelihood out), or one list of them. Their names label the models
 (\verb{Model 1}, \verb{Model 2}, ... when they have none). A \code{befa_list} given
 alone returns the comparison it holds, if any; with other arguments, or
 without one, the comparison is computed.}

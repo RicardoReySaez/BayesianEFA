@@ -2,7 +2,7 @@
 # Marginal likelihood by bridge sampling on a canonical representative of
 # the rotations of the loadings
 # Author: Ricardo Rey-Sáez
-# Last modified: 01-11-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -14,7 +14,7 @@
 #' permutation of the factors.
 #'
 #' @param object A `befa` object returned by [befa()], preferably fitted by
-#'   MCMC.
+#'   MCMC, that did not draw from the prior alone (`prior_only = TRUE`).
 #' @param method Bridge sampling method of [bridgesampling::bridge_sampler()]:
 #'   `"warp3"` (default) or `"normal"`.
 #' @param repetitions Number of repetitions of the estimate, which give its
@@ -87,6 +87,10 @@
 befa_bridge_sampler <- function(object, method = c("warp3", "normal"),
                                 repetitions = 1, anchors = NULL, ...) {
   .check_befa_object(object)
+  if (.is_prior_only(object)) {
+    .befa_stop("Bridge sampling needs draws from the posterior; this fit drew ",
+               "from the prior alone (`prior_only = TRUE`).")
+  }
   method <- match.arg(method)
   for (pkg in c("bridgesampling", "coda")) {
     if (!requireNamespace(pkg, quietly = TRUE)) {

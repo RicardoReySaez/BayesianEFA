@@ -1,7 +1,7 @@
 # befa.R
 # Fit a Bayesian exploratory factor analysis
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -47,6 +47,13 @@
 #'   (default 1e-6) for [rsp_align()].
 #' @param prior Named list of prior hyperparameters that replace the defaults
 #'   (see Details): `xi`, `h2`, `lambda`, `psi`, `sigma` and `nu`.
+#' @param prior_only Logical. Draw from the prior alone, leaving the
+#'   likelihood out (default `FALSE`), to see what the priors imply for the
+#'   loadings, the communalities or the omega coefficients. The data still
+#'   set the number of items and their names, the scale of the normal prior
+#'   and the starting values, and the draws are aligned as usual. The fit
+#'   indices, the factor scores and the comparison of the models need the
+#'   likelihood, so they are skipped.
 #' @param factor_scores Logical. Draw the factor scores of every person (see
 #'   [befa_factor_scores()]); needs `data`. The draws follow `seed`.
 #' @param compute_fit_indices Logical. Compute the Bayesian fit indices and
@@ -146,6 +153,9 @@
 #' * `$n_factors`, `$model_type`, `$lambda_prior`, `$missing`, `$method`,
 #'   `$backend`, `$rotation`, `$priors_used`, `$options` and `$call`.
 #'
+#' With `prior_only = TRUE`, `$draws` and everything computed from them
+#' describe the prior, and `$options$prior_only` is `TRUE`.
+#'
 #' With several values of `n_factors`, an object of class `befa_list`: a list
 #' with one `befa` object per model, named `nf1`, `nf2`, ... after its number
 #' of factors. Each fit is the one `befa()` returns for that number of factors
@@ -176,6 +186,10 @@
 #' fits <- befa(HS_data, n_factors = 1:3, seed = 17)
 #' summary(fits)
 #' fits$nf2
+#'
+#' # What the priors imply, before seeing the data
+#' prior_fit <- befa(HS_data, n_factors = 3, prior_only = TRUE, seed = 17)
+#' summary(prior_fit)
 #' }
 #'
 #' @export
@@ -186,8 +200,9 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
                  missing = c("listwise", "FIML"),
                  method = c("mcmc", "advi", "pathfinder"), backend = "auto",
                  rotate = c("varimax", "none"), rsp_args = NULL, prior = list(),
-                 factor_scores = FALSE, compute_fit_indices = TRUE,
-                 compute_reliability = TRUE, loo_args = NULL, compare = TRUE,
+                 prior_only = FALSE, factor_scores = FALSE,
+                 compute_fit_indices = TRUE, compute_reliability = TRUE,
+                 loo_args = NULL, compare = TRUE,
                  compare_criteria = c("fit", "loo", "ic"), verbose = TRUE,
                  ...) {
   call <- match.call()
@@ -197,9 +212,21 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
   method <- match.arg(method)
   rotate <- match.arg(rotate)
   .check_befa_args(data, n_factors, ordered, sample_nobs, sample_cov,
-                   sample_cor, missing, factor_scores, compute_fit_indices,
-                   compute_reliability, verbose)
+                   sample_cor, missing, prior_only, factor_scores,
+                   compute_fit_indices, compute_reliability, verbose)
   .check_compare(compare, compare_criteria)
+
+  # Without the likelihood, only what describes the parameters is computed.
+  # The factor scores are off by default, so asking for them warns.
+  if (prior_only) {
+    if (factor_scores) {
+      .befa_warn("Factor scores need the likelihood; they are skipped with ",
+                 "`prior_only = TRUE`.")
+    }
+    factor_scores <- FALSE
+    compute_fit_indices <- FALSE
+    compare <- FALSE
+  }
 
   # Data, structure and Stan inputs of each number of factors
   prepared <- .prepare_befa_data(data, model, missing, sample_nobs, sample_cov,
@@ -210,7 +237,8 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
     spec <- .befa_spec(model, lambda_prior, n_factors[k],
                        .data_patterns(prepared), .choose_engine())
     list(n_factors = n_factors[k], spec = spec, priors = priors[[k]],
-         stan_data = .stan_data(spec, prepared, n_factors[k], priors[[k]]))
+         stan_data = .stan_data(spec, prepared, n_factors[k], priors[[k]],
+                                prior_only))
   })
   settings <- .sampler_settings(method, list(...))
   if (length(n_factors) > 1L && !is.null(settings$init)) {
@@ -220,13 +248,18 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
   rsp_config <- validate_rsp_args(rsp_args)
   loo_config <- validate_loo_args(loo_args)
   backend <- .resolve_backend(backend, method, verbose = verbose)
+  if (verbose && prior_only) {
+    cli::cli_alert_info(paste("Sampling from the prior alone: the fit",
+                              "indices, factor scores and model comparison",
+                              "are skipped."))
+  }
 
   run <- list(
     prepared = prepared, settings = settings, backend = backend,
     model = model, lambda_prior = lambda_prior, missing = missing,
     method = method, rotate = rotate, rsp_config = rsp_config,
-    loo_config = loo_config, ordered = ordered, factor_scores = factor_scores,
-    compute_reliability = compute_reliability,
+    loo_config = loo_config, ordered = ordered, prior_only = prior_only,
+    factor_scores = factor_scores, compute_reliability = compute_reliability,
     compute_fit_indices = compute_fit_indices, verbose = verbose, call = call
   )
   if (length(n_factors) == 1L) return(.befa_fit_one(inputs[[1L]], run))
@@ -265,12 +298,17 @@ befa <- function(data = NULL, n_factors = NULL, ordered = FALSE,
     method = run$method, backend = run$backend, rotation = run$rotate,
     priors_used = priors,
     options = list(factor_scores = run$factor_scores, ordered = run$ordered,
-                   rsp_args = run$rsp_config, loo_args = run$loo_config),
+                   prior_only = run$prior_only, rsp_args = run$rsp_config,
+                   loo_args = run$loo_config),
     call = run$call
   ), class = "befa")
   .befa_downstream(object, run$factor_scores, run$compute_reliability,
                    run$compute_fit_indices, settings$seed, run$verbose, shared)
 }
+
+# This function tells whether a fit drew from the prior alone. Fits made
+# before `prior_only` existed did not.
+.is_prior_only <- function(object) isTRUE(object$options$prior_only)
 
 # This function returns the numbers of factors to fit, unique and sorted, and
 # checks them against the number of items. With several values, it warns of

@@ -1,7 +1,7 @@
 # summary-befa.R
 # Summary and printed tables of a fitted model
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -85,7 +85,8 @@ summary.befa <- function(object, probs = c(0.025, 0.975), cutoff = 0,
     reliability = object$reliability,
     header = list(model_type = object$model_type, n_factors = M,
                   N = object$data$N, rotation = object$rotation,
-                  method = object$method, backend = object$backend),
+                  method = object$method, backend = object$backend,
+                  prior_only = .is_prior_only(object)),
     print_options = list(cutoff = cutoff, sort = sort,
                          signif_stars = signif_stars,
                          name_width = as.integer(name_width)),
@@ -195,7 +196,9 @@ print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
   cat("\n")
   width <- .print_styled_table(
     df, title = sprintf("Table %d. Standardized Factor Loadings%s", first, label))
+  prior_only <- isTRUE(x$header$prior_only)
   .print_note(c(
+    if (prior_only) "Draws from the prior alone (prior_only = TRUE).",
     sprintf("%s rotation applied; %s with %s.", x$header$rotation,
             .method_name(x$header$method), x$header$backend),
     "Diagnostics show worst-case values across factors (max Rhat, min ESS).",
@@ -215,8 +218,9 @@ print.summary.befa <- function(x, digits = 2, cutoff = NULL, sort = NULL,
   cat("\n")
   table_width <- .print_styled_table(
     out, title = sprintf("Table %d. Variance Explained%s", first + 1L, label))
-  .print_note(c("Posterior means. Proportion of total: share of the explained",
-                "variance."), table_width)
+  .print_note(c(if (prior_only) "Prior means." else "Posterior means.",
+                "Proportion of total: share of the explained variance."),
+              table_width)
   list(next_table = first + 2L, width = width)
 }
 

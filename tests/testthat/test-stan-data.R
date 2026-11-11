@@ -109,8 +109,16 @@ test_that("a single pattern passes one root and the means", {
   expect_equal(sd$y_bar, colMeans(prep$Y))
   expect_identical(sd$K, ncol(sd$S_root))
   expect_identical(sd$M, 2L)
-  expect_named(sd, c("N", "J", "M", "K", "S_root", "y_bar", "pr_h2", "pr_xi",
-                     "pr_sigma", "pr_nu"))
+  expect_named(sd, c("N", "J", "M", "K", "S_root", "y_bar", "prior_only",
+                     "pr_h2", "pr_xi", "pr_sigma", "pr_nu"))
+})
+
+test_that("the data switch the likelihood off only when asked", {
+  spec <- .befa_spec("cor", "unit_vector", 2L)
+  prep <- .prepared_for(spec)
+  expect_identical(.stan_data(spec, prep, 2L, .prior_for(spec))$prior_only, 0L)
+  expect_identical(.stan_data(spec, prep, 2L, .prior_for(spec),
+                              prior_only = TRUE)$prior_only, 1L)
 })
 
 test_that("several patterns stack their items, roots and means", {

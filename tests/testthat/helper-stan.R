@@ -1,7 +1,7 @@
 # helper-stan.R
 # Shared helpers for the tests of the generated Stan code
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 11-11-2026
 
 # This function returns every model structure the generator supports, named
 # by its label: the correlation, covariance and raw models with each prior on
@@ -71,11 +71,12 @@
 }
 
 # This function returns the log posterior density, with the Jacobian of the
-# constrained parameters, that the Stan code of a structure must give. It is
-# computed independently of the Stan code: the likelihood comes row by row
-# from the prepared data (or from the summary statistics), not from scatter
-# roots.
-.reference_lp <- function(spec, prepared, pars, prior, item_sd = NULL) {
+# constrained parameters, that the Stan code of a structure must give, or
+# the log prior density with `prior_only = TRUE`. It is computed
+# independently of the Stan code: the likelihood comes row by row from the
+# prepared data (or from the summary statistics), not from scatter roots.
+.reference_lp <- function(spec, prepared, pars, prior, item_sd = NULL,
+                          prior_only = FALSE) {
   J <- prepared$J
   lp <- 0
 
@@ -123,6 +124,7 @@
     lp <- lp + sum(stats::dnorm(mu, prior$nu[1], prior$nu[2], log = TRUE))
   }
 
+  if (prior_only) return(lp)
   if (prepared$summary) {
     N <- prepared$N
     d <- (if (is.null(prepared$y_bar)) rep(0, J) else prepared$y_bar) - mu

@@ -21,6 +21,19 @@ test_that("only the structures that need them get the optional blocks", {
   expect_match(.stan_code(.befa_null_spec("cov", "multiple")), "root_r2", fixed = TRUE)
 })
 
+test_that("every program lets the data leave the likelihood out", {
+  for (label in names(specs)) {
+    code <- .stan_code(specs[[label]])
+    expect_match(code, "int<lower=0, upper=1> prior_only;", fixed = TRUE,
+                 label = label)
+    # The likelihood, which starts with its constant, comes after the switch.
+    switch_at <- regexpr("if (!prior_only) {", code, fixed = TRUE)
+    expect_gt(switch_at, 0, label = label)
+    expect_gt(regexpr("target += ll_const", code, fixed = TRUE), switch_at,
+              label = label)
+  }
+})
+
 test_that("the generated code compiles under Stan 2.32 (rstan)", {
   skip_on_cran()
   skip_if_not_installed("rstan")

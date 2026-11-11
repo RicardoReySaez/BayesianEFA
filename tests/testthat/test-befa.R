@@ -25,6 +25,14 @@ test_that("befa() checks the model it is asked to fit", {
                "not available for the correlation model")
   expect_error(befa(Y, 2, chainz = 2), "`chainz` is not an option of MCMC")
   expect_error(befa(Y, 2, backend = "brms"), "must be \"auto\" or one of")
+  expect_error(befa(Y, 2, prior_only = NA),
+               "`prior_only` must be TRUE or FALSE")
+  # Asking for factor scores without the likelihood warns before any sampling
+  # (the number of factors then stops the fit).
+  expect_warning(
+    expect_error(befa(Y, 5, prior_only = TRUE, factor_scores = TRUE),
+                 "smaller than the number of items"),
+    "Factor scores need the likelihood")
 })
 
 test_that("starting values are built, reused or checked", {
@@ -231,6 +239,53 @@ test_that("the scores follow the seed and a failing fit index only warns", {
   expect_warning(res <- .befa_downstream(object, FALSE, FALSE, TRUE, 1L, FALSE),
                  "could not be computed: singular")
   expect_null(res$fit_indices)
+})
+
+test_that("befa() draws from the prior alone with prior_only = TRUE", {
+  .skip_without_stanli()
+  withr::local_options(BayesianEFA.cache_dir = withr::local_tempdir())
+  msgs <- character(0)
+  fit <- suppressWarnings(withCallingHandlers(
+    befa(.simulated_data(N = 300), 2, prior_only = TRUE, backend = "stanli",
+         chains = 2, iter_warmup = 200, iter_sampling = 150, seed = 5,
+         refresh = 0),
+    message = function(m) {
+      msgs <<- c(msgs, conditionMessage(m))
+      invokeRestart("muffleMessage")
+    }))
+  expect_match(paste(msgs, collapse = ""), "Sampling from the prior alone")
+  expect_true(fit$options$prior_only)
+  expect_identical(fit$stan_data$prior_only, 1L)
+  expect_null(fit$fit_indices)
+  expect_s3_class(fit$reliability, "befa_reliability")
+  # The default Beta(1, 1) prior makes each communality uniform on (0, 1),
+  # with mean 0.5 and SD 0.29, while their posterior from 300 rows has an SD
+  # near 0.05. With 300 draws of 5 items, the mean is well within 0.1 of 0.5.
+  h2 <- as.vector(.stacked_draws(fit$draws, "h2"))
+  expect_lt(abs(mean(h2) - 0.5), 0.1)
+  expect_gt(stats::sd(h2), 0.2)
+
+  fits <- .quick_befa(n_factors = 1:2, prior_only = TRUE)
+  expect_s3_class(fits, "befa_list")
+  expect_null(attr(fits, "comparison"))
+  expect_true(all(vapply(fits, .is_prior_only, TRUE)))
+  expect_output(print(fits), "prior alone")
+})
+
+test_that("what needs the likelihood refuses a fit from the prior alone", {
+  object <- .fake_befa()
+  object$options$prior_only <- TRUE
+  expect_warning(expect_null(befa_fit_measures(object)), "prior alone")
+  expect_error(befa_factor_scores(object), "Factor scores need the likelihood")
+  expect_error(befa_bridge_sampler(object), "needs draws from the posterior")
+  expect_error(befa_compare(object, .fake_befa()),
+               "Model 1 drew from the prior")
+  out <- utils::capture.output(print(summary(object)))
+  expect_true(any(grepl("Draws from the prior alone", out)))
+  expect_true(any(grepl("Prior means", out)))
+  # Fits stored before `prior_only` existed drew from the posterior.
+  object$options$prior_only <- NULL
+  expect_false(.is_prior_only(object))
 })
 
 test_that("befa() reproduces v0.1.0 on the Holzinger-Swineford data", {

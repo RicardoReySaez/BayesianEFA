@@ -20,6 +20,7 @@ befa(
   rotate = c("varimax", "none"),
   rsp_args = NULL,
   prior = list(),
+  prior_only = FALSE,
   factor_scores = FALSE,
   compute_fit_indices = TRUE,
   compute_reliability = TRUE,
@@ -76,6 +77,14 @@ most); \code{"none"} returns the loadings as Stan sampled them.}
 
 \item{prior}{Named list of prior hyperparameters that replace the defaults
 (see Details): \code{xi}, \code{h2}, \code{lambda}, \code{psi}, \code{sigma} and \code{nu}.}
+
+\item{prior_only}{Logical. Draw from the prior alone, leaving the
+likelihood out (default \code{FALSE}), to see what the priors imply for the
+loadings, the communalities or the omega coefficients. The data still
+set the number of items and their names, the scale of the normal prior
+and the starting values, and the draws are aligned as usual. The fit
+indices, the factor scores and the comparison of the models need the
+likelihood, so they are skipped.}
 
 \item{factor_scores}{Logical. Draw the factor scores of every person (see
 \code{\link[=befa_factor_scores]{befa_factor_scores()}}); needs \code{data}. The draws follow \code{seed}.}
@@ -140,6 +149,9 @@ returned by \code{\link[=extract_posterior_draws]{extract_posterior_draws()}} in
 \item \verb{$n_factors}, \verb{$model_type}, \verb{$lambda_prior}, \verb{$missing}, \verb{$method},
 \verb{$backend}, \verb{$rotation}, \verb{$priors_used}, \verb{$options} and \verb{$call}.
 }
+
+With \code{prior_only = TRUE}, \verb{$draws} and everything computed from them
+describe the prior, and \verb{$options$prior_only} is \code{TRUE}.
 
 With several values of \code{n_factors}, an object of class \code{befa_list}: a list
 with one \code{befa} object per model, named \code{nf1}, \code{nf2}, ... after its number
@@ -213,6 +225,10 @@ posterior_summaries(fit, pars = "h2")
 fits <- befa(HS_data, n_factors = 1:3, seed = 17)
 summary(fits)
 fits$nf2
+
+# What the priors imply, before seeing the data
+prior_fit <- befa(HS_data, n_factors = 3, prior_only = TRUE, seed = 17)
+summary(prior_fit)
 }
 
 }

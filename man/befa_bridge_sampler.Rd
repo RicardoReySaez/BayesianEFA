@@ -14,7 +14,7 @@ befa_bridge_sampler(
 }
 \arguments{
 \item{object}{A \code{befa} object returned by \code{\link[=befa]{befa()}}, preferably fitted by
-MCMC.}
+MCMC, that did not draw from the prior alone (\code{prior_only = TRUE}).}
 
 \item{method}{Bridge sampling method of \code{\link[bridgesampling:bridge_sampler]{bridgesampling::bridge_sampler()}}:
 \code{"warp3"} (default) or \code{"normal"}.}

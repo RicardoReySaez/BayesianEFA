@@ -12,6 +12,7 @@
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -27,10 +28,12 @@
         matrix[J, M] Lambda_std = diag_pre_multiply(sqrt(h2 ./ r2), Z);
         target += beta_lpdf(h2 | pr_h2[1], pr_h2[2]);
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
-        matrix[J, J] Sigma = add_diag(tcrossprod(Lambda_std), 1 - h2);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(tcrossprod(Lambda_std), 1 - h2);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        }
       }
 
 # the Stan code of cor-uv-single-woodbury is stable
@@ -47,6 +50,7 @@
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -63,14 +67,16 @@
         matrix[J, M] Lambda_std = diag_pre_multiply(sqrt(h2 ./ r2), Z);
         target += beta_lpdf(h2 | pr_h2[1], pr_h2[2]);
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
-        matrix[J, M] A = Lambda_std;
-        vector[J] inv_u = inv(1 - h2);
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        if (!prior_only) {
+          matrix[J, M] A = Lambda_std;
+          vector[J] inv_u = inv(1 - h2);
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        }
       }
 
 # the Stan code of cor-uv-multiple-cholesky is stable
@@ -92,6 +98,7 @@
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -119,20 +126,22 @@
         matrix[J, M] Lambda_std = diag_pre_multiply(sqrt(h2 ./ r2), Z);
         target += beta_lpdf(h2 | pr_h2[1], pr_h2[2]);
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
-        matrix[J, J] Sigma = add_diag(tcrossprod(Lambda_std), 1 - h2);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(tcrossprod(Lambda_std), 1 - h2);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -156,6 +165,7 @@
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -203,32 +213,34 @@
         matrix[J, M] Lambda_std = diag_pre_multiply(sqrt(h2 ./ r2), Z);
         target += beta_lpdf(h2 | pr_h2[1], pr_h2[2]);
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
-        matrix[J, M] A = Lambda_std;
-        vector[J] inv_u = inv(1 - h2);
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[J, M * M] BB;
-        for (k in 1:M) {
-          for (l in 1:M) {
-            BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, M] A = Lambda_std;
+          vector[J] inv_u = inv(1 - h2);
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[J, M * M] BB;
+          for (k in 1:M) {
+            for (l in 1:M) {
+              BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, M * M] C_flat = obs_mat * BB;
-        matrix[K_tot, M] Q = root_pad * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[M, M] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
-            pos_k += K_p[p];
+          matrix[P, M * M] C_flat = obs_mat * BB;
+          matrix[K_tot, M] Q = root_pad * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[M, M] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
       }
 
 # the Stan code of cor-uni-single-cholesky is stable
@@ -251,6 +263,7 @@
         int<lower=1> K;                        // columns of the scatter root
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -260,10 +273,12 @@
       }
       model {
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
-        matrix[J, J] Sigma = add_diag(lambda_std * lambda_std', 1 - square(lambda_std));
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(lambda_std * lambda_std', 1 - square(lambda_std));
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        }
       }
 
 # the Stan code of cor-uni-single-woodbury is stable
@@ -286,6 +301,7 @@
         int<lower=1> K;                        // columns of the scatter root
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -296,14 +312,16 @@
       }
       model {
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
-        matrix[J, 1] A = to_matrix(lambda_std);
-        vector[J] inv_u = inv(1 - square(lambda_std));
-        matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, 1] W = diag_pre_multiply(inv_u, A);
-        matrix[1, 1] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        if (!prior_only) {
+          matrix[J, 1] A = to_matrix(lambda_std);
+          vector[J] inv_u = inv(1 - square(lambda_std));
+          matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, 1] W = diag_pre_multiply(inv_u, A);
+          matrix[1, 1] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        }
       }
 
 # the Stan code of cor-uni-multiple-cholesky is stable
@@ -331,6 +349,7 @@
         int<lower=1> n_root;                   // length of root_flat
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -352,20 +371,22 @@
       }
       model {
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
-        matrix[J, J] Sigma = add_diag(lambda_std * lambda_std', 1 - square(lambda_std));
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(lambda_std * lambda_std', 1 - square(lambda_std));
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -395,6 +416,7 @@
         int<lower=1> n_root;                   // length of root_flat
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -436,32 +458,34 @@
       }
       model {
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
-        matrix[J, 1] A = to_matrix(lambda_std);
-        vector[J] inv_u = inv(1 - square(lambda_std));
-        matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, 1] W = diag_pre_multiply(inv_u, A);
-        matrix[J, 1] BB;
-        for (k in 1:1) {
-          for (l in 1:1) {
-            BB[, (k - 1) * 1 + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, 1] A = to_matrix(lambda_std);
+          vector[J] inv_u = inv(1 - square(lambda_std));
+          matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, 1] W = diag_pre_multiply(inv_u, A);
+          matrix[J, 1] BB;
+          for (k in 1:1) {
+            for (l in 1:1) {
+              BB[, (k - 1) * 1 + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, 1] C_flat = obs_mat * BB;
-        matrix[K_tot, 1] Q = root_pad * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[1, 1] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], 1, 1), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], 1)')));
-            pos_k += K_p[p];
+          matrix[P, 1] C_flat = obs_mat * BB;
+          matrix[K_tot, 1] Q = root_pad * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[1, 1] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], 1, 1), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], 1)')));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
       }
 
 # the Stan code of cov-uv-single-cholesky is stable
@@ -479,6 +503,7 @@
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -497,10 +522,12 @@
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        }
       }
 
 # the Stan code of cov-uv-single-woodbury is stable
@@ -518,6 +545,7 @@
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -537,14 +565,16 @@
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - h2));
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        if (!prior_only) {
+          matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - h2));
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        }
       }
 
 # the Stan code of cov-uv-multiple-cholesky is stable
@@ -567,6 +597,7 @@
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -597,20 +628,22 @@
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -635,6 +668,7 @@
         vector<lower=0>[2] pr_h2;              // Beta prior on h2
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -685,32 +719,34 @@
         target += 0.5 * pr_xi * sum(log(r2)) - 0.5 * sum(r2) - J * log_C;
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - h2));
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[J, M * M] BB;
-        for (k in 1:M) {
-          for (l in 1:M) {
-            BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - h2));
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[J, M * M] BB;
+          for (k in 1:M) {
+            for (l in 1:M) {
+              BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, M * M] C_flat = obs_mat * BB;
-        matrix[K_tot, M] Q = root_pad * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[M, M] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
-            pos_k += K_p[p];
+          matrix[P, M * M] C_flat = obs_mat * BB;
+          matrix[K_tot, M] Q = root_pad * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[M, M] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
       }
 
 # the Stan code of cov-uni-single-cholesky is stable
@@ -734,6 +770,7 @@
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -746,10 +783,12 @@
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        }
       }
 
 # the Stan code of cov-uni-single-woodbury is stable
@@ -773,6 +812,7 @@
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -786,14 +826,16 @@
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, 1] A = to_matrix(sigma .* lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
-        matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, 1] W = diag_pre_multiply(inv_u, A);
-        matrix[1, 1] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        if (!prior_only) {
+          matrix[J, 1] A = to_matrix(sigma .* lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
+          matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, 1] W = diag_pre_multiply(inv_u, A);
+          matrix[1, 1] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        }
       }
 
 # the Stan code of cov-uni-multiple-cholesky is stable
@@ -822,6 +864,7 @@
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -846,20 +889,22 @@
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -890,6 +935,7 @@
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -934,32 +980,34 @@
         target += scaled_beta_lpdf(lambda_std | pr_lambda[1], pr_lambda[2]);
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        matrix[J, 1] A = to_matrix(sigma .* lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
-        matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, 1] W = diag_pre_multiply(inv_u, A);
-        matrix[J, 1] BB;
-        for (k in 1:1) {
-          for (l in 1:1) {
-            BB[, (k - 1) * 1 + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, 1] A = to_matrix(sigma .* lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
+          matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, 1] W = diag_pre_multiply(inv_u, A);
+          matrix[J, 1] BB;
+          for (k in 1:1) {
+            for (l in 1:1) {
+              BB[, (k - 1) * 1 + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, 1] C_flat = obs_mat * BB;
-        matrix[K_tot, 1] Q = root_pad * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[1, 1] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], 1, 1), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], 1)')));
-            pos_k += K_p[p];
+          matrix[P, 1] C_flat = obs_mat * BB;
+          matrix[K_tot, 1] Q = root_pad * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[1, 1] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], 1, 1), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], 1)')));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
       }
 
 # the Stan code of cov-normal-single-cholesky is stable
@@ -978,6 +1026,7 @@
         vector<lower=0>[J] pr_lambda_scale;    // its scale per item
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -991,10 +1040,12 @@
           target += normal_lpdf(col(Lambda, m) | pr_lambda_loc, pr_lambda_scale);
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
-        matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+        }
       }
 
 # the Stan code of cov-normal-single-woodbury is stable
@@ -1013,6 +1064,7 @@
         vector<lower=0>[J] pr_lambda_scale;    // its scale per item
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1027,14 +1079,16 @@
           target += normal_lpdf(col(Lambda, m) | pr_lambda_loc, pr_lambda_scale);
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
-        matrix[J, M] A = Lambda;
-        vector[J] inv_u = inv(psi);
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        if (!prior_only) {
+          matrix[J, M] A = Lambda;
+          vector[J] inv_u = inv(psi);
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+        }
       }
 
 # the Stan code of cov-normal-multiple-cholesky is stable
@@ -1058,6 +1112,7 @@
         vector<lower=0>[J] pr_lambda_scale;    // its scale per item
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1083,20 +1138,22 @@
           target += normal_lpdf(col(Lambda, m) | pr_lambda_loc, pr_lambda_scale);
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
-        matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -1122,6 +1179,7 @@
         vector<lower=0>[J] pr_lambda_scale;    // its scale per item
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1167,32 +1225,34 @@
           target += normal_lpdf(col(Lambda, m) | pr_lambda_loc, pr_lambda_scale);
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
-        matrix[J, M] A = Lambda;
-        vector[J] inv_u = inv(psi);
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[J, M * M] BB;
-        for (k in 1:M) {
-          for (l in 1:M) {
-            BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, M] A = Lambda;
+          vector[J] inv_u = inv(psi);
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[J, M * M] BB;
+          for (k in 1:M) {
+            for (l in 1:M) {
+              BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, M * M] C_flat = obs_mat * BB;
-        matrix[K_tot, M] Q = root_pad * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[M, M] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
-            pos_k += K_p[p];
+          matrix[P, M * M] C_flat = obs_mat * BB;
+          matrix[K_tot, M] Q = root_pad * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[M, M] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
       }
 
 # the Stan code of raw-uv-single-cholesky is stable
@@ -1212,6 +1272,7 @@
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1232,11 +1293,13 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
-        target += -0.5 * N * dot_self(mdivide_left_tri_low(L, y_bar - nu));
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+          target += -0.5 * N * dot_self(mdivide_left_tri_low(L, y_bar - nu));
+        }
       }
 
 # the Stan code of raw-uv-single-woodbury is stable
@@ -1256,6 +1319,7 @@
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1277,16 +1341,18 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - h2));
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
-        target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)
-                              - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));
+        if (!prior_only) {
+          matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - h2));
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+          target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)
+                                - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));
+        }
       }
 
 # the Stan code of raw-uv-multiple-cholesky is stable
@@ -1311,6 +1377,7 @@
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1343,22 +1410,24 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            target += -0.5 * n_p[p] * dot_self(mdivide_left_tri_low(
-              L_p, segment(ybar_flat, pos_j, J_p[p]) - nu[idx]));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(tcrossprod(Lambda_std), 1 - h2), sigma);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              target += -0.5 * n_p[p] * dot_self(mdivide_left_tri_low(
+                L_p, segment(ybar_flat, pos_j, J_p[p]) - nu[idx]));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -1385,6 +1454,7 @@
         real<lower=0> pr_xi;                   // repulsion of the norms of Z
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1439,37 +1509,39 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - h2));
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[J, M * M] BB;
-        for (k in 1:M) {
-          for (l in 1:M) {
-            BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, M] A = diag_pre_multiply(sigma, Lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - h2));
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[J, M * M] BB;
+          for (k in 1:M) {
+            for (l in 1:M) {
+              BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, M * M] C_flat = obs_mat * BB;
-        matrix[K_tot, M] Q = root_pad * W;
-        matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);
-        matrix[P, M] Q_d = D * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        real mean_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[M, M] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
-            mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));
-            pos_k += K_p[p];
+          matrix[P, M * M] C_flat = obs_mat * BB;
+          matrix[K_tot, M] Q = root_pad * W;
+          matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);
+          matrix[P, M] Q_d = D * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          real mean_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[M, M] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
+              mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
+          target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
-        target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);
       }
 
 # the Stan code of raw-uni-single-cholesky is stable
@@ -1495,6 +1567,7 @@
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1509,11 +1582,13 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
-        target += -0.5 * N * dot_self(mdivide_left_tri_low(L, y_bar - nu));
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+          target += -0.5 * N * dot_self(mdivide_left_tri_low(L, y_bar - nu));
+        }
       }
 
 # the Stan code of raw-uni-single-woodbury is stable
@@ -1539,6 +1614,7 @@
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1554,16 +1630,18 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, 1] A = to_matrix(sigma .* lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
-        matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, 1] W = diag_pre_multiply(inv_u, A);
-        matrix[1, 1] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
-        target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)
-                              - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));
+        if (!prior_only) {
+          matrix[J, 1] A = to_matrix(sigma .* lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
+          matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, 1] W = diag_pre_multiply(inv_u, A);
+          matrix[1, 1] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+          target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)
+                                - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));
+        }
       }
 
 # the Stan code of raw-uni-multiple-cholesky is stable
@@ -1594,6 +1672,7 @@
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1620,22 +1699,24 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            target += -0.5 * n_p[p] * dot_self(mdivide_left_tri_low(
-              L_p, segment(ybar_flat, pos_j, J_p[p]) - nu[idx]));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = quad_form_diag(add_diag(lambda_std * lambda_std', 1 - square(lambda_std)), sigma);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              target += -0.5 * n_p[p] * dot_self(mdivide_left_tri_low(
+                L_p, segment(ybar_flat, pos_j, J_p[p]) - nu[idx]));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -1668,6 +1749,7 @@
         vector<lower=0>[2] pr_lambda;          // scaled Beta prior on the loadings
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1716,37 +1798,39 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, 1] A = to_matrix(sigma .* lambda_std);
-        vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
-        matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, 1] W = diag_pre_multiply(inv_u, A);
-        matrix[J, 1] BB;
-        for (k in 1:1) {
-          for (l in 1:1) {
-            BB[, (k - 1) * 1 + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, 1] A = to_matrix(sigma .* lambda_std);
+          vector[J] inv_u = inv(square(sigma) .* (1 - square(lambda_std)));
+          matrix[J, 1] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, 1] W = diag_pre_multiply(inv_u, A);
+          matrix[J, 1] BB;
+          for (k in 1:1) {
+            for (l in 1:1) {
+              BB[, (k - 1) * 1 + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, 1] C_flat = obs_mat * BB;
-        matrix[K_tot, 1] Q = root_pad * W;
-        matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);
-        matrix[P, 1] Q_d = D * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        real mean_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[1, 1] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], 1, 1), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], 1)')));
-            mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));
-            pos_k += K_p[p];
+          matrix[P, 1] C_flat = obs_mat * BB;
+          matrix[K_tot, 1] Q = root_pad * W;
+          matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);
+          matrix[P, 1] Q_d = D * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          real mean_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[1, 1] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], 1, 1), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], 1)')));
+              mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
+          target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
-        target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);
       }
 
 # the Stan code of raw-normal-single-cholesky is stable
@@ -1767,6 +1851,7 @@
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1782,11 +1867,13 @@
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
-        matrix[J, J] L = cholesky_decompose(Sigma);
-        target += ll_const - N * sum(log(diagonal(L)))
-                  - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
-        target += -0.5 * N * dot_self(mdivide_left_tri_low(L, y_bar - nu));
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
+          matrix[J, J] L = cholesky_decompose(Sigma);
+          target += ll_const - N * sum(log(diagonal(L)))
+                    - 0.5 * sum(square(mdivide_left_tri_low(L, S_root)));
+          target += -0.5 * N * dot_self(mdivide_left_tri_low(L, y_bar - nu));
+        }
       }
 
 # the Stan code of raw-normal-single-woodbury is stable
@@ -1807,6 +1894,7 @@
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -1823,16 +1911,18 @@
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, M] A = Lambda;
-        vector[J] inv_u = inv(psi);
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
-        target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
-                  - 0.5 * (dot_product(root_r2, inv_u)
-                           - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
-        target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)
-                              - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));
+        if (!prior_only) {
+          matrix[J, M] A = Lambda;
+          vector[J] inv_u = inv(psi);
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[M, M] L_C = cholesky_decompose(add_diag(crossprod(B), 1));
+          target += ll_const + 0.5 * N * sum(log(inv_u)) - N * sum(log(diagonal(L_C)))
+                    - 0.5 * (dot_product(root_r2, inv_u)
+                             - sum(square(mdivide_left_tri_low(L_C, W' * S_root))));
+          target += -0.5 * N * (dot_product(square(y_bar - nu), inv_u)
+                                - dot_self(mdivide_left_tri_low(L_C, W' * (y_bar - nu))));
+        }
       }
 
 # the Stan code of raw-normal-multiple-cholesky is stable
@@ -1858,6 +1948,7 @@
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1885,22 +1976,24 @@
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          int pos_r = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
-            matrix[J_p[p], K_p[p]] R_p
-              = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
-            target += -n_p[p] * sum(log(diagonal(L_p)))
-                      - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
-            target += -0.5 * n_p[p] * dot_self(mdivide_left_tri_low(
-              L_p, segment(ybar_flat, pos_j, J_p[p]) - nu[idx]));
-            pos_j += J_p[p];
-            pos_r += J_p[p] * K_p[p];
+        if (!prior_only) {
+          matrix[J, J] Sigma = add_diag(tcrossprod(Lambda), psi);
+          target += ll_const;
+          {
+            int pos_j = 1;
+            int pos_r = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              matrix[J_p[p], J_p[p]] L_p = cholesky_decompose(Sigma[idx, idx]);
+              matrix[J_p[p], K_p[p]] R_p
+                = to_matrix(segment(root_flat, pos_r, J_p[p] * K_p[p]), J_p[p], K_p[p]);
+              target += -n_p[p] * sum(log(diagonal(L_p)))
+                        - 0.5 * sum(square(mdivide_left_tri_low(L_p, R_p)));
+              target += -0.5 * n_p[p] * dot_self(mdivide_left_tri_low(
+                L_p, segment(ybar_flat, pos_j, J_p[p]) - nu[idx]));
+              pos_j += J_p[p];
+              pos_r += J_p[p] * K_p[p];
+            }
           }
         }
       }
@@ -1928,6 +2021,7 @@
         real<lower=0> pr_psi_shape;            // inverse-gamma prior on psi
         vector<lower=0>[J] pr_psi_scale;       // its scale per item
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -1977,37 +2071,39 @@
         }
         target += inv_gamma_lpdf(psi | pr_psi_shape, pr_psi_scale);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        matrix[J, M] A = Lambda;
-        vector[J] inv_u = inv(psi);
-        matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
-        matrix[J, M] W = diag_pre_multiply(inv_u, A);
-        matrix[J, M * M] BB;
-        for (k in 1:M) {
-          for (l in 1:M) {
-            BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+        if (!prior_only) {
+          matrix[J, M] A = Lambda;
+          vector[J] inv_u = inv(psi);
+          matrix[J, M] B = diag_pre_multiply(sqrt(inv_u), A);
+          matrix[J, M] W = diag_pre_multiply(inv_u, A);
+          matrix[J, M * M] BB;
+          for (k in 1:M) {
+            for (l in 1:M) {
+              BB[, (k - 1) * M + l] = B[, k] .* B[, l];
+            }
           }
-        }
-        matrix[P, M * M] C_flat = obs_mat * BB;
-        matrix[K_tot, M] Q = root_pad * W;
-        matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);
-        matrix[P, M] Q_d = D * W;
-        real logdet_C = 0;
-        real quad_C = 0;
-        real mean_C = 0;
-        {
-          int pos_k = 1;
-          for (p in 1:P) {
-            matrix[M, M] L_C
-              = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
-            logdet_C += n_p[p] * sum(log(diagonal(L_C)));
-            quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
-            mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));
-            pos_k += K_p[p];
+          matrix[P, M * M] C_flat = obs_mat * BB;
+          matrix[K_tot, M] Q = root_pad * W;
+          matrix[P, J] D = ybar_pad - diag_post_multiply(obs_mat, nu);
+          matrix[P, M] Q_d = D * W;
+          real logdet_C = 0;
+          real quad_C = 0;
+          real mean_C = 0;
+          {
+            int pos_k = 1;
+            for (p in 1:P) {
+              matrix[M, M] L_C
+                = cholesky_decompose(add_diag(to_matrix(C_flat[p], M, M), 1));
+              logdet_C += n_p[p] * sum(log(diagonal(L_C)));
+              quad_C += sum(square(mdivide_left_tri_low(L_C, block(Q, pos_k, 1, K_p[p], M)')));
+              mean_C += n_p[p] * dot_self(mdivide_left_tri_low(L_C, Q_d[p]'));
+              pos_k += K_p[p];
+            }
           }
+          target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
+                    - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
+          target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);
         }
-        target += ll_const + 0.5 * dot_product(n_obs, log(inv_u)) - logdet_C
-                  - 0.5 * (dot_product(r2_item, inv_u) - quad_C);
-        target += -0.5 * (dot_product(to_vector(n_p), (D .* D) * inv_u) - mean_C);
       }
 
 # the Stan code of cov-none-single-diagonal is stable
@@ -2022,6 +2118,7 @@
         int<lower=1> K;                        // columns of the scatter root
         matrix[J, K] S_root;                   // S_root * S_root' = scatter matrix
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -2033,7 +2130,9 @@
       model {
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        target += ll_const - N * sum(log(sigma)) - 0.5 * sum(root_r2 ./ square(sigma));
+        if (!prior_only) {
+          target += ll_const - N * sum(log(sigma)) - 0.5 * sum(root_r2 ./ square(sigma));
+        }
       }
 
 # the Stan code of cov-none-multiple-diagonal is stable
@@ -2053,6 +2152,7 @@
         int<lower=1> n_root;                   // length of root_flat
         vector[n_root] root_flat;              // scatter roots, stacked
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -2086,14 +2186,16 @@
       model {
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            target += -n_p[p] * sum(log(sigma[idx]))
-                      - 0.5 * sum(segment(root_r2, pos_j, J_p[p]) ./ square(sigma[idx]));
-            pos_j += J_p[p];
+        if (!prior_only) {
+          target += ll_const;
+          {
+            int pos_j = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              target += -n_p[p] * sum(log(sigma[idx]))
+                        - 0.5 * sum(segment(root_r2, pos_j, J_p[p]) ./ square(sigma[idx]));
+              pos_j += J_p[p];
+            }
           }
         }
       }
@@ -2112,6 +2214,7 @@
         vector[J] y_bar;                       // item means
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const = -0.5 * N * J * log(2 * pi());
@@ -2125,8 +2228,10 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        target += ll_const - N * sum(log(sigma)) - 0.5 * sum(root_r2 ./ square(sigma));
-        target += -0.5 * N * sum(square((y_bar - nu) ./ sigma));
+        if (!prior_only) {
+          target += ll_const - N * sum(log(sigma)) - 0.5 * sum(root_r2 ./ square(sigma));
+          target += -0.5 * N * sum(square((y_bar - nu) ./ sigma));
+        }
       }
 
 # the Stan code of raw-none-multiple-diagonal is stable
@@ -2148,6 +2253,7 @@
         vector[sum(J_p)] ybar_flat;            // pattern means, stacked
         vector<lower=0>[3] pr_sigma;           // half-t(df, location, scale)
         vector[2] pr_nu;                       // normal prior on the means
+        int<lower=0, upper=1> prior_only;      // 1 leaves the likelihood out
       }
       transformed data {
         real ll_const;
@@ -2183,16 +2289,18 @@
         target += student_t_lpdf(sigma | pr_sigma[1], pr_sigma[2], pr_sigma[3])
                   - J * student_t_lccdf(0 | pr_sigma[1], pr_sigma[2], pr_sigma[3]);
         target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);
-        target += ll_const;
-        {
-          int pos_j = 1;
-          for (p in 1:P) {
-            array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
-            target += -n_p[p] * sum(log(sigma[idx]))
-                      - 0.5 * sum(segment(root_r2, pos_j, J_p[p]) ./ square(sigma[idx]));
-            target += -0.5 * n_p[p]
-                      * sum(square((segment(ybar_flat, pos_j, J_p[p]) - nu[idx]) ./ sigma[idx]));
-            pos_j += J_p[p];
+        if (!prior_only) {
+          target += ll_const;
+          {
+            int pos_j = 1;
+            for (p in 1:P) {
+              array[J_p[p]] int idx = segment(obs_idx, pos_j, J_p[p]);
+              target += -n_p[p] * sum(log(sigma[idx]))
+                        - 0.5 * sum(segment(root_r2, pos_j, J_p[p]) ./ square(sigma[idx]));
+              target += -0.5 * n_p[p]
+                        * sum(square((segment(ybar_flat, pos_j, J_p[p]) - nu[idx]) ./ sigma[idx]));
+              pos_j += J_p[p];
+            }
           }
         }
       }

@@ -1,22 +1,25 @@
 # stan-codegen.R
 # Build the Stan code of a BEFA model from its structure
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 11-11-2026
 
 # Every density keeps its additive constants, so the log density that Stan
 # reports is the full log posterior (up to the Jacobian of the constrained
-# parameters, which Stan adds itself). The code only uses features of Stan
-# 2.32, the version rstan ships.
+# parameters, which Stan adds itself), or the full log prior when the data
+# set `prior_only` to 1. The code only uses features of Stan 2.32, the
+# version rstan ships.
 
 # Internal functions
 
 # This function returns the Stan code of a model structure (see .befa_spec()).
 # The code depends on the structure alone, never on the data, so models with
-# the same structure share one compiled program. Each component adds lines to
-# the blocks of the program, which are assembled in a fixed order.
+# the same structure share one compiled program, also when they sample the
+# prior alone. Each component adds lines to the blocks of the program, which
+# are assembled in a fixed order.
 .stan_code <- function(spec) {
   parts <- list(.stan_dims(spec), .stan_loadings(spec), .stan_scale(spec),
-                .stan_means(spec), .stan_likelihood(spec))
+                .stan_means(spec),
+                .stan_likelihood_switch(.stan_likelihood(spec)))
   block <- function(name) {
     lines <- unlist(lapply(parts, `[[`, name))
     if (!length(lines)) return(NULL)
@@ -202,6 +205,17 @@
     parameters = "vector[J] nu;",
     model = "target += normal_lpdf(nu | pr_nu[1], pr_nu[2]);"
   )
+}
+
+# This function lets the data leave the log-likelihood out: the model block
+# adds it only when `prior_only` is 0, so with 1 the same program samples the
+# prior. What the likelihood computes in the transformed data is kept.
+.stan_likelihood_switch <- function(likelihood) {
+  likelihood$data <- .stan_decl("int<lower=0, upper=1> prior_only;",
+                                "1 leaves the likelihood out")
+  likelihood$model <- c("if (!prior_only) {", paste0("  ", likelihood$model),
+                        "}")
+  likelihood
 }
 
 # This function returns the log-likelihood. For each pattern p, with n_p

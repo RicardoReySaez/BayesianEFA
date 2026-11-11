@@ -1,7 +1,7 @@
 # befa-factor-scores.R
 # Posterior draws of the factor scores
 # Author: Ricardo Rey-Sáez
-# Last modified: 31-10-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -49,6 +49,10 @@ befa_factor_scores <- function(object, post_summaries = TRUE) {
   .check_befa_object(object)
   draws <- object$eta
   if (is.null(draws)) {
+    if (.is_prior_only(object)) {
+      .befa_stop("Factor scores need the likelihood; this fit drew from the ",
+                 "prior alone (`prior_only = TRUE`).")
+    }
     if (object$data$summary) {
       .befa_stop("Factor scores need the raw `data`; this model was fitted to ",
                  "summary statistics.")

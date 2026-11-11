@@ -1,7 +1,7 @@
 # checks.R
 # Checks of the arguments that the internal functions receive
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # This function checks that a value is one whole number of at least `lower`
 # (a positive one by default).
@@ -48,10 +48,11 @@
 # check themselves: the logical flags, one source of data (raw data or
 # summary statistics), FIML only with raw data, and numeric data.
 .check_befa_args <- function(data, n_factors, ordered, sample_nobs, sample_cov,
-                             sample_cor, missing, factor_scores,
+                             sample_cor, missing, prior_only, factor_scores,
                              compute_fit_indices, compute_reliability,
                              verbose) {
-  flags <- list(ordered = ordered, factor_scores = factor_scores,
+  flags <- list(ordered = ordered, prior_only = prior_only,
+                factor_scores = factor_scores,
                 compute_fit_indices = compute_fit_indices,
                 compute_reliability = compute_reliability, verbose = verbose)
   for (arg in names(flags)) .check_flag(flags[[arg]], arg)

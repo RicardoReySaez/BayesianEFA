@@ -1,7 +1,7 @@
 # befa-list.R
 # Fit, compare and report one model per number of factors
 # Author: Ricardo Rey-Sáez
-# Last modified: 08-11-2026
+# Last modified: 11-11-2026
 
 # Public functions
 
@@ -204,16 +204,19 @@ print.summary.befa_list <- function(x, digits = 2, cutoff = NULL, sort = NULL,
   list(n_factors = attr(fits, "n_factors"), model_type = first$model_type,
        lambda_prior = first$lambda_prior, N = first$data$N,
        rotation = first$rotation, method = first$method,
-       backend = first$backend)
+       backend = first$backend, prior_only = .is_prior_only(first))
 }
 
 # This function prints the header of the tables of a list of models.
 .print_list_header <- function(h) {
   cat(sprintf("\nBayesian EFA with %s factors\n",
               paste(h$n_factors, collapse = ", ")))
-  .print_note(sprintf("Data model: %s; prior: %s; N = %d; rotation: %s; %s with %s.",
-                      h$model_type, h$lambda_prior, h$N, h$rotation,
-                      .method_name(h$method), h$backend), 80L, prefix = "")
+  .print_note(c(
+    sprintf("Data model: %s; prior: %s; N = %d; rotation: %s; %s with %s.",
+            h$model_type, h$lambda_prior, h$N, h$rotation,
+            .method_name(h$method), h$backend),
+    if (isTRUE(h$prior_only)) "Draws from the prior alone (prior_only = TRUE)."
+  ), 80L, prefix = "")
 }
 
 # This function returns one row per model with its convergence and its main

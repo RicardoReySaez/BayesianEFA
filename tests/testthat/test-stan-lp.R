@@ -36,6 +36,12 @@ for (label in names(.all_specs())) {
     expect_equal(.stanli_lp(spec, data, pars),
                  .reference_lp(spec, prep, pars, prior, item_sd),
                  tolerance = 1e-8)
+    # Switched off, the likelihood leaves the log prior and its Jacobian.
+    data$prior_only <- 1L
+    expect_equal(.stanli_lp(spec, data, pars),
+                 .reference_lp(spec, prep, pars, prior, item_sd,
+                               prior_only = TRUE),
+                 tolerance = 1e-8)
   })
 }
 
